@@ -5,9 +5,12 @@
   --panel2:#111522;
   --ink:#e9e3d6;
   --muted:#b8b2a6;
-  --accent:#4bb8bf; /* du nutzt den Ton gerne, wirkt modern */
+  --accent:#4bb8bf;
   --border:rgba(255,255,255,0.10);
   --shadow: rgba(0,0,0,0.35);
+
+  /* Checker variables (overwritten per user settings via inline CSS vars) */
+  --checkerSize: 24px;
   --checkerA: rgba(255,255,255,0.08);
   --checkerB: rgba(0,0,0,0.10);
 }
@@ -23,8 +26,28 @@ body{
 .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
 .ui-row{ display: inline-flex; gap: 8px; align-items: center; }
 .ui-row input[type="number"]{ width: 70px; }
-.zoom{ width: 180px; }
+.zoom{ width: 170px; }
 .gridSize{ width: 64px; }
+.checkerSize{ width: 120px; }
+.color{ width: 40px; height: 28px; padding: 0; border: 0; background: transparent; }
+.colorSmall{ width: 28px; height: 22px; padding: 0; border: 0; background: transparent; }
+
+.uiBtn{
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.16);
+  color: var(--ink);
+  cursor: pointer;
+}
+.uiBtn:hover{
+  border-color: rgba(75,184,191,0.6);
+  background: rgba(75,184,191,0.12);
+}
+.uiBtn:disabled{
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 /* Dock layout */
 .dock{
@@ -43,7 +66,7 @@ body{
 .dock__body{
   display: grid;
   grid-template-columns: 64px 1fr 6px auto;
-  min-height: 0; /* wichtig für overflow */
+  min-height: 0;
 }
 
 .dock__left{
@@ -94,6 +117,7 @@ body{
   align-items: center;
   padding: 8px 10px;
   gap: 16px;
+  overflow-x: auto;
 }
 
 .brand{
@@ -128,6 +152,11 @@ body{
   color: var(--muted);
   margin-top: 4px;
 }
+.toolrail__divider{
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 6px 0;
+}
 .toolrail__spacer{ flex: 1; }
 
 .toolbtn{
@@ -142,6 +171,14 @@ body{
 .toolbtn:hover{
   border-color: rgba(75,184,191,0.6);
   background: rgba(75,184,191,0.12);
+}
+.toolbtn--active{
+  border-color: rgba(75,184,191,0.85);
+  background: rgba(75,184,191,0.16);
+}
+.toolbtn--disabled{
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Right panel */
@@ -226,14 +263,19 @@ body{
   overflow: hidden;
 }
 
+/* Checkerboard with customizable variables */
 .stage--checker{
   background:
     linear-gradient(45deg, var(--checkerA) 25%, transparent 25%),
     linear-gradient(-45deg, var(--checkerA) 25%, transparent 25%),
     linear-gradient(45deg, transparent 75%, var(--checkerA) 75%),
     linear-gradient(-45deg, transparent 75%, var(--checkerA) 75%);
-  background-size: 28px 28px;
-  background-position: 0 0, 0 14px, 14px -14px, -14px 0px;
+  background-size: var(--checkerSize) var(--checkerSize);
+  background-position:
+    0 0,
+    0 calc(var(--checkerSize) / 2),
+    calc(var(--checkerSize) / 2) calc(var(--checkerSize) / -2),
+    calc(var(--checkerSize) / -2) 0;
   background-color: var(--checkerB);
 }
 
@@ -249,6 +291,7 @@ body{
   display: flex;
   gap: 8px;
   z-index: 3;
+  pointer-events: none;
 }
 .hudpill{
   padding: 6px 10px;
@@ -259,17 +302,11 @@ body{
   font-size: 12px;
 }
 
-.stage__center{
+/* The actual drawing surface */
+.stage__canvas{
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-}
-
-.canvasPlaceholder{
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: rgba(0,0,0,0.35);
-  color: var(--muted);
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
 }

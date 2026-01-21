@@ -1,38 +1,57 @@
 import React from "react";
+import { ToolId } from "../types";
+
+type Props = {
+  tool: ToolId;
+  onChangeTool: (tool: ToolId) => void;
+};
 
 /**
- * ToolRail (links):
- * Wir starten bewusst minimal: nur Platzhalter-Buttons.
- * Später kommen echte Tools (Pen/Fill/Wand/Gradient+Dither/Selection/Transform).
+ * ToolRail (left).
+ * v0.1: Pen + Eraser.
+ * Next: Fill, Wand, Selection, Transform, Gradient+Dither, etc.
  */
-export default function ToolRail() {
+export default function ToolRail({ tool, onChangeTool }: Props) {
+  function btn(id: ToolId, label: string, title: string) {
+    const active = tool === id;
+    return (
+      <button
+        className={"toolbtn" + (active ? " toolbtn--active" : "")}
+        title={title}
+        onClick={() => onChangeTool(id)}
+      >
+        {label}
+      </button>
+    );
+  }
+
   return (
     <div className="toolrail">
       <div className="toolrail__sectionTitle">Tools</div>
 
-      <button className="toolbtn" title="Pen (B)">
-        ✎
-      </button>
-      <button className="toolbtn" title="Eraser (E)">
-        ⌫
-      </button>
-      <button className="toolbtn" title="Fill (G)">
+      {btn("pen", "✎", "Pen (B)")}
+      {btn("eraser", "⌫", "Eraser (E)")}
+
+      <div className="toolrail__divider" />
+
+      {/* Placeholders (coming next) */}
+      <button className="toolbtn toolbtn--disabled" title="Fill (coming next)" disabled>
         ⛶
       </button>
-      <button className="toolbtn" title="Magic Wand (W)">
+      <button className="toolbtn toolbtn--disabled" title="Magic Wand (coming next)" disabled>
         ✦
       </button>
-      <button className="toolbtn" title="Selection (S)">
+      <button className="toolbtn toolbtn--disabled" title="Selection (coming next)" disabled>
         ▭
       </button>
-      <button className="toolbtn" title="Move/Transform (V)">
+      <button className="toolbtn toolbtn--disabled" title="Move/Transform (coming next)" disabled>
         ✥
       </button>
 
       <div className="toolrail__spacer" />
 
       <div className="toolrail__sectionTitle">View</div>
-      <button className="toolbtn" title="Pan (Space)">
+      <button className="toolbtn toolbtn--disabled" title="Pan (Space) — coming next" disabled>
         ✋
       </button>
     </div>
