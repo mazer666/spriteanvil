@@ -17,11 +17,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ github.workspace }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --- DEBUG: zeigt dir im Log genau, wo der Runner steht und welche Files da sind ---
+      # Debug: zeigt sicher, wo wir sind + ob Node package.json lesen kann
       - name: Debug workspace
         run: |
           echo "PWD:"
@@ -30,24 +35,17 @@ jobs:
           echo "LIST ROOT:"
           ls -la
           echo ""
-          echo "CHECK package.json:"
-          if [ -f package.json ]; then
-            echo "package.json EXISTS ✅"
-            echo "First lines:"
-            head -n 20 package.json
-          else
-            echo "package.json MISSING ❌"
-            echo "Listing again:"
-            ls -la
-            exit 1
-          fi
+          echo "SHOW package.json via ls:"
+          ls -la package.json
+          echo ""
+          echo "READ name from package.json via node:"
+          node -p "require('./package.json').name"
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      # IMPORTANT: npm install (nicht ci), weil bei Remote-Repos oft kein package-lock existiert
       - name: Install deps
         run: npm install --no-audit --no-fund
 
