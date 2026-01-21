@@ -3,21 +3,17 @@
  * -----------------------------------------------------------------------------
  * Simple Undo/Redo history for pixel buffers.
  *
- * We store full snapshots (Uint8ClampedArray) because our pixel canvases are small
- * (typical pixel art sizes). This is the easiest and most reliable approach.
- *
- * Later we could optimize using diffs, but for v0.1 this is perfect.
+ * We store full snapshots (PixelBuffer) because pixel art canvases are small.
+ * This is the most reliable approach for v0.1.
  */
 
-export class HistoryStack {
-  private undoStack: Uint8ClampedArray[] = [];
-  private redoStack: Uint8ClampedArray[] = [];
+import { PixelBuffer, cloneBuffer } from "./pixels";
 
-  /**
-   * Commit a "before" snapshot to the undo stack.
-   * Call this when a stroke completes (and actually changed pixels).
-   */
-  commit(before: Uint8ClampedArray) {
+export class HistoryStack {
+  private undoStack: PixelBuffer[] = [];
+  private redoStack: PixelBuffer[] = [];
+
+  commit(before: PixelBuffer) {
     this.undoStack.push(cloneBuffer(before));
     this.redoStack = [];
   }
@@ -30,7 +26,7 @@ export class HistoryStack {
     return this.redoStack.length > 0;
   }
 
-  undo(current: Uint8ClampedArray): Uint8ClampedArray {
+  undo(current: PixelBuffer): PixelBuffer {
     if (!this.canUndo()) return current;
 
     const previous = this.undoStack.pop()!;
@@ -38,7 +34,7 @@ export class HistoryStack {
     return previous;
   }
 
-  redo(current: Uint8ClampedArray): Uint8ClampedArray {
+  redo(current: PixelBuffer): PixelBuffer {
     if (!this.canRedo()) return current;
 
     const next = this.redoStack.pop()!;
@@ -46,15 +42,8 @@ export class HistoryStack {
     return next;
   }
 
-  /**
-   * Useful for "New Project" later.
-   */
   clear() {
     this.undoStack = [];
     this.redoStack = [];
   }
-}
-
-function cloneBuffer(buf: Uint8ClampedArray): Uint8ClampedArray {
-  return new Uint8ClampedArray(buf);
 }

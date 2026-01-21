@@ -1,47 +1,43 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { CanvasSpec, ToolId, UiSettings } from "../types";
-import { cloneBuffer, drawLine, hexToRgb } from "../editor/pixels";
+import { PixelBuffer, cloneBuffer, drawLine, hexToRgb } from "../editor/pixels";
 
-/**
- * CanvasStage: real drawing canvas.
- *
- * Important goals:
- * - Pixel-correct rendering (no blur): imageSmoothingEnabled = false
- * - Tools: Pen + Eraser (v0.1.1)
- * - Brush Stabilizer toggle: smooths the raw pointer path
- * - History: we only commit undo snapshot on stroke end (if pixels changed)
- */
 export default function CanvasStage(props: {
   settings: UiSettings;
   tool: ToolId;
   canvasSpec: CanvasSpec;
-  buffer: Uint8ClampedArray;
-  onStrokeEnd: (before: Uint8ClampedArray, after: Uint8ClampedArray) => void;
+  buffer: PixelBuffer;
+  onStrokeEnd: (before: PixelBuffer, after: PixelBuffer) => void;
 }) {
   const { settings, tool, canvasSpec, buffer, onStrokeEnd } = props;
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // We keep a mutable reference so we can draw without forcing React rerenders.
-  const bufRef = useRef<Uint8ClampedArray>(buffer);
+  // mutable ref for fast drawing
+  const bufRef = useRef<PixelBuffer>(buffer);
 
-  // When buffer prop changes (e.g., undo/redo), update our ref and redraw.
   useEffect(() => {
     bufRef.current = buffer;
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB]);
+  }, [
+    buffer,
+    settings.zoom,
+    settings.showGrid,
+    settings.gridSize,
+    settings.backgroundMode,
+    settings.checkerSize,
+    settings.checkerA,
+    settings.checkerB
+  ]);
 
-  // Stroke state
   const strokeRef = useRef<{
     active: boolean;
     changed: boolean;
-    beforeSnapshot: Uint8ClampedArray | null;
+    beforeSnapshot: PixelBuffer | null;
     lastX: number;
     lastY: number;
-
-    // Stabilizer state: we keep smoothed floating positions.
     smoothX: number;
     smoothY: number;
     hasSmooth: boolean;
@@ -74,7 +70,6 @@ export default function CanvasStage(props: {
   }, [settings.backgroundMode]);
 
   const stageStyle = useMemo(() => {
-    // These CSS variables allow user-custom checkerboard.
     return {
       ["--checkerSize" as any]: `${settings.checkerSize}px`,
       ["--checkerA" as any]: settings.checkerA,
@@ -93,9 +88,6 @@ export default function CanvasStage(props: {
   }
 
   function applyStabilizer(rawX: number, rawY: number): { x: number; y: number } {
-    // This is a simple exponential smoothing filter.
-    // Higher alpha = follows pointer more closely.
-    // Lower alpha = smoother but more delayed.
     const alpha = 0.35;
 
     const st = strokeRef.current;
@@ -123,7 +115,6 @@ export default function CanvasStage(props: {
 
     const rect = stage.getBoundingClientRect();
 
-    // The canvas image is centered in the stage.
     const zoom = settings.zoom;
     const imgW = canvasSpec.width * zoom;
     const imgH = canvasSpec.height * zoom;
@@ -145,7 +136,6 @@ export default function CanvasStage(props: {
     const p = pointerToPixel(e);
     if (!p) return;
 
-    // Capture pointer so we keep getting move events even if cursor leaves the stage.
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 
     const st = strokeRef.current;
@@ -156,7 +146,6 @@ export default function CanvasStage(props: {
     st.lastY = p.y;
     st.hasSmooth = false;
 
-    // Draw the initial pixel immediately.
     const c = getDrawColor();
     const did = drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, p.x, p.y, p.x, p.y, c);
     if (did) st.changed = true;
@@ -171,9 +160,7 @@ export default function CanvasStage(props: {
     const p0 = pointerToPixel(e);
     if (!p0) return;
 
-    // Stabilizer works on float-space before we quantize to pixels.
     const stabilized = applyStabilizer(p0.x + 0.5, p0.y + 0.5);
-
     const x = Math.floor(stabilized.x);
     const y = Math.floor(stabilized.y);
 
@@ -195,7 +182,6 @@ export default function CanvasStage(props: {
 
     st.active = false;
 
-    // Only commit history if pixels actually changed.
     if (st.changed && st.beforeSnapshot) {
       const after = cloneBuffer(bufRef.current);
       onStrokeEnd(st.beforeSnapshot, after);
@@ -212,7 +198,6 @@ export default function CanvasStage(props: {
 
     const rect = stage.getBoundingClientRect();
 
-    // Match canvas to stage pixels (not image pixels!)
     const w = cssPx(rect.width);
     const h = cssPx(rect.height);
     if (cnv.width !== w) cnv.width = w;
@@ -221,13 +206,11 @@ export default function CanvasStage(props: {
     const ctx = cnv.getContext("2d");
     if (!ctx) return;
 
-    // Clear (transparent so stage background shows through)
     ctx.clearRect(0, 0, w, h);
 
-    // Prepare an ImageData from the buffer (sprite pixels).
+    // ✅ This now matches TypeScript's DOM typing expectations.
     const img = new ImageData(bufRef.current, canvasSpec.width, canvasSpec.height);
 
-    // We draw sprite pixels scaled by zoom in the center.
     ctx.imageSmoothingEnabled = false;
 
     const zoom = settings.zoom;
@@ -237,19 +220,16 @@ export default function CanvasStage(props: {
     const originX = Math.floor((w - imgW) / 2);
     const originY = Math.floor((h - imgH) / 2);
 
-    // Offscreen canvas approach (keeps scaling crisp and simple)
     const off = getOffscreen(canvasSpec.width, canvasSpec.height);
     const offCtx = off.getContext("2d")!;
     offCtx.putImageData(img, 0, 0);
 
     ctx.drawImage(off, 0, 0, canvasSpec.width, canvasSpec.height, originX, originY, imgW, imgH);
 
-    // Optional grid (only draw when zoom is big enough, otherwise it becomes visual noise)
     if (settings.showGrid && zoom >= 6) {
       drawGrid(ctx, originX, originY, canvasSpec.width, canvasSpec.height, zoom, settings.gridSize);
     }
 
-    // Frame outline
     ctx.strokeStyle = "rgba(255,255,255,0.28)";
     ctx.lineWidth = 1;
     ctx.strokeRect(originX + 0.5, originY + 0.5, imgW - 1, imgH - 1);
@@ -272,7 +252,6 @@ export default function CanvasStage(props: {
         </div>
       </div>
 
-      {/* The drawing surface (transparent) */}
       <canvas
         ref={canvasRef}
         className="stage__canvas"
@@ -285,7 +264,6 @@ export default function CanvasStage(props: {
   );
 }
 
-/** A small offscreen canvas reused for every draw call. */
 let _offscreen: HTMLCanvasElement | null = null;
 function getOffscreen(w: number, h: number): HTMLCanvasElement {
   if (!_offscreen) _offscreen = document.createElement("canvas");
@@ -303,9 +281,6 @@ function drawGrid(
   zoom: number,
   gridSize: number
 ) {
-  const step = Math.max(1, gridSize) * zoom;
-
-  // Minor grid
   ctx.strokeStyle = "rgba(255,255,255,0.10)";
   ctx.lineWidth = 1;
 
@@ -325,7 +300,6 @@ function drawGrid(
     ctx.stroke();
   }
 
-  // A slightly stronger grid every 8*gridSize (helps orientation)
   const majorEvery = 8 * gridSize;
   if (majorEvery > 0) {
     ctx.strokeStyle = "rgba(255,255,255,0.18)";
@@ -344,7 +318,4 @@ function drawGrid(
       ctx.stroke();
     }
   }
-
-  // Keep ts happy for now
-  void step;
 }

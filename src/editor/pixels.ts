@@ -3,14 +3,23 @@
  * -----------------------------------------------------------------------------
  * Pixel buffer utilities (RGBA).
  *
- * We store pixels in a Uint8ClampedArray: [R,G,B,A, R,G,B,A, ...]
- * This matches ImageData's internal format and avoids endianness issues.
+ * IMPORTANT (TypeScript DOM typing):
+ * ImageData expects a Uint8ClampedArray backed by an ArrayBuffer (not "ArrayBufferLike").
+ * So we define PixelBuffer as Uint8ClampedArray<ArrayBuffer> and create buffers accordingly.
  */
 
 export type RGBA = { r: number; g: number; b: number; a: number };
 
-export function createBuffer(width: number, height: number, fill: RGBA): Uint8ClampedArray {
-  const buf = new Uint8ClampedArray(width * height * 4);
+/**
+ * A pixel buffer that is guaranteed to be backed by a real ArrayBuffer.
+ * This avoids TypeScript errors when calling `new ImageData(data, w, h)`.
+ */
+export type PixelBuffer = Uint8ClampedArray<ArrayBuffer>;
+
+export function createBuffer(width: number, height: number, fill: RGBA): PixelBuffer {
+  const ab = new ArrayBuffer(width * height * 4);
+  const buf = new Uint8ClampedArray(ab) as PixelBuffer;
+
   for (let i = 0; i < width * height; i++) {
     const o = i * 4;
     buf[o + 0] = fill.r;
@@ -21,12 +30,16 @@ export function createBuffer(width: number, height: number, fill: RGBA): Uint8Cl
   return buf;
 }
 
-export function cloneBuffer(buf: Uint8ClampedArray): Uint8ClampedArray {
-  return new Uint8ClampedArray(buf);
+export function cloneBuffer(buf: Uint8ClampedArray): PixelBuffer {
+  const ab = new ArrayBuffer(buf.byteLength);
+  const copy = new Uint8ClampedArray(ab) as PixelBuffer;
+
+  // Copy bytes (handles any TypedArray view)
+  copy.set(new Uint8ClampedArray(buf.buffer as ArrayBuffer, buf.byteOffset, buf.byteLength));
+  return copy;
 }
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  // Accepts "#RRGGBB" only (we keep it simple and predictable).
   const h = hex.trim();
   if (!/^#[0-9a-fA-F]{6}$/.test(h)) return { r: 255, g: 255, b: 255 };
   const r = parseInt(h.slice(1, 3), 16);
@@ -46,7 +59,6 @@ export function setPixel(
   if (x < 0 || y < 0 || x >= width || y >= height) return false;
   const i = (y * width + x) * 4;
 
-  // Only mark changed if pixel actually differs (helps avoid false history commits).
   const changed =
     buf[i + 0] !== rgba.r || buf[i + 1] !== rgba.g || buf[i + 2] !== rgba.b || buf[i + 3] !== rgba.a;
 
@@ -58,10 +70,6 @@ export function setPixel(
   return changed;
 }
 
-/**
- * Draw a line using Bresenham (pixel-perfect, no blur).
- * Returns true if at least one pixel changed.
- */
 export function drawLine(
   buf: Uint8ClampedArray,
   width: number,

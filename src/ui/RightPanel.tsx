@@ -4,13 +4,21 @@ import { UiSettings } from "../types";
 type Props = {
   settings: UiSettings;
   onChangeSettings: (next: UiSettings) => void;
+
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 };
 
-/**
- * Right Panel: Tabs (Animation / Layers / Rig / Palette / Export)
- * V0.1: nur UI-Shell + ein paar Settings.
- */
-export default function RightPanel({ settings, onChangeSettings }: Props) {
+export default function RightPanel({
+  settings,
+  onChangeSettings,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo
+}: Props) {
   const tabs = useMemo(() => ["Animation", "Layers", "Rig", "Palette", "Export"] as const, []);
   const [active, setActive] = useState<(typeof tabs)[number]>("Animation");
 
@@ -33,10 +41,22 @@ export default function RightPanel({ settings, onChangeSettings }: Props) {
           <section>
             <h3>Animation</h3>
             <p className="muted">
-              In v0.1 kommen hier: FPS, Tags (idle/walk/attack), Frame Durations.
+              Next steps: FPS, Tags (idle/walk/attack), Frame durations, Markers, Diff view (incl. first ↔ last).
             </p>
 
             <div className="card">
+              <div className="card__row">
+                <span>Undo / Redo</span>
+                <div className="ui-row">
+                  <button className="uiBtn" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)">
+                    Undo
+                  </button>
+                  <button className="uiBtn" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Y)">
+                    Redo
+                  </button>
+                </div>
+              </div>
+
               <div className="card__row">
                 <span>Onion Skin</span>
                 <label className="ui-row">

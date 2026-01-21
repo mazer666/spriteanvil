@@ -2,31 +2,40 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import DockLayout from "./ui/DockLayout";
 import { CanvasSpec, ToolId, UiSettings } from "./types";
 import { HistoryStack } from "./editor/history";
-import { cloneBuffer, createBuffer } from "./editor/pixels";
+import { PixelBuffer, createBuffer } from "./editor/pixels";
 
 /**
- * App Root.
- * We keep a minimal "document model" in App state:
- * - a single canvas size (J1: fixed per animation for now)
- * - a single frame buffer (we add real multi-frame timeline next)
+ * src/App.tsx
+ * -----------------------------------------------------------------------------
+ * App Root (v0.1)
  *
- * CanvasStage will mutate pixels during a stroke, then call onStrokeEnd() to:
- * - commit undo history
- * - store the final buffer snapshot in React state
+ * Warum halten wir (noch) so viel im App-State?
+ * - Für den Start ist es für Anfänger am verständlichsten.
+ * - Später ziehen wir das in einen Store (z.B. Zustand) um, wenn Frames/Parts/Rigs größer werden.
+ *
+ * Wir starten mit:
+ * - EINEM Canvas (J1: fixe Größe pro Animation)
+ * - EINEM Frame (PixelBuffer)
+ * - Pen/Eraser Tool
+ * - Undo/Redo
+ *
+ * Timeline/Frames (mehrere Frames, Onion-Skin wirklich) kommen als nächster Schritt.
  */
 export default function App() {
-  // Fixed canvas size for the current animation (J1).
+  // J1: Fixed canvas size for the current animation.
+  // Later we will offer presets + custom sizes and animation-level settings.
   const [canvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
 
-  // Current tool
+  // Current tool (left tool rail)
   const [tool, setTool] = useState<ToolId>("pen");
 
-  // Pixel buffer for the current frame (RGBA).
-  const [buffer, setBuffer] = useState<Uint8ClampedArray>(() =>
+  // Current frame pixel buffer (RGBA).
+  // PixelBuffer is guaranteed to be backed by a real ArrayBuffer (important for ImageData typing).
+  const [buffer, setBuffer] = useState<PixelBuffer>(() =>
     createBuffer(canvasSpec.width, canvasSpec.height, { r: 0, g: 0, b: 0, a: 0 })
   );
 
-  // History stack is stored in a ref (does not need to cause rerenders automatically).
+  // Undo/Redo history (stored in a ref so it doesn't trigger rerenders by itself)
   const historyRef = useRef<HistoryStack>(new HistoryStack());
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -36,7 +45,7 @@ export default function App() {
     setCanRedo(historyRef.current.canRedo());
   }
 
-  // UI Settings (view + some tool settings)
+  // UI Settings (view + basic tool settings)
   const [settings, setSettings] = useState<UiSettings>(() => ({
     zoom: 8, // 800% (pixel art usually needs high zoom)
     brushStabilizerEnabled: true,
@@ -58,12 +67,25 @@ export default function App() {
 
   const zoomLabel = useMemo(() => `${Math.round(settings.zoom * 100)}%`, [settings.zoom]);
 
-  // Keyboard shortcuts (simple, predictable)
+  /**
+   * Keyboard shortcuts
+   * - B = Pen
+   * - E = Eraser
+   * - Ctrl+Z = Undo
+   * - Ctrl+Y = Redo
+   *
+   * We ignore keypresses when a text input is focused (so typing into inputs won't trigger tools).
+   */
   useEffect(() => {
     function isTextInput(el: Element | null): boolean {
       if (!el) return false;
       const tag = (el as HTMLElement).tagName?.toLowerCase();
-      return tag === "input" || tag === "textarea" || tag === "select" || (el as HTMLElement).isContentEditable;
+      return (
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
+        (el as HTMLElement).isContentEditable
+      );
     }
 
     function onKeyDown(e: KeyboardEvent) {
@@ -73,7 +95,7 @@ export default function App() {
       if (e.key === "b" || e.key === "B") setTool("pen");
       if (e.key === "e" || e.key === "E") setTool("eraser");
 
-      // Undo/Redo (Ctrl+Z / Ctrl+Y)
+      // Undo/Redo
       if (e.ctrlKey && (e.key === "z" || e.key === "Z")) {
         e.preventDefault();
         handleUndo();
@@ -86,7 +108,7 @@ export default function App() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // buffer is read by undo/redo handlers; we re-bind keys when buffer changes
   }, [buffer]);
 
   function handleUndo() {
@@ -110,7 +132,7 @@ export default function App() {
    * - before: snapshot taken at stroke start
    * - after: final snapshot after drawing
    */
-  function onStrokeEnd(before: Uint8ClampedArray, after: Uint8ClampedArray) {
+  function onStrokeEnd(before: PixelBuffer, after: PixelBuffer) {
     historyRef.current.commit(before);
     setBuffer(after);
     syncHistoryFlags();
@@ -211,7 +233,9 @@ export default function App() {
                     max={64}
                     step={1}
                     value={settings.checkerSize}
-                    onChange={(e) => setSettings((s) => ({ ...s, checkerSize: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setSettings((s) => ({ ...s, checkerSize: Number(e.target.value) }))
+                    }
                   />
                   <span className="mono">{settings.checkerSize}px</span>
                 </label>
@@ -266,13 +290,14 @@ export default function App() {
 }
 
 /**
- * Because checkerA/checkerB are CSS colors (could be rgba),
+ * Because checkerA/checkerB are stored as CSS colors (could be rgba),
  * but <input type="color"> requires hex, we use a safe fallback.
- * For now we keep it simple.
+ *
+ * v0.2 improvement:
+ * - store checker colors consistently as hex in settings
+ * - add opacity sliders separately
  */
-function toHexFallback(_cssColor: string, fallbackHex: string): string {
-  // We do not parse arbitrary CSS colors in v0.1.
-  // Later we will store checker colors as hex consistently.
-  if (/^#[0-9a-fA-F]{6}$/.test(_cssColor)) return _cssColor;
+function toHexFallback(cssColor: string, fallbackHex: string): string {
+  if (/^#[0-9a-fA-F]{6}$/.test(cssColor)) return cssColor;
   return fallbackHex;
 }
