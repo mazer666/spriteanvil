@@ -5,11 +5,17 @@ export type BackgroundMode =
   | "greenscreen"
   | "bluescreen";
 
-export type ToolId = "pen" | "eraser";
+/**
+ * Tools (Left Tool Rail)
+ * v0.1: pen, eraser, fill
+ * Next: wand, selection, transform, eyedropper, gradient+dither, etc.
+ */
+export type ToolId = "pen" | "eraser" | "fill";
 
 /**
  * UI/Editor Settings (v0.1).
- * Later we extend this with palette management, tool settings, export presets, etc.
+ * Later we extend this with palette management, advanced tool settings,
+ * export presets, project files, etc.
  */
 export type UiSettings = {
   zoom: number; // 1.0 = 100%
@@ -32,6 +38,9 @@ export type UiSettings = {
 
   // Drawing
   primaryColor: string; // "#RRGGBB"
+
+  // Fill tool
+  fillTolerance: number; // 0..255 (per-channel tolerance)
 };
 
 export type CanvasSpec = {

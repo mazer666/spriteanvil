@@ -8,8 +8,8 @@ type Props = {
 
 /**
  * ToolRail (left).
- * v0.1: Pen + Eraser.
- * Next: Fill, Wand, Selection, Transform, Gradient+Dither, etc.
+ * v0.1: Pen + Eraser + Fill
+ * Next: Wand, Selection, Transform, Eyedropper, Gradient+Dither, etc.
  */
 export default function ToolRail({ tool, onChangeTool }: Props) {
   function btn(id: ToolId, label: string, title: string) {
@@ -31,13 +31,11 @@ export default function ToolRail({ tool, onChangeTool }: Props) {
 
       {btn("pen", "✎", "Pen (B)")}
       {btn("eraser", "⌫", "Eraser (E)")}
+      {btn("fill", "⛶", "Fill (G)")}
 
       <div className="toolrail__divider" />
 
       {/* Placeholders (coming next) */}
-      <button className="toolbtn toolbtn--disabled" title="Fill (coming next)" disabled>
-        ⛶
-      </button>
       <button className="toolbtn toolbtn--disabled" title="Magic Wand (coming next)" disabled>
         ✦
       </button>

@@ -1,7 +1,19 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { CanvasSpec, ToolId, UiSettings } from "../types";
-import { PixelBuffer, cloneBuffer, drawLine, hexToRgb } from "../editor/pixels";
+import { PixelBuffer, cloneBuffer, drawLine, floodFill, hexToRgb } from "../editor/pixels";
 
+/**
+ * CanvasStage: real drawing canvas.
+ *
+ * Current tools:
+ * - Pen
+ * - Eraser
+ * - Fill (Flood fill with tolerance)
+ *
+ * Goals:
+ * - Pixel-correct rendering (no blur): imageSmoothingEnabled = false
+ * - History commit on stroke end (if pixels changed)
+ */
 export default function CanvasStage(props: {
   settings: UiSettings;
   tool: ToolId;
@@ -14,9 +26,10 @@ export default function CanvasStage(props: {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // mutable ref for fast drawing
+  // Mutable ref for fast drawing without rerendering every pixel.
   const bufRef = useRef<PixelBuffer>(buffer);
 
+  // Redraw whenever buffer or relevant view settings change
   useEffect(() => {
     bufRef.current = buffer;
     draw();
@@ -32,12 +45,15 @@ export default function CanvasStage(props: {
     settings.checkerB
   ]);
 
+  // Stroke state (for pen/eraser)
   const strokeRef = useRef<{
     active: boolean;
     changed: boolean;
     beforeSnapshot: PixelBuffer | null;
     lastX: number;
     lastY: number;
+
+    // Stabilizer state: smoothed floating positions
     smoothX: number;
     smoothY: number;
     hasSmooth: boolean;
@@ -115,6 +131,7 @@ export default function CanvasStage(props: {
 
     const rect = stage.getBoundingClientRect();
 
+    // The sprite image is centered in the stage.
     const zoom = settings.zoom;
     const imgW = canvasSpec.width * zoom;
     const imgH = canvasSpec.height * zoom;
@@ -136,6 +153,32 @@ export default function CanvasStage(props: {
     const p = pointerToPixel(e);
     if (!p) return;
 
+    // Fill tool: one click, no drag stroke.
+    if (tool === "fill") {
+      const before = cloneBuffer(bufRef.current);
+
+      const { r, g, b } = hexToRgb(settings.primaryColor);
+      const replacement = { r, g, b, a: 255 };
+
+      const changed = floodFill(
+        bufRef.current,
+        canvasSpec.width,
+        canvasSpec.height,
+        p.x,
+        p.y,
+        replacement,
+        settings.fillTolerance
+      );
+
+      if (changed) {
+        const after = cloneBuffer(bufRef.current);
+        onStrokeEnd(before, after);
+        draw();
+      }
+      return;
+    }
+
+    // Pen/Eraser: begin drag stroke
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 
     const st = strokeRef.current;
@@ -146,6 +189,7 @@ export default function CanvasStage(props: {
     st.lastY = p.y;
     st.hasSmooth = false;
 
+    // Draw the initial pixel
     const c = getDrawColor();
     const did = drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, p.x, p.y, p.x, p.y, c);
     if (did) st.changed = true;
@@ -198,6 +242,7 @@ export default function CanvasStage(props: {
 
     const rect = stage.getBoundingClientRect();
 
+    // Match canvas to stage pixels (not sprite pixels!)
     const w = cssPx(rect.width);
     const h = cssPx(rect.height);
     if (cnv.width !== w) cnv.width = w;
@@ -208,7 +253,7 @@ export default function CanvasStage(props: {
 
     ctx.clearRect(0, 0, w, h);
 
-    // ✅ This now matches TypeScript's DOM typing expectations.
+    // ImageData from buffer (sprite pixels)
     const img = new ImageData(bufRef.current, canvasSpec.width, canvasSpec.height);
 
     ctx.imageSmoothingEnabled = false;
@@ -220,16 +265,19 @@ export default function CanvasStage(props: {
     const originX = Math.floor((w - imgW) / 2);
     const originY = Math.floor((h - imgH) / 2);
 
+    // Offscreen canvas (reused) makes crisp scaling simple
     const off = getOffscreen(canvasSpec.width, canvasSpec.height);
     const offCtx = off.getContext("2d")!;
     offCtx.putImageData(img, 0, 0);
 
     ctx.drawImage(off, 0, 0, canvasSpec.width, canvasSpec.height, originX, originY, imgW, imgH);
 
+    // Grid (only when zoom is high enough)
     if (settings.showGrid && zoom >= 6) {
       drawGrid(ctx, originX, originY, canvasSpec.width, canvasSpec.height, zoom, settings.gridSize);
     }
 
+    // Frame outline
     ctx.strokeStyle = "rgba(255,255,255,0.28)";
     ctx.lineWidth = 1;
     ctx.strokeRect(originX + 0.5, originY + 0.5, imgW - 1, imgH - 1);
@@ -264,6 +312,7 @@ export default function CanvasStage(props: {
   );
 }
 
+/** A small offscreen canvas reused for every draw call. */
 let _offscreen: HTMLCanvasElement | null = null;
 function getOffscreen(w: number, h: number): HTMLCanvasElement {
   if (!_offscreen) _offscreen = document.createElement("canvas");
@@ -300,6 +349,7 @@ function drawGrid(
     ctx.stroke();
   }
 
+  // Stronger grid every 8*gridSize (helps orientation)
   const majorEvery = 8 * gridSize;
   if (majorEvery > 0) {
     ctx.strokeStyle = "rgba(255,255,255,0.18)";

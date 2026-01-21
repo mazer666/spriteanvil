@@ -9,33 +9,24 @@ import { PixelBuffer, createBuffer } from "./editor/pixels";
  * -----------------------------------------------------------------------------
  * App Root (v0.1)
  *
- * Warum halten wir (noch) so viel im App-State?
- * - Für den Start ist es für Anfänger am verständlichsten.
- * - Später ziehen wir das in einen Store (z.B. Zustand) um, wenn Frames/Parts/Rigs größer werden.
+ * Start:
+ * - one canvas size (J1)
+ * - one frame (PixelBuffer)
+ * - pen/eraser/fill
+ * - undo/redo
  *
- * Wir starten mit:
- * - EINEM Canvas (J1: fixe Größe pro Animation)
- * - EINEM Frame (PixelBuffer)
- * - Pen/Eraser Tool
- * - Undo/Redo
- *
- * Timeline/Frames (mehrere Frames, Onion-Skin wirklich) kommen als nächster Schritt.
+ * Next:
+ * - multi-frame timeline + onion skin for real
  */
 export default function App() {
-  // J1: Fixed canvas size for the current animation.
-  // Later we will offer presets + custom sizes and animation-level settings.
   const [canvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
 
-  // Current tool (left tool rail)
   const [tool, setTool] = useState<ToolId>("pen");
 
-  // Current frame pixel buffer (RGBA).
-  // PixelBuffer is guaranteed to be backed by a real ArrayBuffer (important for ImageData typing).
   const [buffer, setBuffer] = useState<PixelBuffer>(() =>
     createBuffer(canvasSpec.width, canvasSpec.height, { r: 0, g: 0, b: 0, a: 0 })
   );
 
-  // Undo/Redo history (stored in a ref so it doesn't trigger rerenders by itself)
   const historyRef = useRef<HistoryStack>(new HistoryStack());
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -45,9 +36,8 @@ export default function App() {
     setCanRedo(historyRef.current.canRedo());
   }
 
-  // UI Settings (view + basic tool settings)
   const [settings, setSettings] = useState<UiSettings>(() => ({
-    zoom: 8, // 800% (pixel art usually needs high zoom)
+    zoom: 8,
     brushStabilizerEnabled: true,
 
     backgroundMode: "checker",
@@ -62,20 +52,13 @@ export default function App() {
     onionPrev: 1,
     onionNext: 1,
 
-    primaryColor: "#f2ead7"
+    primaryColor: "#f2ead7",
+
+    fillTolerance: 0
   }));
 
   const zoomLabel = useMemo(() => `${Math.round(settings.zoom * 100)}%`, [settings.zoom]);
 
-  /**
-   * Keyboard shortcuts
-   * - B = Pen
-   * - E = Eraser
-   * - Ctrl+Z = Undo
-   * - Ctrl+Y = Redo
-   *
-   * We ignore keypresses when a text input is focused (so typing into inputs won't trigger tools).
-   */
   useEffect(() => {
     function isTextInput(el: Element | null): boolean {
       if (!el) return false;
@@ -94,6 +77,7 @@ export default function App() {
       // Tools
       if (e.key === "b" || e.key === "B") setTool("pen");
       if (e.key === "e" || e.key === "E") setTool("eraser");
+      if (e.key === "g" || e.key === "G") setTool("fill");
 
       // Undo/Redo
       if (e.ctrlKey && (e.key === "z" || e.key === "Z")) {
@@ -108,7 +92,6 @@ export default function App() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-    // buffer is read by undo/redo handlers; we re-bind keys when buffer changes
   }, [buffer]);
 
   function handleUndo() {
@@ -127,11 +110,6 @@ export default function App() {
     }
   }
 
-  /**
-   * Called by CanvasStage when a stroke ended AND pixels actually changed.
-   * - before: snapshot taken at stroke start
-   * - after: final snapshot after drawing
-   */
   function onStrokeEnd(before: PixelBuffer, after: PixelBuffer) {
     historyRef.current.commit(before);
     setBuffer(after);
@@ -289,14 +267,6 @@ export default function App() {
   );
 }
 
-/**
- * Because checkerA/checkerB are stored as CSS colors (could be rgba),
- * but <input type="color"> requires hex, we use a safe fallback.
- *
- * v0.2 improvement:
- * - store checker colors consistently as hex in settings
- * - add opacity sliders separately
- */
 function toHexFallback(cssColor: string, fallbackHex: string): string {
   if (/^#[0-9a-fA-F]{6}$/.test(cssColor)) return cssColor;
   return fallbackHex;

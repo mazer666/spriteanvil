@@ -11,6 +11,13 @@ type Props = {
   canRedo: boolean;
 };
 
+/**
+ * Right Panel: Tabs (Animation / Layers / Rig / Palette / Export)
+ * v0.1: UI shell + a few helpful settings.
+ *
+ * We also host "Tool settings" here for now (Fill tolerance).
+ * Later we can add a dedicated "Tools" tab.
+ */
 export default function RightPanel({
   settings,
   onChangeSettings,
@@ -94,6 +101,39 @@ export default function RightPanel({
                   />
                 </div>
               </div>
+            </div>
+
+            <div className="card">
+              <h4 style={{ margin: "0 0 10px 0" }}>Fill Tool</h4>
+              <div className="card__row">
+                <span>Tolerance</span>
+                <div className="ui-row">
+                  <input
+                    type="range"
+                    min={0}
+                    max={255}
+                    step={1}
+                    value={settings.fillTolerance}
+                    onChange={(e) =>
+                      onChangeSettings({ ...settings, fillTolerance: Number(e.target.value) })
+                    }
+                    title="Fill tolerance (0 = exact, higher = looser matching)"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={255}
+                    value={settings.fillTolerance}
+                    onChange={(e) =>
+                      onChangeSettings({ ...settings, fillTolerance: Number(e.target.value) })
+                    }
+                  />
+                </div>
+              </div>
+              <p className="muted" style={{ margin: "10px 0 0 0" }}>
+                Tip: For clean pixel art, start with <span className="mono">0</span> or{" "}
+                <span className="mono">5–15</span>. Higher values will “leak” across similar colors.
+              </p>
             </div>
           </section>
         )}
