@@ -4,20 +4,6 @@ import { CanvasSpec, ToolId, UiSettings } from "./types";
 import { HistoryStack } from "./editor/history";
 import { PixelBuffer, createBuffer } from "./editor/pixels";
 
-/**
- * src/App.tsx
- * -----------------------------------------------------------------------------
- * App Root (v0.1)
- *
- * Start:
- * - one canvas size (J1)
- * - one frame (PixelBuffer)
- * - pen/eraser/fill
- * - undo/redo
- *
- * Next:
- * - multi-frame timeline + onion skin for real
- */
 export default function App() {
   const [canvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
 
@@ -54,7 +40,8 @@ export default function App() {
 
     primaryColor: "#f2ead7",
 
-    fillTolerance: 0
+    fillTolerance: 0,
+    wandTolerance: 0
   }));
 
   const zoomLabel = useMemo(() => `${Math.round(settings.zoom * 100)}%`, [settings.zoom]);
@@ -78,6 +65,7 @@ export default function App() {
       if (e.key === "b" || e.key === "B") setTool("pen");
       if (e.key === "e" || e.key === "E") setTool("eraser");
       if (e.key === "g" || e.key === "G") setTool("fill");
+      if (e.key === "w" || e.key === "W") setTool("wand");
 
       // Undo/Redo
       if (e.ctrlKey && (e.key === "z" || e.key === "Z")) {

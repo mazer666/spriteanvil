@@ -6,11 +6,6 @@ type Props = {
   onChangeTool: (tool: ToolId) => void;
 };
 
-/**
- * ToolRail (left).
- * v0.1: Pen + Eraser + Fill
- * Next: Wand, Selection, Transform, Eyedropper, Gradient+Dither, etc.
- */
 export default function ToolRail({ tool, onChangeTool }: Props) {
   function btn(id: ToolId, label: string, title: string) {
     const active = tool === id;
@@ -32,13 +27,11 @@ export default function ToolRail({ tool, onChangeTool }: Props) {
       {btn("pen", "✎", "Pen (B)")}
       {btn("eraser", "⌫", "Eraser (E)")}
       {btn("fill", "⛶", "Fill (G)")}
+      {btn("wand", "✦", "Magic Wand (W)")}
 
       <div className="toolrail__divider" />
 
       {/* Placeholders (coming next) */}
-      <button className="toolbtn toolbtn--disabled" title="Magic Wand (coming next)" disabled>
-        ✦
-      </button>
       <button className="toolbtn toolbtn--disabled" title="Selection (coming next)" disabled>
         ▭
       </button>

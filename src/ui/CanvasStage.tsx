@@ -1,18 +1,19 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CanvasSpec, ToolId, UiSettings } from "../types";
 import { PixelBuffer, cloneBuffer, drawLine, floodFill, hexToRgb } from "../editor/pixels";
+import { SelectionMask, magicWandSelect, selectionHasAny, selectionOutline } from "../editor/selection";
 
 /**
- * CanvasStage: real drawing canvas.
+ * CanvasStage: drawing canvas + selection visualization.
  *
- * Current tools:
+ * Tools:
  * - Pen
  * - Eraser
- * - Fill (Flood fill with tolerance)
+ * - Fill
+ * - Magic Wand (creates a selection mask, shows outline)
  *
- * Goals:
- * - Pixel-correct rendering (no blur): imageSmoothingEnabled = false
- * - History commit on stroke end (if pixels changed)
+ * Selection is not exported yet; it's purely a working UI element right now.
+ * Next step: Selection tool + transform/copy/paste.
  */
 export default function CanvasStage(props: {
   settings: UiSettings;
@@ -29,9 +30,30 @@ export default function CanvasStage(props: {
   // Mutable ref for fast drawing without rerendering every pixel.
   const bufRef = useRef<PixelBuffer>(buffer);
 
-  // Redraw whenever buffer or relevant view settings change
+  // Selection state (mask length = width * height)
+  const [selection, setSelection] = useState<SelectionMask>(() => new Uint8Array(canvasSpec.width * canvasSpec.height));
+
+  // Marching ants phase (animated outline)
+  const antsPhaseRef = useRef<number>(0);
+
+  // Redraw loop for animated selection outline
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      antsPhaseRef.current = (antsPhaseRef.current + 1) % 8;
+      draw();
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Redraw whenever buffer or view settings change
   useEffect(() => {
     bufRef.current = buffer;
+    // If canvas size changes later, we must resize selection mask
+    // (for now size is fixed).
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -131,7 +153,6 @@ export default function CanvasStage(props: {
 
     const rect = stage.getBoundingClientRect();
 
-    // The sprite image is centered in the stage.
     const zoom = settings.zoom;
     const imgW = canvasSpec.width * zoom;
     const imgH = canvasSpec.height * zoom;
@@ -153,7 +174,15 @@ export default function CanvasStage(props: {
     const p = pointerToPixel(e);
     if (!p) return;
 
-    // Fill tool: one click, no drag stroke.
+    // Magic wand: creates selection, no stroke.
+    if (tool === "wand") {
+      const sel = magicWandSelect(bufRef.current, canvasSpec.width, canvasSpec.height, p.x, p.y, settings.wandTolerance);
+      setSelection(sel);
+      draw();
+      return;
+    }
+
+    // Fill: one click, no drag.
     if (tool === "fill") {
       const before = cloneBuffer(bufRef.current);
 
@@ -189,7 +218,6 @@ export default function CanvasStage(props: {
     st.lastY = p.y;
     st.hasSmooth = false;
 
-    // Draw the initial pixel
     const c = getDrawColor();
     const did = drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, p.x, p.y, p.x, p.y, c);
     if (did) st.changed = true;
@@ -242,7 +270,6 @@ export default function CanvasStage(props: {
 
     const rect = stage.getBoundingClientRect();
 
-    // Match canvas to stage pixels (not sprite pixels!)
     const w = cssPx(rect.width);
     const h = cssPx(rect.height);
     if (cnv.width !== w) cnv.width = w;
@@ -253,7 +280,6 @@ export default function CanvasStage(props: {
 
     ctx.clearRect(0, 0, w, h);
 
-    // ImageData from buffer (sprite pixels)
     const img = new ImageData(bufRef.current, canvasSpec.width, canvasSpec.height);
 
     ctx.imageSmoothingEnabled = false;
@@ -265,16 +291,19 @@ export default function CanvasStage(props: {
     const originX = Math.floor((w - imgW) / 2);
     const originY = Math.floor((h - imgH) / 2);
 
-    // Offscreen canvas (reused) makes crisp scaling simple
     const off = getOffscreen(canvasSpec.width, canvasSpec.height);
     const offCtx = off.getContext("2d")!;
     offCtx.putImageData(img, 0, 0);
 
     ctx.drawImage(off, 0, 0, canvasSpec.width, canvasSpec.height, originX, originY, imgW, imgH);
 
-    // Grid (only when zoom is high enough)
     if (settings.showGrid && zoom >= 6) {
       drawGrid(ctx, originX, originY, canvasSpec.width, canvasSpec.height, zoom, settings.gridSize);
+    }
+
+    // Selection outline (marching ants)
+    if (selectionHasAny(selection) && zoom >= 4) {
+      drawSelectionOutline(ctx, originX, originY, canvasSpec.width, canvasSpec.height, zoom, selection, antsPhaseRef.current);
     }
 
     // Frame outline
@@ -298,6 +327,9 @@ export default function CanvasStage(props: {
         <div className="hudpill">
           Stabilizer: <span className="mono">{settings.brushStabilizerEnabled ? "ON" : "OFF"}</span>
         </div>
+        <div className="hudpill">
+          Wand Sel: <span className="mono">{selectionHasAny(selection) ? "YES" : "NO"}</span>
+        </div>
       </div>
 
       <canvas
@@ -312,7 +344,7 @@ export default function CanvasStage(props: {
   );
 }
 
-/** A small offscreen canvas reused for every draw call. */
+/** Offscreen canvas reused for scaling */
 let _offscreen: HTMLCanvasElement | null = null;
 function getOffscreen(w: number, h: number): HTMLCanvasElement {
   if (!_offscreen) _offscreen = document.createElement("canvas");
@@ -349,7 +381,6 @@ function drawGrid(
     ctx.stroke();
   }
 
-  // Stronger grid every 8*gridSize (helps orientation)
   const majorEvery = 8 * gridSize;
   if (majorEvery > 0) {
     ctx.strokeStyle = "rgba(255,255,255,0.18)";
@@ -366,6 +397,39 @@ function drawGrid(
       ctx.moveTo(originX, py);
       ctx.lineTo(originX + spriteW * zoom, py);
       ctx.stroke();
+    }
+  }
+}
+
+/**
+ * Draw "marching ants" outline for a selection mask.
+ * We compute an outline mask (border pixels) and render alternating black/white pattern.
+ */
+function drawSelectionOutline(
+  ctx: CanvasRenderingContext2D,
+  originX: number,
+  originY: number,
+  spriteW: number,
+  spriteH: number,
+  zoom: number,
+  sel: SelectionMask,
+  phase: number
+) {
+  const outline = selectionOutline(spriteW, spriteH, sel);
+
+  // Ants style: alternating colors along border pixels. We use a simple parity pattern.
+  for (let y = 0; y < spriteH; y++) {
+    for (let x = 0; x < spriteW; x++) {
+      const idx = y * spriteW + x;
+      if (!outline[idx]) continue;
+
+      // Pattern changes with phase -> looks like marching.
+      const p = (x + y + phase) & 1;
+
+      ctx.fillStyle = p ? "rgba(255,255,255,0.95)" : "rgba(0,0,0,0.95)";
+
+      // Draw as 1px in sprite space scaled by zoom
+      ctx.fillRect(originX + x * zoom, originY + y * zoom, zoom, zoom);
     }
   }
 }

@@ -7,15 +7,11 @@ export type BackgroundMode =
 
 /**
  * Tools (Left Tool Rail)
- * v0.1: pen, eraser, fill
- * Next: wand, selection, transform, eyedropper, gradient+dither, etc.
  */
-export type ToolId = "pen" | "eraser" | "fill";
+export type ToolId = "pen" | "eraser" | "fill" | "wand";
 
 /**
  * UI/Editor Settings (v0.1).
- * Later we extend this with palette management, advanced tool settings,
- * export presets, project files, etc.
  */
 export type UiSettings = {
   zoom: number; // 1.0 = 100%
@@ -41,6 +37,9 @@ export type UiSettings = {
 
   // Fill tool
   fillTolerance: number; // 0..255 (per-channel tolerance)
+
+  // Magic Wand tool
+  wandTolerance: number; // 0..255 (per-channel tolerance)
 };
 
 export type CanvasSpec = {
