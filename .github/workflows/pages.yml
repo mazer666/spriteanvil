@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "dev"]
 
 permissions:
   contents: read
@@ -24,10 +24,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
+      # IMPORTANT:
+      # We use `npm install` (not `npm ci`) because you likely don't have a package-lock.json
+      # when working only via VS Code Remote Repositories.
       - name: Install deps
-        run: npm ci
+        run: npm install
 
       - name: Build
         run: npm run build
