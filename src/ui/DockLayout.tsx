@@ -3,42 +3,62 @@ import ToolRail from "./ToolRail";
 import RightPanel from "./RightPanel";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
-import { UiSettings } from "../types";
+import { CanvasSpec, ToolId, UiSettings } from "../types";
 
 type Props = {
   settings: UiSettings;
   onChangeSettings: (next: UiSettings) => void;
+
+  tool: ToolId;
+  onChangeTool: (tool: ToolId) => void;
+
+  canvasSpec: CanvasSpec;
+  buffer: Uint8ClampedArray;
+  onStrokeEnd: (before: Uint8ClampedArray, after: Uint8ClampedArray) => void;
+
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+
   topBar: ReactNode;
 };
 
 /**
- * DockLayout: Resizable Panels (Dock-Panels) mit Splittern.
+ * DockLayout: Resizable Panels (Dock-Panels) with splitters.
  *
  * Layout:
- * - Left: ToolRail (fix)
+ * - Left: ToolRail (fixed)
  * - Center: CanvasStage (flex)
  * - Right: RightPanel (resizable width)
  * - Bottom: Timeline (resizable height)
  *
- * Wir speichern Panel-Größen in localStorage, damit sich die App "merkt",
- * wie der User es eingestellt hat (gute UX).
+ * We persist panel sizes in localStorage so the layout "sticks".
  */
-export default function DockLayout({ settings, onChangeSettings, topBar }: Props) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  // Default sizes
+export default function DockLayout({
+  settings,
+  onChangeSettings,
+  tool,
+  onChangeTool,
+  canvasSpec,
+  buffer,
+  onStrokeEnd,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  topBar
+}: Props) {
   const [rightWidth, setRightWidth] = useState<number>(() => loadNumber("dock:rightWidth", 360));
   const [timelineHeight, setTimelineHeight] = useState<number>(() =>
     loadNumber("dock:timelineHeight", 200)
   );
 
-  // Persist sizes
   useEffect(() => saveNumber("dock:rightWidth", rightWidth), [rightWidth]);
   useEffect(() => saveNumber("dock:timelineHeight", timelineHeight), [timelineHeight]);
 
   const sizes = useMemo(() => ({ rightWidth, timelineHeight }), [rightWidth, timelineHeight]);
 
-  // Drag logic for splitters (Pointer Events)
   const dragStateRef = useRef<
     | null
     | {
@@ -68,12 +88,10 @@ export default function DockLayout({ settings, onChangeSettings, topBar }: Props
 
     if (st.kind === "right") {
       const dx = st.startX - e.clientX; // drag left increases width
-      const next = clamp(st.startRightWidth + dx, 260, 700);
-      setRightWidth(next);
+      setRightWidth(clamp(st.startRightWidth + dx, 260, 700));
     } else {
       const dy = st.startY - e.clientY; // drag up increases height
-      const next = clamp(st.startTimelineHeight + dy, 140, 420);
-      setTimelineHeight(next);
+      setTimelineHeight(clamp(st.startTimelineHeight + dy, 140, 420));
     }
   }
 
@@ -82,25 +100,24 @@ export default function DockLayout({ settings, onChangeSettings, topBar }: Props
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="dock"
-      onPointerMove={onDragMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
-    >
+    <div className="dock" onPointerMove={onDragMove} onPointerUp={endDrag} onPointerCancel={endDrag}>
       <div className="dock__top">{topBar}</div>
 
       <div className="dock__body">
         <div className="dock__left">
-          <ToolRail />
+          <ToolRail tool={tool} onChangeTool={onChangeTool} />
         </div>
 
         <div className="dock__center">
-          <CanvasStage settings={settings} />
+          <CanvasStage
+            settings={settings}
+            tool={tool}
+            canvasSpec={canvasSpec}
+            buffer={buffer}
+            onStrokeEnd={onStrokeEnd}
+          />
         </div>
 
-        {/* Vertical splitter between center and right */}
         <div
           className="splitter splitter--v"
           title="Drag to resize panel"
@@ -108,11 +125,17 @@ export default function DockLayout({ settings, onChangeSettings, topBar }: Props
         />
 
         <div className="dock__right" style={{ width: sizes.rightWidth }}>
-          <RightPanel settings={settings} onChangeSettings={onChangeSettings} />
+          <RightPanel
+            settings={settings}
+            onChangeSettings={onChangeSettings}
+            onUndo={onUndo}
+            onRedo={onRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+          />
         </div>
       </div>
 
-      {/* Horizontal splitter above timeline */}
       <div
         className="splitter splitter--h"
         title="Drag to resize timeline"
@@ -145,6 +168,6 @@ function saveNumber(key: string, value: number) {
   try {
     localStorage.setItem(key, String(value));
   } catch {
-    // ignore (private mode etc.)
+    // ignore
   }
 }
