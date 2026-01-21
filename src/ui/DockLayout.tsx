@@ -4,6 +4,7 @@ import RightPanel from "./RightPanel";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
 import { CanvasSpec, ToolId, UiSettings } from "../types";
+import { PixelBuffer } from "../editor/pixels";
 
 type Props = {
   settings: UiSettings;
@@ -13,8 +14,19 @@ type Props = {
   onChangeTool: (tool: ToolId) => void;
 
   canvasSpec: CanvasSpec;
-  buffer: Uint8ClampedArray;
-  onStrokeEnd: (before: Uint8ClampedArray, after: Uint8ClampedArray) => void;
+
+  /**
+   * The current frame buffer (RGBA pixels).
+   * IMPORTANT: We use PixelBuffer (backed by ArrayBuffer) so `new ImageData(...)`
+   * is type-safe in TypeScript.
+   */
+  buffer: PixelBuffer;
+
+  /**
+   * Called when a drawing stroke ends and pixels actually changed.
+   * We commit undo history in App.tsx, so DockLayout only forwards.
+   */
+  onStrokeEnd: (before: PixelBuffer, after: PixelBuffer) => void;
 
   onUndo: () => void;
   onRedo: () => void;
@@ -25,6 +37,8 @@ type Props = {
 };
 
 /**
+ * src/ui/DockLayout.tsx
+ * -----------------------------------------------------------------------------
  * DockLayout: Resizable Panels (Dock-Panels) with splitters.
  *
  * Layout:
@@ -33,7 +47,7 @@ type Props = {
  * - Right: RightPanel (resizable width)
  * - Bottom: Timeline (resizable height)
  *
- * We persist panel sizes in localStorage so the layout "sticks".
+ * We persist panel sizes in localStorage so the layout "sticks" (good UX).
  */
 export default function DockLayout({
   settings,
@@ -49,16 +63,19 @@ export default function DockLayout({
   canRedo,
   topBar
 }: Props) {
+  // Default sizes
   const [rightWidth, setRightWidth] = useState<number>(() => loadNumber("dock:rightWidth", 360));
   const [timelineHeight, setTimelineHeight] = useState<number>(() =>
     loadNumber("dock:timelineHeight", 200)
   );
 
+  // Persist sizes
   useEffect(() => saveNumber("dock:rightWidth", rightWidth), [rightWidth]);
   useEffect(() => saveNumber("dock:timelineHeight", timelineHeight), [timelineHeight]);
 
   const sizes = useMemo(() => ({ rightWidth, timelineHeight }), [rightWidth, timelineHeight]);
 
+  // Drag logic for splitters (Pointer Events)
   const dragStateRef = useRef<
     | null
     | {
@@ -71,6 +88,7 @@ export default function DockLayout({
   >(null);
 
   function beginDrag(kind: "right" | "timeline", e: React.PointerEvent) {
+    // Captures the pointer so we keep receiving move events while dragging.
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 
     dragStateRef.current = {
@@ -87,10 +105,12 @@ export default function DockLayout({
     const st = dragStateRef.current;
 
     if (st.kind === "right") {
-      const dx = st.startX - e.clientX; // drag left increases width
+      // Drag left => increase width
+      const dx = st.startX - e.clientX;
       setRightWidth(clamp(st.startRightWidth + dx, 260, 700));
     } else {
-      const dy = st.startY - e.clientY; // drag up increases height
+      // Drag up => increase height
+      const dy = st.startY - e.clientY;
       setTimelineHeight(clamp(st.startTimelineHeight + dy, 140, 420));
     }
   }
@@ -118,6 +138,7 @@ export default function DockLayout({
           />
         </div>
 
+        {/* Vertical splitter between center and right */}
         <div
           className="splitter splitter--v"
           title="Drag to resize panel"
@@ -136,6 +157,7 @@ export default function DockLayout({
         </div>
       </div>
 
+      {/* Horizontal splitter above timeline */}
       <div
         className="splitter splitter--h"
         title="Drag to resize timeline"
@@ -168,6 +190,6 @@ function saveNumber(key: string, value: number) {
   try {
     localStorage.setItem(key, String(value));
   } catch {
-    // ignore
+    // ignore (private mode etc.)
   }
 }
