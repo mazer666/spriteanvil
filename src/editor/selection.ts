@@ -3,24 +3,50 @@
  * -----------------------------------------------------------------------------
  * Selection utilities for SpriteAnvil.
  *
- * We represent a selection as a boolean mask (Uint8Array):
+ * Selection is a boolean mask (Uint8Array):
  * - 0 = not selected
  * - 1 = selected
  *
- * For Magic Wand:
- * - We perform a flood fill style region grow based on color similarity
- * - Only connected pixels (4-way) are included
+ * Magic Wand:
+ * - Flood-fill style region grow based on color similarity
+ * - Connected pixels only (4-way)
  */
 
-import { RGBA, colorsMatch, getPixel } from "./pixels";
+import { colorsMatch, getPixel } from "./pixels";
 
 export type SelectionMask = Uint8Array;
+
+export type SelectionBounds = {
+  xMin: number;
+  yMin: number;
+  xMax: number; // inclusive
+  yMax: number; // inclusive
+  width: number;
+  height: number;
+};
 
 /**
  * Create an empty selection mask.
  */
 export function createEmptySelection(width: number, height: number): SelectionMask {
   return new Uint8Array(width * height);
+}
+
+/**
+ * Convenience helper: checks if selection has any selected pixel.
+ */
+export function selectionHasAny(sel: SelectionMask): boolean {
+  for (let i = 0; i < sel.length; i++) {
+    if (sel[i]) return true;
+  }
+  return false;
+}
+
+/**
+ * Clear selection (in-place).
+ */
+export function clearSelection(sel: SelectionMask) {
+  sel.fill(0);
 }
 
 /**
@@ -93,27 +119,34 @@ export function selectionOutline(width: number, height: number, sel: SelectionMa
 }
 
 /**
- * Convenience helper: checks if selection has any selected pixel.
+ * Compute bounds (min/max) of the selection.
+ * Returns null if the selection is empty.
  */
-export function selectionHasAny(sel: SelectionMask): boolean {
-  for (let i = 0; i < sel.length; i++) {
-    if (sel[i]) return true;
+export function selectionBounds(width: number, height: number, sel: SelectionMask): SelectionBounds | null {
+  let xMin = Infinity;
+  let yMin = Infinity;
+  let xMax = -Infinity;
+  let yMax = -Infinity;
+
+  for (let y = 0; y < height; y++) {
+    const row = y * width;
+    for (let x = 0; x < width; x++) {
+      if (!sel[row + x]) continue;
+      if (x < xMin) xMin = x;
+      if (y < yMin) yMin = y;
+      if (x > xMax) xMax = x;
+      if (y > yMax) yMax = y;
+    }
   }
-  return false;
-}
 
-/**
- * Optional helper: clear selection
- */
-export function clearSelection(sel: SelectionMask) {
-  sel.fill(0);
-}
+  if (xMin === Infinity) return null;
 
-/**
- * Convert a selection mask to a list of selected indices (useful later for copy/cut/paste).
- */
-export function selectionToIndices(sel: SelectionMask): number[] {
-  const out: number[] = [];
-  for (let i = 0; i < sel.length; i++) if (sel[i]) out.push(i);
-  return out;
+  return {
+    xMin,
+    yMin,
+    xMax,
+    yMax,
+    width: xMax - xMin + 1,
+    height: yMax - yMin + 1
+  };
 }
