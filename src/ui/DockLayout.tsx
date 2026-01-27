@@ -149,10 +149,6 @@ export default function DockLayout({
           <RightPanel
             settings={settings}
             onChangeSettings={onChangeSettings}
-            onUndo={onUndo}
-            onRedo={onRedo}
-            canUndo={canUndo}
-            canRedo={canRedo}
           />
         </div>
       </div>
