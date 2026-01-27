@@ -47,3 +47,14 @@ export type CanvasSpec = {
   width: number;
   height: number;
 };
+
+export type Frame = {
+  id: string;
+  pixels: Uint8ClampedArray;
+  durationMs: number;
+};
+
+export type AnimationData = {
+  frames: Frame[];
+  currentFrameIndex: number;
+};

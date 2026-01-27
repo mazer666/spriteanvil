@@ -10,6 +10,8 @@ import {
 } from "../editor/tools/shapes";
 import { selectRectangle } from "../editor/selection";
 
+import { Frame } from "../types";
+
 export default function CanvasStage(props: {
   settings: UiSettings;
   tool: ToolId;
@@ -18,8 +20,10 @@ export default function CanvasStage(props: {
   onStrokeEnd: (before: Uint8ClampedArray, after: Uint8ClampedArray) => void;
   selection: Uint8Array | null;
   onChangeSelection: (selection: Uint8Array | null) => void;
+  frames?: Frame[];
+  currentFrameIndex?: number;
 }) {
-  const { settings, tool, canvasSpec, buffer, onStrokeEnd, selection, onChangeSelection } = props;
+  const { settings, tool, canvasSpec, buffer, onStrokeEnd, selection, onChangeSelection, frames, currentFrameIndex } = props;
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -360,6 +364,29 @@ export default function CanvasStage(props: {
 
     ctx.drawImage(off, 0, 0, canvasSpec.width, canvasSpec.height, originX, originY, imgW, imgH);
 
+    if (settings.showOnionSkin && frames && currentFrameIndex !== undefined) {
+      const prevCount = settings.onionPrev;
+      const nextCount = settings.onionNext;
+
+      for (let i = 1; i <= prevCount; i++) {
+        const frameIndex = currentFrameIndex - i;
+        if (frameIndex >= 0 && frameIndex < frames.length) {
+          const frame = frames[frameIndex];
+          const opacity = 0.3 * (1 - (i - 1) / prevCount);
+          drawOnionFrame(ctx, frame.pixels, canvasSpec, originX, originY, imgW, imgH, opacity, "#4bb8bf");
+        }
+      }
+
+      for (let i = 1; i <= nextCount; i++) {
+        const frameIndex = currentFrameIndex + i;
+        if (frameIndex >= 0 && frameIndex < frames.length) {
+          const frame = frames[frameIndex];
+          const opacity = 0.3 * (1 - (i - 1) / nextCount);
+          drawOnionFrame(ctx, frame.pixels, canvasSpec, originX, originY, imgW, imgH, opacity, "#f2a03d");
+        }
+      }
+    }
+
     if (settings.showGrid && zoom >= 6) {
       drawGrid(ctx, originX, originY, canvasSpec.width, canvasSpec.height, zoom, settings.gridSize);
     }
@@ -553,4 +580,34 @@ function drawGrid(
   }
 
   void step;
+}
+
+function drawOnionFrame(
+  ctx: CanvasRenderingContext2D,
+  pixels: Uint8ClampedArray,
+  canvasSpec: CanvasSpec,
+  originX: number,
+  originY: number,
+  imgW: number,
+  imgH: number,
+  opacity: number,
+  tintColor: string
+) {
+  const off = getOffscreen(canvasSpec.width, canvasSpec.height);
+  const offCtx = off.getContext("2d")!;
+
+  const img = new ImageData(
+    new Uint8ClampedArray(pixels),
+    canvasSpec.width,
+    canvasSpec.height
+  );
+
+  offCtx.clearRect(0, 0, canvasSpec.width, canvasSpec.height);
+  offCtx.putImageData(img, 0, 0);
+
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.globalCompositeOperation = "source-over";
+  ctx.drawImage(off, 0, 0, canvasSpec.width, canvasSpec.height, originX, originY, imgW, imgH);
+  ctx.restore();
 }

@@ -3,7 +3,7 @@ import ToolRail from "./ToolRail";
 import RightPanel from "./RightPanel";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
-import { CanvasSpec, ToolId, UiSettings } from "../types";
+import { CanvasSpec, ToolId, UiSettings, Frame } from "../types";
 
 type Props = {
   settings: UiSettings;
@@ -23,6 +23,16 @@ type Props = {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+
+  frames: Frame[];
+  currentFrameIndex: number;
+  isPlaying: boolean;
+  onSelectFrame: (index: number) => void;
+  onInsertFrame: () => void;
+  onDuplicateFrame: () => void;
+  onDeleteFrame: () => void;
+  onUpdateFrameDuration: (index: number, durationMs: number) => void;
+  onTogglePlayback: () => void;
 
   topBar: ReactNode;
 };
@@ -52,6 +62,15 @@ export default function DockLayout({
   onRedo,
   canUndo,
   canRedo,
+  frames,
+  currentFrameIndex,
+  isPlaying,
+  onSelectFrame,
+  onInsertFrame,
+  onDuplicateFrame,
+  onDeleteFrame,
+  onUpdateFrameDuration,
+  onTogglePlayback,
   topBar
 }: Props) {
   const [rightWidth, setRightWidth] = useState<number>(() => loadNumber("dock:rightWidth", 280));
@@ -131,6 +150,8 @@ export default function DockLayout({
             onStrokeEnd={onStrokeEnd}
             selection={selection}
             onChangeSelection={onChangeSelection}
+            frames={frames}
+            currentFrameIndex={currentFrameIndex}
           />
         </div>
 
@@ -155,7 +176,20 @@ export default function DockLayout({
       />
 
       <div className="dock__bottom">
-        <Timeline settings={settings} onChangeSettings={onChangeSettings} />
+        <Timeline
+          settings={settings}
+          onChangeSettings={onChangeSettings}
+          canvasSpec={canvasSpec}
+          frames={frames}
+          currentFrameIndex={currentFrameIndex}
+          isPlaying={isPlaying}
+          onSelectFrame={onSelectFrame}
+          onInsertFrame={onInsertFrame}
+          onDuplicateFrame={onDuplicateFrame}
+          onDeleteFrame={onDeleteFrame}
+          onUpdateFrameDuration={onUpdateFrameDuration}
+          onTogglePlayback={onTogglePlayback}
+        />
       </div>
     </div>
   );

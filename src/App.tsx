@@ -1,51 +1,68 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import DockLayout from "./ui/DockLayout";
-import { CanvasSpec, ToolId, UiSettings } from "./types";
+import { CanvasSpec, ToolId, UiSettings, Frame } from "./types";
 import { HistoryStack } from "./editor/history";
 import { cloneBuffer, createBuffer } from "./editor/pixels";
-import { getSelectionBounds } from "./editor/selection";
+import { copySelection, cutSelection, pasteClipboard, ClipboardData } from "./editor/clipboard";
 
 /**
  * App Root.
- * We keep a minimal "document model" in App state:
- * - a single canvas size (J1: fixed per animation for now)
- * - a single frame buffer (we add real multi-frame timeline next)
- *
- * CanvasStage will mutate pixels during a stroke, then call onStrokeEnd() to:
- * - commit undo history
- * - store the final buffer snapshot in React state
+ * Manages the complete animation with multiple frames and timeline.
  */
 export default function App() {
-  // Fixed canvas size for the current animation (J1).
   const [canvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
-
-  // Current tool
   const [tool, setTool] = useState<ToolId>("pen");
 
-  // Pixel buffer for the current frame (RGBA).
-  const [buffer, setBuffer] = useState<Uint8ClampedArray>(() =>
-    createBuffer(canvasSpec.width, canvasSpec.height, { r: 0, g: 0, b: 0, a: 0 })
-  );
+  const [frames, setFrames] = useState<Frame[]>(() => [
+    {
+      id: crypto.randomUUID(),
+      pixels: createBuffer(canvasSpec.width, canvasSpec.height, { r: 0, g: 0, b: 0, a: 0 }),
+      durationMs: 100
+    }
+  ]);
 
-  // Active selection mask (1 byte per pixel: 1 = selected, 0 = not selected)
+  const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
+
   const [selection, setSelection] = useState<Uint8Array | null>(null);
 
-  // Clipboard for cut/copy/paste operations
-  const clipboardRef = useRef<{
-    pixels: Uint8ClampedArray;
-    width: number;
-    height: number;
-  } | null>(null);
+  const clipboardRef = useRef<ClipboardData | null>(null);
 
-  // History stack is stored in a ref (does not need to cause rerenders automatically).
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playbackTimerRef = useRef<number | null>(null);
+
   const historyRef = useRef<HistoryStack>(new HistoryStack());
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+
+  const currentFrame = frames[currentFrameIndex];
+  const buffer = currentFrame.pixels;
 
   function syncHistoryFlags() {
     setCanUndo(historyRef.current.canUndo());
     setCanRedo(historyRef.current.canRedo());
   }
+
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const advanceFrame = () => {
+      setCurrentFrameIndex((prev) => {
+        const next = (prev + 1) % frames.length;
+        const nextDuration = frames[next].durationMs;
+        playbackTimerRef.current = window.setTimeout(advanceFrame, nextDuration);
+        return next;
+      });
+    };
+
+    playbackTimerRef.current = window.setTimeout(advanceFrame, currentFrame.durationMs);
+
+    return () => {
+      if (playbackTimerRef.current !== null) {
+        clearTimeout(playbackTimerRef.current);
+        playbackTimerRef.current = null;
+      }
+    };
+  }, [isPlaying, currentFrame.durationMs, frames.length]);
 
   // UI Settings (view + some tool settings)
   const [settings, setSettings] = useState<UiSettings>(() => ({
@@ -115,6 +132,11 @@ export default function App() {
       if (e.key === "Escape") {
         handleDeselect();
       }
+
+      if (e.key === " " || e.key === "Spacebar") {
+        e.preventDefault();
+        handleTogglePlayback();
+      }
     }
 
     window.addEventListener("keydown", onKeyDown);
@@ -125,7 +147,7 @@ export default function App() {
   function handleUndo() {
     const next = historyRef.current.undo(buffer);
     if (next !== buffer) {
-      setBuffer(next);
+      updateCurrentFrame(next);
       syncHistoryFlags();
     }
   }
@@ -133,65 +155,26 @@ export default function App() {
   function handleRedo() {
     const next = historyRef.current.redo(buffer);
     if (next !== buffer) {
-      setBuffer(next);
+      updateCurrentFrame(next);
       syncHistoryFlags();
     }
   }
 
   function handleCopy() {
     if (!selection) return;
-
-    const bounds = getSelectionBounds(selection, canvasSpec.width, canvasSpec.height);
-    if (!bounds) return;
-
-    const clipWidth = bounds.width;
-    const clipHeight = bounds.height;
-    const clipData = new Uint8ClampedArray(clipWidth * clipHeight * 4);
-
-    for (let y = 0; y < clipHeight; y++) {
-      for (let x = 0; x < clipWidth; x++) {
-        const srcX = bounds.x + x;
-        const srcY = bounds.y + y;
-        const srcIdx = (srcY * canvasSpec.width + srcX) * 4;
-        const selIdx = srcY * canvasSpec.width + srcX;
-        const dstIdx = (y * clipWidth + x) * 4;
-
-        if (selection[selIdx]) {
-          clipData[dstIdx] = buffer[srcIdx];
-          clipData[dstIdx + 1] = buffer[srcIdx + 1];
-          clipData[dstIdx + 2] = buffer[srcIdx + 2];
-          clipData[dstIdx + 3] = buffer[srcIdx + 3];
-        }
-      }
-    }
-
-    clipboardRef.current = {
-      pixels: clipData,
-      width: clipWidth,
-      height: clipHeight
-    };
+    const clip = copySelection(buffer, selection, canvasSpec.width, canvasSpec.height);
+    if (clip) clipboardRef.current = clip;
   }
 
   function handleCut() {
     if (!selection) return;
-
-    handleCopy();
-
     const before = cloneBuffer(buffer);
-    const after = cloneBuffer(buffer);
+    const { clipboardData, modifiedBuffer } = cutSelection(buffer, selection, canvasSpec.width, canvasSpec.height);
 
-    for (let i = 0; i < selection.length; i++) {
-      if (selection[i]) {
-        const idx = i * 4;
-        after[idx] = 0;
-        after[idx + 1] = 0;
-        after[idx + 2] = 0;
-        after[idx + 3] = 0;
-      }
-    }
+    if (clipboardData) clipboardRef.current = clipboardData;
 
     historyRef.current.commit(before);
-    setBuffer(after);
+    updateCurrentFrame(modifiedBuffer);
     syncHistoryFlags();
   }
 
@@ -199,34 +182,10 @@ export default function App() {
     if (!clipboardRef.current) return;
 
     const before = cloneBuffer(buffer);
-    const after = cloneBuffer(buffer);
-
-    const clip = clipboardRef.current;
-    const pasteX = 0;
-    const pasteY = 0;
-
-    for (let y = 0; y < clip.height; y++) {
-      for (let x = 0; x < clip.width; x++) {
-        const dstX = pasteX + x;
-        const dstY = pasteY + y;
-
-        if (dstX >= 0 && dstX < canvasSpec.width && dstY >= 0 && dstY < canvasSpec.height) {
-          const srcIdx = (y * clip.width + x) * 4;
-          const dstIdx = (dstY * canvasSpec.width + dstX) * 4;
-
-          const alpha = clip.pixels[srcIdx + 3];
-          if (alpha > 0) {
-            after[dstIdx] = clip.pixels[srcIdx];
-            after[dstIdx + 1] = clip.pixels[srcIdx + 1];
-            after[dstIdx + 2] = clip.pixels[srcIdx + 2];
-            after[dstIdx + 3] = clip.pixels[srcIdx + 3];
-          }
-        }
-      }
-    }
+    const after = pasteClipboard(buffer, clipboardRef.current, canvasSpec.width, canvasSpec.height);
 
     historyRef.current.commit(before);
-    setBuffer(after);
+    updateCurrentFrame(after);
     syncHistoryFlags();
   }
 
@@ -234,15 +193,73 @@ export default function App() {
     setSelection(null);
   }
 
-  /**
-   * Called by CanvasStage when a stroke ended AND pixels actually changed.
-   * - before: snapshot taken at stroke start
-   * - after: final snapshot after drawing
-   */
+  function updateCurrentFrame(newPixels: Uint8ClampedArray) {
+    setFrames((prev) =>
+      prev.map((f, i) => (i === currentFrameIndex ? { ...f, pixels: newPixels } : f))
+    );
+  }
+
   function onStrokeEnd(before: Uint8ClampedArray, after: Uint8ClampedArray) {
     historyRef.current.commit(before);
-    setBuffer(after);
+    updateCurrentFrame(after);
     syncHistoryFlags();
+  }
+
+  function handleInsertFrame() {
+    const newFrame: Frame = {
+      id: crypto.randomUUID(),
+      pixels: createBuffer(canvasSpec.width, canvasSpec.height, { r: 0, g: 0, b: 0, a: 0 }),
+      durationMs: 100
+    };
+
+    setFrames((prev) => {
+      const updated = [...prev];
+      updated.splice(currentFrameIndex + 1, 0, newFrame);
+      return updated;
+    });
+
+    setCurrentFrameIndex(currentFrameIndex + 1);
+  }
+
+  function handleDuplicateFrame() {
+    const duplicate: Frame = {
+      id: crypto.randomUUID(),
+      pixels: cloneBuffer(currentFrame.pixels),
+      durationMs: currentFrame.durationMs
+    };
+
+    setFrames((prev) => {
+      const updated = [...prev];
+      updated.splice(currentFrameIndex + 1, 0, duplicate);
+      return updated;
+    });
+
+    setCurrentFrameIndex(currentFrameIndex + 1);
+  }
+
+  function handleDeleteFrame() {
+    if (frames.length <= 1) return;
+
+    setFrames((prev) => prev.filter((_, i) => i !== currentFrameIndex));
+
+    if (currentFrameIndex >= frames.length - 1) {
+      setCurrentFrameIndex(Math.max(0, frames.length - 2));
+    }
+  }
+
+  function handleSelectFrame(index: number) {
+    if (isPlaying) setIsPlaying(false);
+    setCurrentFrameIndex(index);
+  }
+
+  function handleUpdateFrameDuration(index: number, durationMs: number) {
+    setFrames((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, durationMs } : f))
+    );
+  }
+
+  function handleTogglePlayback() {
+    setIsPlaying(!isPlaying);
   }
 
   return (
@@ -260,6 +277,15 @@ export default function App() {
       onRedo={handleRedo}
       canUndo={canUndo}
       canRedo={canRedo}
+      frames={frames}
+      currentFrameIndex={currentFrameIndex}
+      isPlaying={isPlaying}
+      onSelectFrame={handleSelectFrame}
+      onInsertFrame={handleInsertFrame}
+      onDuplicateFrame={handleDuplicateFrame}
+      onDeleteFrame={handleDeleteFrame}
+      onUpdateFrameDuration={handleUpdateFrameDuration}
+      onTogglePlayback={handleTogglePlayback}
       topBar={
         <div className="topbar">
           <div className="brand">
