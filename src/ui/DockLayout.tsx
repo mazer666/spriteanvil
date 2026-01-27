@@ -16,6 +16,9 @@ type Props = {
   buffer: Uint8ClampedArray;
   onStrokeEnd: (before: Uint8ClampedArray, after: Uint8ClampedArray) => void;
 
+  selection: Uint8Array | null;
+  onChangeSelection: (selection: Uint8Array | null) => void;
+
   onUndo: () => void;
   onRedo: () => void;
   canUndo: boolean;
@@ -43,6 +46,8 @@ export default function DockLayout({
   canvasSpec,
   buffer,
   onStrokeEnd,
+  selection,
+  onChangeSelection,
   onUndo,
   onRedo,
   canUndo,
@@ -115,6 +120,8 @@ export default function DockLayout({
             canvasSpec={canvasSpec}
             buffer={buffer}
             onStrokeEnd={onStrokeEnd}
+            selection={selection}
+            onChangeSelection={onChangeSelection}
           />
         </div>
 

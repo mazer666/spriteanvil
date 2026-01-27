@@ -3,6 +3,7 @@ import DockLayout from "./ui/DockLayout";
 import { CanvasSpec, ToolId, UiSettings } from "./types";
 import { HistoryStack } from "./editor/history";
 import { cloneBuffer, createBuffer } from "./editor/pixels";
+import { getSelectionBounds } from "./editor/selection";
 
 /**
  * App Root.
@@ -25,6 +26,16 @@ export default function App() {
   const [buffer, setBuffer] = useState<Uint8ClampedArray>(() =>
     createBuffer(canvasSpec.width, canvasSpec.height, { r: 0, g: 0, b: 0, a: 0 })
   );
+
+  // Active selection mask (1 byte per pixel: 1 = selected, 0 = not selected)
+  const [selection, setSelection] = useState<Uint8Array | null>(null);
+
+  // Clipboard for cut/copy/paste operations
+  const clipboardRef = useRef<{
+    pixels: Uint8ClampedArray;
+    width: number;
+    height: number;
+  } | null>(null);
 
   // History stack is stored in a ref (does not need to cause rerenders automatically).
   const historyRef = useRef<HistoryStack>(new HistoryStack());
@@ -72,6 +83,7 @@ export default function App() {
       // Tools
       if (e.key === "b" || e.key === "B") setTool("pen");
       if (e.key === "e" || e.key === "E") setTool("eraser");
+      if (e.key === "m" || e.key === "M") setTool("selectRect");
 
       // Undo/Redo (Ctrl+Z / Ctrl+Y)
       if (e.ctrlKey && (e.key === "z" || e.key === "Z")) {
@@ -81,6 +93,27 @@ export default function App() {
       if (e.ctrlKey && (e.key === "y" || e.key === "Y")) {
         e.preventDefault();
         handleRedo();
+      }
+
+      // Selection operations
+      if (e.ctrlKey && (e.key === "x" || e.key === "X")) {
+        e.preventDefault();
+        handleCut();
+      }
+      if (e.ctrlKey && (e.key === "c" || e.key === "C")) {
+        e.preventDefault();
+        handleCopy();
+      }
+      if (e.ctrlKey && (e.key === "v" || e.key === "V")) {
+        e.preventDefault();
+        handlePaste();
+      }
+      if (e.ctrlKey && (e.key === "d" || e.key === "D")) {
+        e.preventDefault();
+        handleDeselect();
+      }
+      if (e.key === "Escape") {
+        handleDeselect();
       }
     }
 
@@ -105,6 +138,102 @@ export default function App() {
     }
   }
 
+  function handleCopy() {
+    if (!selection) return;
+
+    const bounds = getSelectionBounds(selection, canvasSpec.width, canvasSpec.height);
+    if (!bounds) return;
+
+    const clipWidth = bounds.width;
+    const clipHeight = bounds.height;
+    const clipData = new Uint8ClampedArray(clipWidth * clipHeight * 4);
+
+    for (let y = 0; y < clipHeight; y++) {
+      for (let x = 0; x < clipWidth; x++) {
+        const srcX = bounds.x + x;
+        const srcY = bounds.y + y;
+        const srcIdx = (srcY * canvasSpec.width + srcX) * 4;
+        const selIdx = srcY * canvasSpec.width + srcX;
+        const dstIdx = (y * clipWidth + x) * 4;
+
+        if (selection[selIdx]) {
+          clipData[dstIdx] = buffer[srcIdx];
+          clipData[dstIdx + 1] = buffer[srcIdx + 1];
+          clipData[dstIdx + 2] = buffer[srcIdx + 2];
+          clipData[dstIdx + 3] = buffer[srcIdx + 3];
+        }
+      }
+    }
+
+    clipboardRef.current = {
+      pixels: clipData,
+      width: clipWidth,
+      height: clipHeight
+    };
+  }
+
+  function handleCut() {
+    if (!selection) return;
+
+    handleCopy();
+
+    const before = cloneBuffer(buffer);
+    const after = cloneBuffer(buffer);
+
+    for (let i = 0; i < selection.length; i++) {
+      if (selection[i]) {
+        const idx = i * 4;
+        after[idx] = 0;
+        after[idx + 1] = 0;
+        after[idx + 2] = 0;
+        after[idx + 3] = 0;
+      }
+    }
+
+    historyRef.current.commit(before);
+    setBuffer(after);
+    syncHistoryFlags();
+  }
+
+  function handlePaste() {
+    if (!clipboardRef.current) return;
+
+    const before = cloneBuffer(buffer);
+    const after = cloneBuffer(buffer);
+
+    const clip = clipboardRef.current;
+    const pasteX = 0;
+    const pasteY = 0;
+
+    for (let y = 0; y < clip.height; y++) {
+      for (let x = 0; x < clip.width; x++) {
+        const dstX = pasteX + x;
+        const dstY = pasteY + y;
+
+        if (dstX >= 0 && dstX < canvasSpec.width && dstY >= 0 && dstY < canvasSpec.height) {
+          const srcIdx = (y * clip.width + x) * 4;
+          const dstIdx = (dstY * canvasSpec.width + dstX) * 4;
+
+          const alpha = clip.pixels[srcIdx + 3];
+          if (alpha > 0) {
+            after[dstIdx] = clip.pixels[srcIdx];
+            after[dstIdx + 1] = clip.pixels[srcIdx + 1];
+            after[dstIdx + 2] = clip.pixels[srcIdx + 2];
+            after[dstIdx + 3] = clip.pixels[srcIdx + 3];
+          }
+        }
+      }
+    }
+
+    historyRef.current.commit(before);
+    setBuffer(after);
+    syncHistoryFlags();
+  }
+
+  function handleDeselect() {
+    setSelection(null);
+  }
+
   /**
    * Called by CanvasStage when a stroke ended AND pixels actually changed.
    * - before: snapshot taken at stroke start
@@ -125,6 +254,8 @@ export default function App() {
       canvasSpec={canvasSpec}
       buffer={buffer}
       onStrokeEnd={onStrokeEnd}
+      selection={selection}
+      onChangeSelection={setSelection}
       onUndo={handleUndo}
       onRedo={handleRedo}
       canUndo={canUndo}

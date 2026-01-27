@@ -8,6 +8,7 @@ import {
   drawCircle,
   fillCircle
 } from "../editor/tools/shapes";
+import { selectRectangle } from "../editor/selection";
 
 export default function CanvasStage(props: {
   settings: UiSettings;
@@ -15,8 +16,10 @@ export default function CanvasStage(props: {
   canvasSpec: CanvasSpec;
   buffer: Uint8ClampedArray;
   onStrokeEnd: (before: Uint8ClampedArray, after: Uint8ClampedArray) => void;
+  selection: Uint8Array | null;
+  onChangeSelection: (selection: Uint8Array | null) => void;
 }) {
-  const { settings, tool, canvasSpec, buffer, onStrokeEnd } = props;
+  const { settings, tool, canvasSpec, buffer, onStrokeEnd, selection, onChangeSelection } = props;
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -30,11 +33,25 @@ export default function CanvasStage(props: {
     endY: number;
   } | null>(null);
 
+  // Animation frame counter for marching ants
+  const [animFrame, setAnimFrame] = useState(0);
+
+  // Animate marching ants when there's an active selection
+  useEffect(() => {
+    if (!selection) return;
+
+    const interval = setInterval(() => {
+      setAnimFrame((f) => (f + 1) % 60);
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [selection]);
+
   useEffect(() => {
     bufRef.current = buffer;
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB, shapePreview]);
+  }, [buffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB, shapePreview, selection, animFrame]);
 
   const strokeRef = useRef<{
     active: boolean;
@@ -273,6 +290,26 @@ export default function CanvasStage(props: {
         }
       }
 
+      if (tool === "selectRect") {
+        const x1 = Math.min(startX, endX);
+        const y1 = Math.min(startY, endY);
+        const x2 = Math.max(startX, endX);
+        const y2 = Math.max(startY, endY);
+
+        const newSelection = selectRectangle(
+          canvasSpec.width,
+          canvasSpec.height,
+          {
+            x: x1,
+            y: y1,
+            width: x2 - x1 + 1,
+            height: y2 - y1 + 1
+          }
+        );
+
+        onChangeSelection(newSelection);
+      }
+
       setShapePreview(null);
     }
 
@@ -374,6 +411,52 @@ export default function CanvasStage(props: {
       }
 
       ctx.globalAlpha = 1;
+    }
+
+    // Render selection with marching ants
+    if (selection) {
+      ctx.save();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.lineDashOffset = -animFrame / 2;
+
+      // Find selection bounds and draw outline
+      for (let y = 0; y < canvasSpec.height; y++) {
+        for (let x = 0; x < canvasSpec.width; x++) {
+          const idx = y * canvasSpec.width + x;
+          if (selection[idx]) {
+            const left = x === 0 || !selection[idx - 1];
+            const right = x === canvasSpec.width - 1 || !selection[idx + 1];
+            const top = y === 0 || !selection[idx - canvasSpec.width];
+            const bottom = y === canvasSpec.height - 1 || !selection[idx + canvasSpec.width];
+
+            const px = originX + x * zoom;
+            const py = originY + y * zoom;
+
+            ctx.beginPath();
+            if (top) {
+              ctx.moveTo(px, py);
+              ctx.lineTo(px + zoom, py);
+            }
+            if (bottom) {
+              ctx.moveTo(px, py + zoom);
+              ctx.lineTo(px + zoom, py + zoom);
+            }
+            if (left) {
+              ctx.moveTo(px, py);
+              ctx.lineTo(px, py + zoom);
+            }
+            if (right) {
+              ctx.moveTo(px + zoom, py);
+              ctx.lineTo(px + zoom, py + zoom);
+            }
+            ctx.stroke();
+          }
+        }
+      }
+
+      ctx.restore();
     }
 
     ctx.strokeStyle = "rgba(255,255,255,0.28)";
