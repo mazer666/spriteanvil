@@ -5,7 +5,16 @@ export type BackgroundMode =
   | "greenscreen"
   | "bluescreen";
 
-export type ToolId = "pen" | "eraser";
+export type ToolId =
+  | "pen"
+  | "eraser"
+  | "fill"
+  | "line"
+  | "rectangle"
+  | "rectangleFilled"
+  | "circle"
+  | "circleFilled"
+  | "selectRect";
 
 /**
  * UI/Editor Settings (v0.1).

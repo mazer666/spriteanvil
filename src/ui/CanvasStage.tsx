@@ -1,16 +1,14 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CanvasSpec, ToolId, UiSettings } from "../types";
 import { cloneBuffer, drawLine, hexToRgb } from "../editor/pixels";
+import { floodFill } from "../editor/tools/fill";
+import {
+  drawRectangle,
+  fillRectangle,
+  drawCircle,
+  fillCircle
+} from "../editor/tools/shapes";
 
-/**
- * CanvasStage: real drawing canvas.
- *
- * Important goals:
- * - Pixel-correct rendering (no blur): imageSmoothingEnabled = false
- * - Tools: Pen + Eraser (v0.1.1)
- * - Brush Stabilizer toggle: smooths the raw pointer path
- * - History: we only commit undo snapshot on stroke end (if pixels changed)
- */
 export default function CanvasStage(props: {
   settings: UiSettings;
   tool: ToolId;
@@ -23,25 +21,29 @@ export default function CanvasStage(props: {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // We keep a mutable reference so we can draw without forcing React rerenders.
   const bufRef = useRef<Uint8ClampedArray>(buffer);
 
-  // When buffer prop changes (e.g., undo/redo), update our ref and redraw.
+  const [shapePreview, setShapePreview] = useState<{
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+  } | null>(null);
+
   useEffect(() => {
     bufRef.current = buffer;
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB]);
+  }, [buffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB, shapePreview]);
 
-  // Stroke state
   const strokeRef = useRef<{
     active: boolean;
     changed: boolean;
     beforeSnapshot: Uint8ClampedArray | null;
     lastX: number;
     lastY: number;
-
-    // Stabilizer state: we keep smoothed floating positions.
+    startX: number;
+    startY: number;
     smoothX: number;
     smoothY: number;
     hasSmooth: boolean;
@@ -51,6 +53,8 @@ export default function CanvasStage(props: {
     beforeSnapshot: null,
     lastX: -1,
     lastY: -1,
+    startX: -1,
+    startY: -1,
     smoothX: 0,
     smoothY: 0,
     hasSmooth: false
@@ -74,7 +78,6 @@ export default function CanvasStage(props: {
   }, [settings.backgroundMode]);
 
   const stageStyle = useMemo(() => {
-    // These CSS variables allow user-custom checkerboard.
     return {
       ["--checkerSize" as any]: `${settings.checkerSize}px`,
       ["--checkerA" as any]: settings.checkerA,
@@ -93,13 +96,10 @@ export default function CanvasStage(props: {
   }
 
   function applyStabilizer(rawX: number, rawY: number): { x: number; y: number } {
-    // This is a simple exponential smoothing filter.
-    // Higher alpha = follows pointer more closely.
-    // Lower alpha = smoother but more delayed.
     const alpha = 0.35;
 
     const st = strokeRef.current;
-    if (!settings.brushStabilizerEnabled) {
+    if (!settings.brushStabilizerEnabled || tool !== "pen") {
       st.hasSmooth = false;
       return { x: rawX, y: rawY };
     }
@@ -123,7 +123,6 @@ export default function CanvasStage(props: {
 
     const rect = stage.getBoundingClientRect();
 
-    // The canvas image is centered in the stage.
     const zoom = settings.zoom;
     const imgW = canvasSpec.width * zoom;
     const imgH = canvasSpec.height * zoom;
@@ -145,7 +144,6 @@ export default function CanvasStage(props: {
     const p = pointerToPixel(e);
     if (!p) return;
 
-    // Capture pointer so we keep getting move events even if cursor leaves the stage.
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 
     const st = strokeRef.current;
@@ -154,14 +152,36 @@ export default function CanvasStage(props: {
     st.beforeSnapshot = cloneBuffer(bufRef.current);
     st.lastX = p.x;
     st.lastY = p.y;
+    st.startX = p.x;
+    st.startY = p.y;
     st.hasSmooth = false;
 
-    // Draw the initial pixel immediately.
     const c = getDrawColor();
-    const did = drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, p.x, p.y, p.x, p.y, c);
-    if (did) st.changed = true;
 
-    draw();
+    if (tool === "fill") {
+      const pixelsChanged = floodFill(
+        bufRef.current,
+        canvasSpec.width,
+        canvasSpec.height,
+        p.x,
+        p.y,
+        c
+      );
+      if (pixelsChanged > 0) st.changed = true;
+      draw();
+      endStroke();
+      return;
+    }
+
+    if (tool === "pen" || tool === "eraser") {
+      const did = drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, p.x, p.y, p.x, p.y, c);
+      if (did) st.changed = true;
+      draw();
+    }
+
+    if (tool === "line" || tool === "rectangle" || tool === "rectangleFilled" || tool === "circle" || tool === "circleFilled" || tool === "selectRect") {
+      setShapePreview({ startX: p.x, startY: p.y, endX: p.x, endY: p.y });
+    }
   }
 
   function moveStroke(e: React.PointerEvent) {
@@ -171,22 +191,27 @@ export default function CanvasStage(props: {
     const p0 = pointerToPixel(e);
     if (!p0) return;
 
-    // Stabilizer works on float-space before we quantize to pixels.
-    const stabilized = applyStabilizer(p0.x + 0.5, p0.y + 0.5);
+    if (tool === "pen" || tool === "eraser") {
+      const stabilized = applyStabilizer(p0.x + 0.5, p0.y + 0.5);
 
-    const x = Math.floor(stabilized.x);
-    const y = Math.floor(stabilized.y);
+      const x = Math.floor(stabilized.x);
+      const y = Math.floor(stabilized.y);
 
-    if (x === st.lastX && y === st.lastY) return;
+      if (x === st.lastX && y === st.lastY) return;
 
-    const c = getDrawColor();
-    const did = drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, st.lastX, st.lastY, x, y, c);
-    if (did) st.changed = true;
+      const c = getDrawColor();
+      const did = drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, st.lastX, st.lastY, x, y, c);
+      if (did) st.changed = true;
 
-    st.lastX = x;
-    st.lastY = y;
+      st.lastX = x;
+      st.lastY = y;
 
-    draw();
+      draw();
+    }
+
+    if (tool === "line" || tool === "rectangle" || tool === "rectangleFilled" || tool === "circle" || tool === "circleFilled" || tool === "selectRect") {
+      setShapePreview({ startX: st.startX, startY: st.startY, endX: p0.x, endY: p0.y });
+    }
   }
 
   function endStroke() {
@@ -195,7 +220,62 @@ export default function CanvasStage(props: {
 
     st.active = false;
 
-    // Only commit history if pixels actually changed.
+    const c = getDrawColor();
+
+    if (shapePreview) {
+      const { startX, startY, endX, endY } = shapePreview;
+
+      if (tool === "line") {
+        const did = drawLine(
+          bufRef.current,
+          canvasSpec.width,
+          canvasSpec.height,
+          startX,
+          startY,
+          endX,
+          endY,
+          c
+        );
+        if (did) st.changed = true;
+      }
+
+      if (tool === "rectangle") {
+        const w = Math.abs(endX - startX) + 1;
+        const h = Math.abs(endY - startY) + 1;
+        const x = Math.min(startX, endX);
+        const y = Math.min(startY, endY);
+        const did = drawRectangle(bufRef.current, canvasSpec.width, canvasSpec.height, x, y, w, h, c);
+        if (did) st.changed = true;
+      }
+
+      if (tool === "rectangleFilled") {
+        const w = Math.abs(endX - startX) + 1;
+        const h = Math.abs(endY - startY) + 1;
+        const x = Math.min(startX, endX);
+        const y = Math.min(startY, endY);
+        const did = fillRectangle(bufRef.current, canvasSpec.width, canvasSpec.height, x, y, w, h, c);
+        if (did) st.changed = true;
+      }
+
+      if (tool === "circle" || tool === "circleFilled") {
+        const cx = Math.round((startX + endX) / 2);
+        const cy = Math.round((startY + endY) / 2);
+        const dx = Math.abs(endX - startX);
+        const dy = Math.abs(endY - startY);
+        const radius = Math.round(Math.max(dx, dy) / 2);
+
+        if (tool === "circle") {
+          const did = drawCircle(bufRef.current, canvasSpec.width, canvasSpec.height, cx, cy, radius, c);
+          if (did) st.changed = true;
+        } else {
+          const did = fillCircle(bufRef.current, canvasSpec.width, canvasSpec.height, cx, cy, radius, c);
+          if (did) st.changed = true;
+        }
+      }
+
+      setShapePreview(null);
+    }
+
     if (st.changed && st.beforeSnapshot) {
       const after = cloneBuffer(bufRef.current);
       onStrokeEnd(st.beforeSnapshot, after);
@@ -212,7 +292,6 @@ export default function CanvasStage(props: {
 
     const rect = stage.getBoundingClientRect();
 
-    // Match canvas to stage pixels (not image pixels!)
     const w = cssPx(rect.width);
     const h = cssPx(rect.height);
     if (cnv.width !== w) cnv.width = w;
@@ -221,17 +300,14 @@ export default function CanvasStage(props: {
     const ctx = cnv.getContext("2d");
     if (!ctx) return;
 
-    // Clear (transparent so stage background shows through)
     ctx.clearRect(0, 0, w, h);
 
-    // Prepare an ImageData from the buffer (sprite pixels).
     const img = new ImageData(
       new Uint8ClampedArray(bufRef.current),
       canvasSpec.width,
       canvasSpec.height
     );
 
-    // We draw sprite pixels scaled by zoom in the center.
     ctx.imageSmoothingEnabled = false;
 
     const zoom = settings.zoom;
@@ -241,19 +317,65 @@ export default function CanvasStage(props: {
     const originX = Math.floor((w - imgW) / 2);
     const originY = Math.floor((h - imgH) / 2);
 
-    // Offscreen canvas approach (keeps scaling crisp and simple)
     const off = getOffscreen(canvasSpec.width, canvasSpec.height);
     const offCtx = off.getContext("2d")!;
     offCtx.putImageData(img, 0, 0);
 
     ctx.drawImage(off, 0, 0, canvasSpec.width, canvasSpec.height, originX, originY, imgW, imgH);
 
-    // Optional grid (only draw when zoom is big enough, otherwise it becomes visual noise)
     if (settings.showGrid && zoom >= 6) {
       drawGrid(ctx, originX, originY, canvasSpec.width, canvasSpec.height, zoom, settings.gridSize);
     }
 
-    // Frame outline
+    if (shapePreview) {
+      const { startX, startY, endX, endY } = shapePreview;
+
+      ctx.strokeStyle = settings.primaryColor;
+      ctx.fillStyle = settings.primaryColor;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.7;
+
+      const x1 = originX + startX * zoom;
+      const y1 = originY + startY * zoom;
+      const x2 = originX + endX * zoom;
+      const y2 = originY + endY * zoom;
+
+      if (tool === "line") {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      if (tool === "rectangle" || tool === "rectangleFilled" || tool === "selectRect") {
+        const w = x2 - x1;
+        const h = y2 - y1;
+        if (tool === "rectangleFilled") {
+          ctx.fillRect(x1, y1, w, h);
+        } else {
+          ctx.strokeRect(x1, y1, w, h);
+        }
+      }
+
+      if (tool === "circle" || tool === "circleFilled") {
+        const cx = (x1 + x2) / 2;
+        const cy = (y1 + y2) / 2;
+        const dx = Math.abs(x2 - x1);
+        const dy = Math.abs(y2 - y1);
+        const radius = Math.max(dx, dy) / 2;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        if (tool === "circleFilled") {
+          ctx.fill();
+        } else {
+          ctx.stroke();
+        }
+      }
+
+      ctx.globalAlpha = 1;
+    }
+
     ctx.strokeStyle = "rgba(255,255,255,0.28)";
     ctx.lineWidth = 1;
     ctx.strokeRect(originX + 0.5, originY + 0.5, imgW - 1, imgH - 1);
@@ -271,12 +393,13 @@ export default function CanvasStage(props: {
             {canvasSpec.width}×{canvasSpec.height}
           </span>
         </div>
-        <div className="hudpill">
-          Stabilizer: <span className="mono">{settings.brushStabilizerEnabled ? "ON" : "OFF"}</span>
-        </div>
+        {(tool === "pen" || tool === "eraser") && (
+          <div className="hudpill">
+            Stabilizer: <span className="mono">{settings.brushStabilizerEnabled ? "ON" : "OFF"}</span>
+          </div>
+        )}
       </div>
 
-      {/* The drawing surface (transparent) */}
       <canvas
         ref={canvasRef}
         className="stage__canvas"
@@ -289,7 +412,6 @@ export default function CanvasStage(props: {
   );
 }
 
-/** A small offscreen canvas reused for every draw call. */
 let _offscreen: HTMLCanvasElement | null = null;
 function getOffscreen(w: number, h: number): HTMLCanvasElement {
   if (!_offscreen) _offscreen = document.createElement("canvas");
@@ -309,7 +431,6 @@ function drawGrid(
 ) {
   const step = Math.max(1, gridSize) * zoom;
 
-  // Minor grid
   ctx.strokeStyle = "rgba(255,255,255,0.10)";
   ctx.lineWidth = 1;
 
@@ -329,7 +450,6 @@ function drawGrid(
     ctx.stroke();
   }
 
-  // A slightly stronger grid every 8*gridSize (helps orientation)
   const majorEvery = 8 * gridSize;
   if (majorEvery > 0) {
     ctx.strokeStyle = "rgba(255,255,255,0.18)";
@@ -349,6 +469,5 @@ function drawGrid(
     }
   }
 
-  // Keep ts happy for now
   void step;
 }

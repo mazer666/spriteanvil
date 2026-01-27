@@ -31,22 +31,19 @@ export default function ToolRail({ tool, onChangeTool }: Props) {
 
       {btn("pen", "✎", "Pen (B)")}
       {btn("eraser", "⌫", "Eraser (E)")}
+      {btn("fill", "⛶", "Fill (F)")}
+      {btn("line", "╱", "Line (L)")}
 
       <div className="toolrail__divider" />
 
-      {/* Placeholders (coming next) */}
-      <button className="toolbtn toolbtn--disabled" title="Fill (coming next)" disabled>
-        ⛶
-      </button>
-      <button className="toolbtn toolbtn--disabled" title="Magic Wand (coming next)" disabled>
-        ✦
-      </button>
-      <button className="toolbtn toolbtn--disabled" title="Selection (coming next)" disabled>
-        ▭
-      </button>
-      <button className="toolbtn toolbtn--disabled" title="Move/Transform (coming next)" disabled>
-        ✥
-      </button>
+      {btn("rectangle", "▭", "Rectangle (R)")}
+      {btn("rectangleFilled", "▮", "Filled Rectangle (Shift+R)")}
+      {btn("circle", "○", "Circle (C)")}
+      {btn("circleFilled", "●", "Filled Circle (Shift+C)")}
+
+      <div className="toolrail__divider" />
+
+      {btn("selectRect", "⬚", "Select Rectangle (M)")}
 
       <div className="toolrail__spacer" />
 
