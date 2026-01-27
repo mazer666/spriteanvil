@@ -10,6 +10,7 @@ export type ToolId =
   | "eraser"
   | "eyedropper"
   | "fill"
+  | "gradient"
   | "line"
   | "rectangle"
   | "rectangleFilled"
@@ -18,7 +19,13 @@ export type ToolId =
   | "ellipse"
   | "ellipseFilled"
   | "selectRect"
-  | "selectEllipse";
+  | "selectEllipse"
+  | "selectLasso"
+  | "selectWand"
+  | "move"
+  | "rotate"
+  | "scale"
+  | "flip";
 
 /**
  * UI/Editor Settings (v0.1).
