@@ -33,6 +33,7 @@ export default function ToolRail({ tool, onChangeTool }: Props) {
       {btn("eraser", "⌫", "Eraser (E)")}
       {btn("eyedropper", "💧", "Eyedropper (I)")}
       {btn("fill", "⛶", "Fill (F)")}
+      {btn("gradient", "◐", "Gradient (G)")}
       {btn("line", "╱", "Line (L)")}
 
       <div className="toolrail__divider" />
@@ -48,6 +49,8 @@ export default function ToolRail({ tool, onChangeTool }: Props) {
 
       {btn("selectRect", "⬚", "Select Rectangle (M)")}
       {btn("selectEllipse", "⬭", "Select Ellipse (Shift+M)")}
+      {btn("selectLasso", "⚯", "Lasso Selection (W)")}
+      {btn("selectWand", "🪄", "Magic Wand")}
 
       <div className="toolrail__spacer" />
 

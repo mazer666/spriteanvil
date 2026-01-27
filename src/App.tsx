@@ -1,15 +1,31 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import DockLayout from "./ui/DockLayout";
 import ExportPanel from "./ui/ExportPanel";
+import CommandPalette, { Command } from "./ui/CommandPalette";
 import { CanvasSpec, ToolId, UiSettings, Frame } from "./types";
 import { HistoryStack } from "./editor/history";
 import { cloneBuffer, createBuffer } from "./editor/pixels";
 import { copySelection, cutSelection, pasteClipboard, ClipboardData } from "./editor/clipboard";
+import { LayerData, BlendMode } from "./ui/LayerPanel";
+import { PaletteData } from "./ui/PalettePanel";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import {
+  flipHorizontal,
+  flipVertical,
+  rotate90CW,
+  rotate90CCW,
+  rotate180,
+  scaleNearest,
+} from "./editor/tools/transform";
+import {
+  adjustHue,
+  adjustSaturation,
+  adjustBrightness,
+  invertColors,
+  desaturate,
+  posterize,
+} from "./editor/tools/coloradjust";
 
-/**
- * App Root.
- * Manages the complete animation with multiple frames and timeline.
- */
 export default function App() {
   const [canvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
   const [tool, setTool] = useState<ToolId>("pen");
@@ -23,15 +39,14 @@ export default function App() {
   ]);
 
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
-
   const [selection, setSelection] = useState<Uint8Array | null>(null);
-
   const clipboardRef = useRef<ClipboardData | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const playbackTimerRef = useRef<number | null>(null);
 
   const [showExportPanel, setShowExportPanel] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
 
   const historyRef = useRef<HistoryStack>(new HistoryStack());
   const [canUndo, setCanUndo] = useState(false);
@@ -39,6 +54,49 @@ export default function App() {
 
   const currentFrame = frames[currentFrameIndex];
   const buffer = currentFrame.pixels;
+
+  const [layers, setLayers] = useState<LayerData[]>([
+    {
+      id: "layer-1",
+      name: "Layer 1",
+      opacity: 1,
+      blend_mode: "normal",
+      is_visible: true,
+      is_locked: false,
+    }
+  ]);
+  const [activeLayerId, setActiveLayerId] = useState<string>("layer-1");
+
+  const [palettes, setPalettes] = useState<PaletteData[]>([
+    {
+      id: "default",
+      name: "Default Palette",
+      colors: [
+        "#000000", "#1a1c2c", "#5d275d", "#b13e53", "#ef7d57", "#ffcd75", "#a7f070", "#38b764",
+        "#257179", "#29366f", "#3b5dc9", "#41a6f6", "#73eff7", "#f4f4f4", "#94b0c2", "#566c86",
+      ],
+      is_default: true,
+    }
+  ]);
+  const [activePaletteId, setActivePaletteId] = useState<string>("default");
+  const [recentColors, setRecentColors] = useState<string[]>([]);
+
+  const [settings, setSettings] = useState<UiSettings>(() => ({
+    zoom: 8,
+    brushStabilizerEnabled: true,
+    backgroundMode: "checker",
+    checkerSize: 24,
+    checkerA: "rgba(255,255,255,0.08)",
+    checkerB: "rgba(0,0,0,0.10)",
+    showGrid: true,
+    gridSize: 1,
+    showOnionSkin: true,
+    onionPrev: 1,
+    onionNext: 1,
+    primaryColor: "#f2ead7"
+  }));
+
+  const zoomLabel = useMemo(() => `${Math.round(settings.zoom * 100)}%`, [settings.zoom]);
 
   function syncHistoryFlags() {
     setCanUndo(historyRef.current.canUndo());
@@ -66,86 +124,6 @@ export default function App() {
       }
     };
   }, [isPlaying, currentFrame.durationMs, frames.length]);
-
-  // UI Settings (view + some tool settings)
-  const [settings, setSettings] = useState<UiSettings>(() => ({
-    zoom: 8, // 800% (pixel art usually needs high zoom)
-    brushStabilizerEnabled: true,
-
-    backgroundMode: "checker",
-    checkerSize: 24,
-    checkerA: "rgba(255,255,255,0.08)",
-    checkerB: "rgba(0,0,0,0.10)",
-
-    showGrid: true,
-    gridSize: 1,
-
-    showOnionSkin: true,
-    onionPrev: 1,
-    onionNext: 1,
-
-    primaryColor: "#f2ead7"
-  }));
-
-  const zoomLabel = useMemo(() => `${Math.round(settings.zoom * 100)}%`, [settings.zoom]);
-
-  // Keyboard shortcuts (simple, predictable)
-  useEffect(() => {
-    function isTextInput(el: Element | null): boolean {
-      if (!el) return false;
-      const tag = (el as HTMLElement).tagName?.toLowerCase();
-      return tag === "input" || tag === "textarea" || tag === "select" || (el as HTMLElement).isContentEditable;
-    }
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (isTextInput(document.activeElement)) return;
-
-      // Tools
-      if (e.key === "b" || e.key === "B") setTool("pen");
-      if (e.key === "e" || e.key === "E") setTool("eraser");
-      if (e.key === "m" || e.key === "M") setTool("selectRect");
-
-      // Undo/Redo (Ctrl+Z / Ctrl+Y)
-      if (e.ctrlKey && (e.key === "z" || e.key === "Z")) {
-        e.preventDefault();
-        handleUndo();
-      }
-      if (e.ctrlKey && (e.key === "y" || e.key === "Y")) {
-        e.preventDefault();
-        handleRedo();
-      }
-
-      // Selection operations
-      if (e.ctrlKey && (e.key === "x" || e.key === "X")) {
-        e.preventDefault();
-        handleCut();
-      }
-      if (e.ctrlKey && (e.key === "c" || e.key === "C")) {
-        e.preventDefault();
-        handleCopy();
-      }
-      if (e.ctrlKey && (e.key === "v" || e.key === "V")) {
-        e.preventDefault();
-        handlePaste();
-      }
-      if (e.ctrlKey && (e.key === "d" || e.key === "D")) {
-        e.preventDefault();
-        handleDeselect();
-      }
-      if (e.key === "Escape") {
-        handleDeselect();
-      }
-
-      if (e.key === " " || e.key === "Spacebar") {
-        e.preventDefault();
-        handleTogglePlayback();
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buffer]);
 
   function handleUndo() {
     const next = historyRef.current.undo(buffer);
@@ -194,6 +172,12 @@ export default function App() {
 
   function handleDeselect() {
     setSelection(null);
+  }
+
+  function handleSelectAll() {
+    const sel = new Uint8Array(canvasSpec.width * canvasSpec.height);
+    sel.fill(1);
+    setSelection(sel);
   }
 
   function updateCurrentFrame(newPixels: Uint8ClampedArray) {
@@ -265,175 +249,447 @@ export default function App() {
     setIsPlaying(!isPlaying);
   }
 
+  function handleSelectColor(color: string) {
+    setSettings((s) => ({ ...s, primaryColor: color }));
+    setRecentColors((prev) => {
+      const filtered = prev.filter((c) => c !== color);
+      return [color, ...filtered].slice(0, 20);
+    });
+  }
+
+  function handleCreateLayer() {
+    const newLayer: LayerData = {
+      id: `layer-${Date.now()}`,
+      name: `Layer ${layers.length + 1}`,
+      opacity: 1,
+      blend_mode: "normal",
+      is_visible: true,
+      is_locked: false,
+    };
+    setLayers((prev) => [newLayer, ...prev]);
+    setActiveLayerId(newLayer.id);
+  }
+
+  function handleDeleteLayer(id: string) {
+    if (layers.length === 1) return;
+    setLayers((prev) => prev.filter((l) => l.id !== id));
+    if (activeLayerId === id) {
+      setActiveLayerId(layers.find((l) => l.id !== id)?.id || layers[0].id);
+    }
+  }
+
+  function handleDuplicateLayer(id: string) {
+    const layer = layers.find((l) => l.id === id);
+    if (!layer) return;
+    const newLayer: LayerData = {
+      ...layer,
+      id: `layer-${Date.now()}`,
+      name: `${layer.name} copy`,
+    };
+    const index = layers.findIndex((l) => l.id === id);
+    setLayers((prev) => {
+      const updated = [...prev];
+      updated.splice(index, 0, newLayer);
+      return updated;
+    });
+  }
+
+  function handleToggleLayerVisibility(id: string) {
+    setLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, is_visible: !l.is_visible } : l))
+    );
+  }
+
+  function handleToggleLayerLock(id: string) {
+    setLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, is_locked: !l.is_locked } : l))
+    );
+  }
+
+  function handleUpdateLayerOpacity(id: string, opacity: number) {
+    setLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, opacity } : l))
+    );
+  }
+
+  function handleUpdateLayerBlendMode(id: string, blend_mode: BlendMode) {
+    setLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, blend_mode } : l))
+    );
+  }
+
+  function handleRenameLayer(id: string, name: string) {
+    setLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, name } : l))
+    );
+  }
+
+  function handleReorderLayers(fromIndex: number, toIndex: number) {
+    setLayers((prev) => {
+      const updated = [...prev];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return updated;
+    });
+  }
+
+  function handleMergeDown(id: string) {
+    const index = layers.findIndex((l) => l.id === id);
+    if (index === layers.length - 1) return;
+  }
+
+  function handleCreatePalette(name: string, colors: string[]) {
+    const newPalette: PaletteData = {
+      id: `palette-${Date.now()}`,
+      name,
+      colors,
+      is_default: false,
+    };
+    setPalettes((prev) => [newPalette, ...prev]);
+    setActivePaletteId(newPalette.id);
+  }
+
+  function handleDeletePalette(id: string) {
+    setPalettes((prev) => prev.filter((p) => p.id !== id));
+    if (activePaletteId === id) {
+      setActivePaletteId(palettes.find((p) => p.id !== id)?.id || "default");
+    }
+  }
+
+  function handleAddColorToPalette(paletteId: string, color: string) {
+    setPalettes((prev) =>
+      prev.map((p) =>
+        p.id === paletteId ? { ...p, colors: [...p.colors, color] } : p
+      )
+    );
+  }
+
+  function handleRemoveColorFromPalette(paletteId: string, colorIndex: number) {
+    setPalettes((prev) =>
+      prev.map((p) =>
+        p.id === paletteId
+          ? { ...p, colors: p.colors.filter((_, i) => i !== colorIndex) }
+          : p
+      )
+    );
+  }
+
+  function handleSwapColors(fromColor: string, toColor: string) {
+    const before = cloneBuffer(buffer);
+    // Implementation would replace all pixels of fromColor with toColor
+    historyRef.current.commit(before);
+    syncHistoryFlags();
+  }
+
+  function handleFlipHorizontal() {
+    const before = cloneBuffer(buffer);
+    const after = flipHorizontal(buffer, canvasSpec.width, canvasSpec.height);
+    historyRef.current.commit(before);
+    updateCurrentFrame(after);
+    syncHistoryFlags();
+  }
+
+  function handleFlipVertical() {
+    const before = cloneBuffer(buffer);
+    const after = flipVertical(buffer, canvasSpec.width, canvasSpec.height);
+    historyRef.current.commit(before);
+    updateCurrentFrame(after);
+    syncHistoryFlags();
+  }
+
+  function handleRotate90CW() {
+    const before = cloneBuffer(buffer);
+    const result = rotate90CW(buffer, canvasSpec.width, canvasSpec.height);
+    historyRef.current.commit(before);
+    updateCurrentFrame(result.buffer);
+    syncHistoryFlags();
+  }
+
+  function handleRotate90CCW() {
+    const before = cloneBuffer(buffer);
+    const result = rotate90CCW(buffer, canvasSpec.width, canvasSpec.height);
+    historyRef.current.commit(before);
+    updateCurrentFrame(result.buffer);
+    syncHistoryFlags();
+  }
+
+  function handleRotate180() {
+    const before = cloneBuffer(buffer);
+    const after = rotate180(buffer, canvasSpec.width, canvasSpec.height);
+    historyRef.current.commit(before);
+    updateCurrentFrame(after);
+    syncHistoryFlags();
+  }
+
+  function handleScale(scaleX: number, scaleY: number) {
+    const before = cloneBuffer(buffer);
+    const result = scaleNearest(buffer, canvasSpec.width, canvasSpec.height, scaleX, scaleY);
+    historyRef.current.commit(before);
+    updateCurrentFrame(result.buffer);
+    syncHistoryFlags();
+  }
+
+  function handleAdjustHue(hueShift: number) {
+    const before = cloneBuffer(buffer);
+    const after = adjustHue(buffer, canvasSpec.width, canvasSpec.height, hueShift);
+    historyRef.current.commit(before);
+    updateCurrentFrame(after);
+    syncHistoryFlags();
+  }
+
+  function handleAdjustSaturation(saturationDelta: number) {
+    const before = cloneBuffer(buffer);
+    const after = adjustSaturation(buffer, canvasSpec.width, canvasSpec.height, saturationDelta);
+    historyRef.current.commit(before);
+    updateCurrentFrame(after);
+    syncHistoryFlags();
+  }
+
+  function handleAdjustBrightness(brightnessDelta: number) {
+    const before = cloneBuffer(buffer);
+    const after = adjustBrightness(buffer, canvasSpec.width, canvasSpec.height, brightnessDelta);
+    historyRef.current.commit(before);
+    updateCurrentFrame(after);
+    syncHistoryFlags();
+  }
+
+  function handleInvert() {
+    const before = cloneBuffer(buffer);
+    const after = invertColors(buffer, canvasSpec.width, canvasSpec.height);
+    historyRef.current.commit(before);
+    updateCurrentFrame(after);
+    syncHistoryFlags();
+  }
+
+  function handleDesaturate() {
+    const before = cloneBuffer(buffer);
+    const after = desaturate(buffer, canvasSpec.width, canvasSpec.height);
+    historyRef.current.commit(before);
+    updateCurrentFrame(after);
+    syncHistoryFlags();
+  }
+
+  function handlePosterize(levels: number) {
+    const before = cloneBuffer(buffer);
+    const after = posterize(buffer, canvasSpec.width, canvasSpec.height, levels);
+    historyRef.current.commit(before);
+    updateCurrentFrame(after);
+    syncHistoryFlags();
+  }
+
+  const commands: Command[] = useMemo(() => [
+    { id: "undo", name: "Undo", shortcut: "Cmd+Z", category: "Edit", action: handleUndo },
+    { id: "redo", name: "Redo", shortcut: "Cmd+Y", category: "Edit", action: handleRedo },
+    { id: "copy", name: "Copy", shortcut: "Cmd+C", category: "Edit", action: handleCopy },
+    { id: "cut", name: "Cut", shortcut: "Cmd+X", category: "Edit", action: handleCut },
+    { id: "paste", name: "Paste", shortcut: "Cmd+V", category: "Edit", action: handlePaste },
+    { id: "selectAll", name: "Select All", shortcut: "Cmd+A", category: "Edit", action: handleSelectAll },
+    { id: "deselect", name: "Deselect", shortcut: "Cmd+D", category: "Edit", action: handleDeselect },
+    { id: "newFrame", name: "New Frame", category: "Animation", action: handleInsertFrame },
+    { id: "duplicateFrame", name: "Duplicate Frame", category: "Animation", action: handleDuplicateFrame },
+    { id: "deleteFrame", name: "Delete Frame", category: "Animation", action: handleDeleteFrame },
+    { id: "playPause", name: "Play/Pause", shortcut: "Space", category: "Animation", action: handleTogglePlayback },
+    { id: "export", name: "Export", shortcut: "Cmd+E", category: "File", action: () => setShowExportPanel(true) },
+    { id: "flipH", name: "Flip Horizontal", shortcut: "Cmd+H", category: "Transform", action: handleFlipHorizontal },
+    { id: "flipV", name: "Flip Vertical", shortcut: "Cmd+Shift+H", category: "Transform", action: handleFlipVertical },
+    { id: "rotate90CW", name: "Rotate 90° CW", shortcut: "Cmd+R", category: "Transform", action: handleRotate90CW },
+    { id: "rotate90CCW", name: "Rotate 90° CCW", shortcut: "Cmd+Shift+R", category: "Transform", action: handleRotate90CCW },
+    { id: "rotate180", name: "Rotate 180°", category: "Transform", action: handleRotate180 },
+    { id: "invert", name: "Invert Colors", category: "Color", action: handleInvert },
+    { id: "desaturate", name: "Desaturate", category: "Color", action: handleDesaturate },
+    { id: "newLayer", name: "New Layer", category: "Layer", action: handleCreateLayer },
+    { id: "toolPen", name: "Pen Tool", shortcut: "B", category: "Tools", action: () => setTool("pen") },
+    { id: "toolEraser", name: "Eraser Tool", shortcut: "E", category: "Tools", action: () => setTool("eraser") },
+    { id: "toolFill", name: "Fill Tool", shortcut: "F", category: "Tools", action: () => setTool("fill") },
+    { id: "toolEyedropper", name: "Eyedropper Tool", shortcut: "I", category: "Tools", action: () => setTool("eyedropper") },
+  ], []);
+
+  useKeyboardShortcuts({
+    onUndo: handleUndo,
+    onRedo: handleRedo,
+    onCopy: handleCopy,
+    onCut: handleCut,
+    onPaste: handlePaste,
+    onDelete: handleDeselect,
+    onSelectAll: handleSelectAll,
+    onDeselect: handleDeselect,
+    onChangeTool: setTool,
+    onExport: () => setShowExportPanel(true),
+    onZoomIn: () => setSettings((s) => ({ ...s, zoom: Math.min(32, s.zoom + 1) })),
+    onZoomOut: () => setSettings((s) => ({ ...s, zoom: Math.max(1, s.zoom - 1) })),
+    onZoomReset: () => setSettings((s) => ({ ...s, zoom: 8 })),
+    onToggleGrid: () => setSettings((s) => ({ ...s, showGrid: !s.showGrid })),
+    onToggleOnionSkin: () => setSettings((s) => ({ ...s, showOnionSkin: !s.showOnionSkin })),
+    onFlipHorizontal: handleFlipHorizontal,
+    onFlipVertical: handleFlipVertical,
+    onRotate90CW: handleRotate90CW,
+    onRotate90CCW: handleRotate90CCW,
+    onOpenCommandPalette: () => setShowCommandPalette(true),
+    onNewFrame: handleInsertFrame,
+    onDuplicateFrame: handleDuplicateFrame,
+    onDeleteFrame: handleDeleteFrame,
+    onNextFrame: () => setCurrentFrameIndex((i) => Math.min(frames.length - 1, i + 1)),
+    onPrevFrame: () => setCurrentFrameIndex((i) => Math.max(0, i - 1)),
+    onPlayPause: handleTogglePlayback,
+  }, !showCommandPalette);
+
   return (
     <>
       <DockLayout
-      settings={settings}
-      onChangeSettings={setSettings}
-      tool={tool}
-      onChangeTool={setTool}
-      canvasSpec={canvasSpec}
-      buffer={buffer}
-      onStrokeEnd={onStrokeEnd}
-      selection={selection}
-      onChangeSelection={setSelection}
-      onColorPick={(color) => setSettings((s) => ({ ...s, primaryColor: color }))}
-      onUndo={handleUndo}
-      onRedo={handleRedo}
-      canUndo={canUndo}
-      canRedo={canRedo}
-      frames={frames}
-      currentFrameIndex={currentFrameIndex}
-      isPlaying={isPlaying}
-      onSelectFrame={handleSelectFrame}
-      onInsertFrame={handleInsertFrame}
-      onDuplicateFrame={handleDuplicateFrame}
-      onDeleteFrame={handleDeleteFrame}
-      onUpdateFrameDuration={handleUpdateFrameDuration}
-      onTogglePlayback={handleTogglePlayback}
-      topBar={
-        <div className="topbar">
-          <div className="brand">
-            <div className="brand__name">SpriteAnvil</div>
-            <div className="brand__tagline">Forge sprites. Shape motion.</div>
-          </div>
+        settings={settings}
+        onChangeSettings={setSettings}
+        tool={tool}
+        onChangeTool={setTool}
+        canvasSpec={canvasSpec}
+        buffer={buffer}
+        onStrokeEnd={onStrokeEnd}
+        selection={selection}
+        onChangeSelection={setSelection}
+        onColorPick={handleSelectColor}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        frames={frames}
+        currentFrameIndex={currentFrameIndex}
+        isPlaying={isPlaying}
+        onSelectFrame={handleSelectFrame}
+        onInsertFrame={handleInsertFrame}
+        onDuplicateFrame={handleDuplicateFrame}
+        onDeleteFrame={handleDeleteFrame}
+        onUpdateFrameDuration={handleUpdateFrameDuration}
+        onTogglePlayback={handleTogglePlayback}
+        layers={layers}
+        activeLayerId={activeLayerId}
+        onLayerOperations={{
+          onSelectLayer: setActiveLayerId,
+          onCreateLayer: handleCreateLayer,
+          onDeleteLayer: handleDeleteLayer,
+          onDuplicateLayer: handleDuplicateLayer,
+          onToggleVisibility: handleToggleLayerVisibility,
+          onToggleLock: handleToggleLayerLock,
+          onUpdateOpacity: handleUpdateLayerOpacity,
+          onUpdateBlendMode: handleUpdateLayerBlendMode,
+          onRenameLayer: handleRenameLayer,
+          onReorderLayers: handleReorderLayers,
+          onMergeDown: handleMergeDown,
+        }}
+        palettes={palettes}
+        activePaletteId={activePaletteId}
+        recentColors={recentColors}
+        onPaletteOperations={{
+          onSelectPalette: setActivePaletteId,
+          onCreatePalette: handleCreatePalette,
+          onDeletePalette: handleDeletePalette,
+          onAddColorToPalette: handleAddColorToPalette,
+          onRemoveColorFromPalette: handleRemoveColorFromPalette,
+          onSwapColors: handleSwapColors,
+        }}
+        onTransformOperations={{
+          onFlipHorizontal: handleFlipHorizontal,
+          onFlipVertical: handleFlipVertical,
+          onRotate90CW: handleRotate90CW,
+          onRotate90CCW: handleRotate90CCW,
+          onRotate180: handleRotate180,
+          onScale: handleScale,
+        }}
+        onColorAdjustOperations={{
+          onAdjustHue: handleAdjustHue,
+          onAdjustSaturation: handleAdjustSaturation,
+          onAdjustBrightness: handleAdjustBrightness,
+          onInvert: handleInvert,
+          onDesaturate: handleDesaturate,
+          onPosterize: handlePosterize,
+        }}
+        topBar={
+          <div className="topbar">
+            <div className="brand">
+              <div className="brand__name">SpriteAnvil</div>
+              <div className="brand__tagline">Forge sprites. Shape motion.</div>
+            </div>
 
-          <div className="topbar__group">
-            <button className="uiBtn" onClick={handleUndo} disabled={!canUndo} title="Undo (Ctrl+Z)">
-              Undo
-            </button>
-            <button className="uiBtn" onClick={handleRedo} disabled={!canRedo} title="Redo (Ctrl+Y)">
-              Redo
-            </button>
-          </div>
+            <div className="topbar__group">
+              <button className="uiBtn" onClick={handleUndo} disabled={!canUndo} title="Undo (Cmd+Z)">
+                Undo
+              </button>
+              <button className="uiBtn" onClick={handleRedo} disabled={!canRedo} title="Redo (Cmd+Y)">
+                Redo
+              </button>
+            </div>
 
-          <div className="topbar__group">
-            <button
-              className="uiBtn uiBtn--primary"
-              onClick={() => setShowExportPanel(true)}
-              title="Export Sprite"
-            >
-              Export
-            </button>
-          </div>
-
-          <div className="topbar__group">
-            <label className="ui-row">
-              <input
-                type="checkbox"
-                checked={settings.brushStabilizerEnabled}
-                onChange={(e) =>
-                  setSettings((s) => ({ ...s, brushStabilizerEnabled: e.target.checked }))
-                }
-              />
-              <span>Brush Stabilizer</span>
-            </label>
-
-            <label className="ui-row">
-              <span>Color</span>
-              <input
-                className="color"
-                type="color"
-                value={settings.primaryColor}
-                onChange={(e) => setSettings((s) => ({ ...s, primaryColor: e.target.value }))}
-                title="Primary Color"
-              />
-            </label>
-
-            <label className="ui-row">
-              <span>Zoom</span>
-              <input
-                className="zoom"
-                type="range"
-                min={1}
-                max={32}
-                step={0.25}
-                value={settings.zoom}
-                onChange={(e) => setSettings((s) => ({ ...s, zoom: Number(e.target.value) }))}
-              />
-              <span className="mono">{zoomLabel}</span>
-            </label>
-          </div>
-
-          <div className="topbar__group">
-            <label className="ui-row">
-              <span>Background</span>
-              <select
-                value={settings.backgroundMode}
-                onChange={(e) =>
-                  setSettings((s) => ({ ...s, backgroundMode: e.target.value as any }))
-                }
+            <div className="topbar__group">
+              <button
+                className="uiBtn"
+                onClick={() => setShowCommandPalette(true)}
+                title="Command Palette (Cmd+K)"
               >
-                <option value="checker">Checkerboard</option>
-                <option value="solidDark">Solid (Dark)</option>
-                <option value="solidLight">Solid (Light)</option>
-                <option value="greenscreen">Greenscreen</option>
-                <option value="bluescreen">Bluescreen</option>
-              </select>
-            </label>
+                Commands
+              </button>
+              <button
+                className="uiBtn uiBtn--primary"
+                onClick={() => setShowExportPanel(true)}
+                title="Export Sprite (Cmd+E)"
+              >
+                Export
+              </button>
+            </div>
 
-            {settings.backgroundMode === "checker" && (
-              <>
-                <label className="ui-row">
-                  <span>Size</span>
-                  <input
-                    className="checkerSize"
-                    type="range"
-                    min={8}
-                    max={64}
-                    step={1}
-                    value={settings.checkerSize}
-                    onChange={(e) => setSettings((s) => ({ ...s, checkerSize: Number(e.target.value) }))}
-                  />
-                  <span className="mono">{settings.checkerSize}px</span>
-                </label>
+            <div className="topbar__group">
+              <label className="ui-row">
+                <span>Color</span>
+                <input
+                  className="color"
+                  type="color"
+                  value={settings.primaryColor}
+                  onChange={(e) => handleSelectColor(e.target.value)}
+                  title="Primary Color"
+                />
+              </label>
 
-                <label className="ui-row">
-                  <span>A</span>
-                  <input
-                    className="colorSmall"
-                    type="color"
-                    value={toHexFallback(settings.checkerA, "#3a3a3a")}
-                    onChange={(e) => setSettings((s) => ({ ...s, checkerA: e.target.value }))}
-                    title="Checker color A"
-                  />
-                  <span>B</span>
-                  <input
-                    className="colorSmall"
-                    type="color"
-                    value={toHexFallback(settings.checkerB, "#1f1f1f")}
-                    onChange={(e) => setSettings((s) => ({ ...s, checkerB: e.target.value }))}
-                    title="Checker color B"
-                  />
-                </label>
-              </>
-            )}
+              <label className="ui-row">
+                <span>Zoom</span>
+                <input
+                  className="zoom"
+                  type="range"
+                  min={1}
+                  max={32}
+                  step={0.25}
+                  value={settings.zoom}
+                  onChange={(e) => setSettings((s) => ({ ...s, zoom: Number(e.target.value) }))}
+                />
+                <span className="mono">{zoomLabel}</span>
+              </label>
+            </div>
 
-            <label className="ui-row">
-              <input
-                type="checkbox"
-                checked={settings.showGrid}
-                onChange={(e) => setSettings((s) => ({ ...s, showGrid: e.target.checked }))}
-              />
-              <span>Grid</span>
-            </label>
+            <div className="topbar__group">
+              <label className="ui-row">
+                <span>Background</span>
+                <select
+                  value={settings.backgroundMode}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, backgroundMode: e.target.value as any }))
+                  }
+                >
+                  <option value="checker">Checkerboard</option>
+                  <option value="solidDark">Solid (Dark)</option>
+                  <option value="solidLight">Solid (Light)</option>
+                  <option value="greenscreen">Greenscreen</option>
+                  <option value="bluescreen">Bluescreen</option>
+                </select>
+              </label>
 
-            <label className="ui-row">
-              <span>Grid</span>
-              <input
-                className="gridSize"
-                type="number"
-                min={1}
-                max={64}
-                value={settings.gridSize}
-                onChange={(e) => setSettings((s) => ({ ...s, gridSize: Number(e.target.value) }))}
-              />
-              <span className="muted">px</span>
-            </label>
+              <label className="ui-row">
+                <input
+                  type="checkbox"
+                  checked={settings.showGrid}
+                  onChange={(e) => setSettings((s) => ({ ...s, showGrid: e.target.checked }))}
+                />
+                <span>Grid</span>
+              </label>
+            </div>
           </div>
-        </div>
-      }
-    />
+        }
+      />
 
       {showExportPanel && (
         <ExportPanel
@@ -442,18 +698,19 @@ export default function App() {
           onClose={() => setShowExportPanel(false)}
         />
       )}
+
+      {showCommandPalette && (
+        <CommandPalette
+          commands={commands}
+          isOpen={showCommandPalette}
+          onClose={() => setShowCommandPalette(false)}
+        />
+      )}
     </>
   );
 }
 
-/**
- * Because checkerA/checkerB are CSS colors (could be rgba),
- * but <input type="color"> requires hex, we use a safe fallback.
- * For now we keep it simple.
- */
 function toHexFallback(_cssColor: string, fallbackHex: string): string {
-  // We do not parse arbitrary CSS colors in v0.1.
-  // Later we will store checker colors as hex consistently.
   if (/^#[0-9a-fA-F]{6}$/.test(_cssColor)) return _cssColor;
   return fallbackHex;
 }

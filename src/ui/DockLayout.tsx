@@ -4,6 +4,8 @@ import RightPanel from "./RightPanel";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
 import { CanvasSpec, ToolId, UiSettings, Frame } from "../types";
+import { LayerData, BlendMode } from "./LayerPanel";
+import { PaletteData } from "./PalettePanel";
 
 type Props = {
   settings: UiSettings;
@@ -34,6 +36,52 @@ type Props = {
   onDeleteFrame: () => void;
   onUpdateFrameDuration: (index: number, durationMs: number) => void;
   onTogglePlayback: () => void;
+
+  layers?: LayerData[];
+  activeLayerId?: string | null;
+  onLayerOperations?: {
+    onSelectLayer: (id: string) => void;
+    onCreateLayer: () => void;
+    onDeleteLayer: (id: string) => void;
+    onDuplicateLayer: (id: string) => void;
+    onToggleVisibility: (id: string) => void;
+    onToggleLock: (id: string) => void;
+    onUpdateOpacity: (id: string, opacity: number) => void;
+    onUpdateBlendMode: (id: string, mode: BlendMode) => void;
+    onRenameLayer: (id: string, name: string) => void;
+    onReorderLayers: (fromIndex: number, toIndex: number) => void;
+    onMergeDown: (id: string) => void;
+  };
+
+  palettes?: PaletteData[];
+  activePaletteId?: string | null;
+  recentColors?: string[];
+  onPaletteOperations?: {
+    onSelectPalette: (id: string) => void;
+    onCreatePalette: (name: string, colors: string[]) => void;
+    onDeletePalette: (id: string) => void;
+    onAddColorToPalette: (paletteId: string, color: string) => void;
+    onRemoveColorFromPalette: (paletteId: string, colorIndex: number) => void;
+    onSwapColors: (fromColor: string, toColor: string) => void;
+  };
+
+  onTransformOperations?: {
+    onFlipHorizontal: () => void;
+    onFlipVertical: () => void;
+    onRotate90CW: () => void;
+    onRotate90CCW: () => void;
+    onRotate180: () => void;
+    onScale: (scaleX: number, scaleY: number) => void;
+  };
+
+  onColorAdjustOperations?: {
+    onAdjustHue: (hueShift: number) => void;
+    onAdjustSaturation: (saturationDelta: number) => void;
+    onAdjustBrightness: (brightnessDelta: number) => void;
+    onInvert: () => void;
+    onDesaturate: () => void;
+    onPosterize: (levels: number) => void;
+  };
 
   topBar: ReactNode;
 };
@@ -73,6 +121,15 @@ export default function DockLayout({
   onDeleteFrame,
   onUpdateFrameDuration,
   onTogglePlayback,
+  layers,
+  activeLayerId,
+  onLayerOperations,
+  palettes,
+  activePaletteId,
+  recentColors,
+  onPaletteOperations,
+  onTransformOperations,
+  onColorAdjustOperations,
   topBar
 }: Props) {
   const [rightWidth, setRightWidth] = useState<number>(() => loadNumber("dock:rightWidth", 280));
@@ -168,6 +225,15 @@ export default function DockLayout({
           <RightPanel
             settings={settings}
             onChangeSettings={onChangeSettings}
+            layers={layers}
+            activeLayerId={activeLayerId}
+            onLayerOperations={onLayerOperations}
+            palettes={palettes}
+            activePaletteId={activePaletteId}
+            recentColors={recentColors}
+            onPaletteOperations={onPaletteOperations}
+            onTransformOperations={onTransformOperations}
+            onColorAdjustOperations={onColorAdjustOperations}
           />
         </div>
       </div>
