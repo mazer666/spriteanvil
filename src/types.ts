@@ -8,13 +8,17 @@ export type BackgroundMode =
 export type ToolId =
   | "pen"
   | "eraser"
+  | "eyedropper"
   | "fill"
   | "line"
   | "rectangle"
   | "rectangleFilled"
   | "circle"
   | "circleFilled"
-  | "selectRect";
+  | "ellipse"
+  | "ellipseFilled"
+  | "selectRect"
+  | "selectEllipse";
 
 /**
  * UI/Editor Settings (v0.1).

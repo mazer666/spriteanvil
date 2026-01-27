@@ -35,6 +35,23 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } {
   return { r, g, b };
 }
 
+export function getPixel(
+  buf: Uint8ClampedArray,
+  width: number,
+  height: number,
+  x: number,
+  y: number
+): RGBA | null {
+  if (x < 0 || y < 0 || x >= width || y >= height) return null;
+  const i = (y * width + x) * 4;
+  return {
+    r: buf[i + 0],
+    g: buf[i + 1],
+    b: buf[i + 2],
+    a: buf[i + 3]
+  };
+}
+
 export function setPixel(
   buf: Uint8ClampedArray,
   width: number,

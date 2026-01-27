@@ -1,14 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CanvasSpec, ToolId, UiSettings } from "../types";
-import { cloneBuffer, drawLine, hexToRgb } from "../editor/pixels";
+import { cloneBuffer, drawLine, hexToRgb, getPixel } from "../editor/pixels";
 import { floodFill } from "../editor/tools/fill";
 import {
   drawRectangle,
   fillRectangle,
   drawCircle,
-  fillCircle
+  fillCircle,
+  drawEllipse,
+  fillEllipse
 } from "../editor/tools/shapes";
-import { selectRectangle } from "../editor/selection";
+import { selectRectangle, selectEllipse } from "../editor/selection";
 
 import { Frame } from "../types";
 
@@ -20,10 +22,11 @@ export default function CanvasStage(props: {
   onStrokeEnd: (before: Uint8ClampedArray, after: Uint8ClampedArray) => void;
   selection: Uint8Array | null;
   onChangeSelection: (selection: Uint8Array | null) => void;
+  onColorPick?: (color: string) => void;
   frames?: Frame[];
   currentFrameIndex?: number;
 }) {
-  const { settings, tool, canvasSpec, buffer, onStrokeEnd, selection, onChangeSelection, frames, currentFrameIndex } = props;
+  const { settings, tool, canvasSpec, buffer, onStrokeEnd, selection, onChangeSelection, onColorPick, frames, currentFrameIndex } = props;
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -179,6 +182,16 @@ export default function CanvasStage(props: {
 
     const c = getDrawColor();
 
+    if (tool === "eyedropper") {
+      const rgba = getPixel(bufRef.current, canvasSpec.width, canvasSpec.height, p.x, p.y);
+      if (rgba && onColorPick) {
+        const hex = `#${rgba.r.toString(16).padStart(2, "0")}${rgba.g.toString(16).padStart(2, "0")}${rgba.b.toString(16).padStart(2, "0")}`;
+        onColorPick(hex);
+      }
+      endStroke();
+      return;
+    }
+
     if (tool === "fill") {
       const pixelsChanged = floodFill(
         bufRef.current,
@@ -200,7 +213,7 @@ export default function CanvasStage(props: {
       draw();
     }
 
-    if (tool === "line" || tool === "rectangle" || tool === "rectangleFilled" || tool === "circle" || tool === "circleFilled" || tool === "selectRect") {
+    if (tool === "line" || tool === "rectangle" || tool === "rectangleFilled" || tool === "circle" || tool === "circleFilled" || tool === "ellipse" || tool === "ellipseFilled" || tool === "selectRect" || tool === "selectEllipse") {
       setShapePreview({ startX: p.x, startY: p.y, endX: p.x, endY: p.y });
     }
   }
@@ -230,7 +243,7 @@ export default function CanvasStage(props: {
       draw();
     }
 
-    if (tool === "line" || tool === "rectangle" || tool === "rectangleFilled" || tool === "circle" || tool === "circleFilled" || tool === "selectRect") {
+    if (tool === "line" || tool === "rectangle" || tool === "rectangleFilled" || tool === "circle" || tool === "circleFilled" || tool === "ellipse" || tool === "ellipseFilled" || tool === "selectRect" || tool === "selectEllipse") {
       setShapePreview({ startX: st.startX, startY: st.startY, endX: p0.x, endY: p0.y });
     }
   }
@@ -294,6 +307,21 @@ export default function CanvasStage(props: {
         }
       }
 
+      if (tool === "ellipse" || tool === "ellipseFilled") {
+        const cx = Math.round((startX + endX) / 2);
+        const cy = Math.round((startY + endY) / 2);
+        const rx = Math.round(Math.abs(endX - startX) / 2);
+        const ry = Math.round(Math.abs(endY - startY) / 2);
+
+        if (tool === "ellipse") {
+          const did = drawEllipse(bufRef.current, canvasSpec.width, canvasSpec.height, cx, cy, rx, ry, c);
+          if (did) st.changed = true;
+        } else {
+          const did = fillEllipse(bufRef.current, canvasSpec.width, canvasSpec.height, cx, cy, rx, ry, c);
+          if (did) st.changed = true;
+        }
+      }
+
       if (tool === "selectRect") {
         const x1 = Math.min(startX, endX);
         const y1 = Math.min(startY, endY);
@@ -309,6 +337,24 @@ export default function CanvasStage(props: {
             width: x2 - x1 + 1,
             height: y2 - y1 + 1
           }
+        );
+
+        onChangeSelection(newSelection);
+      }
+
+      if (tool === "selectEllipse") {
+        const cx = Math.round((startX + endX) / 2);
+        const cy = Math.round((startY + endY) / 2);
+        const rx = Math.round(Math.abs(endX - startX) / 2);
+        const ry = Math.round(Math.abs(endY - startY) / 2);
+
+        const newSelection = selectEllipse(
+          canvasSpec.width,
+          canvasSpec.height,
+          cx,
+          cy,
+          rx,
+          ry
         );
 
         onChangeSelection(newSelection);
@@ -418,6 +464,21 @@ export default function CanvasStage(props: {
           ctx.fillRect(x1, y1, w, h);
         } else {
           ctx.strokeRect(x1, y1, w, h);
+        }
+      }
+
+      if (tool === "ellipse" || tool === "ellipseFilled" || tool === "selectEllipse") {
+        const cx = (x1 + x2) / 2;
+        const cy = (y1 + y2) / 2;
+        const rx = Math.abs(x2 - x1) / 2;
+        const ry = Math.abs(y2 - y1) / 2;
+
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        if (tool === "ellipseFilled") {
+          ctx.fill();
+        } else {
+          ctx.stroke();
         }
       }
 

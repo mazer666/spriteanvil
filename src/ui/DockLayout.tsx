@@ -18,6 +18,7 @@ type Props = {
 
   selection: Uint8Array | null;
   onChangeSelection: (selection: Uint8Array | null) => void;
+  onColorPick?: (color: string) => void;
 
   onUndo: () => void;
   onRedo: () => void;
@@ -58,6 +59,7 @@ export default function DockLayout({
   onStrokeEnd,
   selection,
   onChangeSelection,
+  onColorPick,
   onUndo,
   onRedo,
   canUndo,
@@ -150,6 +152,7 @@ export default function DockLayout({
             onStrokeEnd={onStrokeEnd}
             selection={selection}
             onChangeSelection={onChangeSelection}
+            onColorPick={onColorPick}
             frames={frames}
             currentFrameIndex={currentFrameIndex}
           />

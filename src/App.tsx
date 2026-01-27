@@ -277,6 +277,7 @@ export default function App() {
       onStrokeEnd={onStrokeEnd}
       selection={selection}
       onChangeSelection={setSelection}
+      onColorPick={(color) => setSettings((s) => ({ ...s, primaryColor: color }))}
       onUndo={handleUndo}
       onRedo={handleRedo}
       canUndo={canUndo}

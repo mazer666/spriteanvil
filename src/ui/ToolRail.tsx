@@ -31,6 +31,7 @@ export default function ToolRail({ tool, onChangeTool }: Props) {
 
       {btn("pen", "✎", "Pen (B)")}
       {btn("eraser", "⌫", "Eraser (E)")}
+      {btn("eyedropper", "💧", "Eyedropper (I)")}
       {btn("fill", "⛶", "Fill (F)")}
       {btn("line", "╱", "Line (L)")}
 
@@ -40,10 +41,13 @@ export default function ToolRail({ tool, onChangeTool }: Props) {
       {btn("rectangleFilled", "▮", "Filled Rectangle (Shift+R)")}
       {btn("circle", "○", "Circle (C)")}
       {btn("circleFilled", "●", "Filled Circle (Shift+C)")}
+      {btn("ellipse", "◯", "Ellipse (Shift+O)")}
+      {btn("ellipseFilled", "⬭", "Filled Ellipse (O)")}
 
       <div className="toolrail__divider" />
 
       {btn("selectRect", "⬚", "Select Rectangle (M)")}
+      {btn("selectEllipse", "⬭", "Select Ellipse (Shift+M)")}
 
       <div className="toolrail__spacer" />
 
