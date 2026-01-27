@@ -54,9 +54,9 @@ export default function DockLayout({
   canRedo,
   topBar
 }: Props) {
-  const [rightWidth, setRightWidth] = useState<number>(() => loadNumber("dock:rightWidth", 360));
+  const [rightWidth, setRightWidth] = useState<number>(() => loadNumber("dock:rightWidth", 280));
   const [timelineHeight, setTimelineHeight] = useState<number>(() =>
-    loadNumber("dock:timelineHeight", 200)
+    loadNumber("dock:timelineHeight", 160)
   );
 
   useEffect(() => saveNumber("dock:rightWidth", rightWidth), [rightWidth]);
@@ -93,10 +93,10 @@ export default function DockLayout({
 
     if (st.kind === "right") {
       const dx = st.startX - e.clientX; // drag left increases width
-      setRightWidth(clamp(st.startRightWidth + dx, 260, 700));
+      setRightWidth(clamp(st.startRightWidth + dx, 240, 500));
     } else {
       const dy = st.startY - e.clientY; // drag up increases height
-      setTimelineHeight(clamp(st.startTimelineHeight + dy, 140, 420));
+      setTimelineHeight(clamp(st.startTimelineHeight + dy, 120, 350));
     }
   }
 
