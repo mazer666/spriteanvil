@@ -1,138 +1,160 @@
-# SpriteAnvil Docs
+# SpriteAnvil — Forge sprites. Shape motion.
 
-Willkommen in der Dokumentation von **SpriteAnvil** – einem Pixel-Art Sprite- & Animation-Builder mit Fokus auf einen klaren Workflow:
-Frames zeichnen, modulare Parts wiederverwenden, mit Anchors riggen, und nach **Godot 4.5** (und generische Formate) exportieren.
+SpriteAnvil is a **pixel-art sprite & animation builder** focused on a clean workflow:
+draw frames, reuse modular parts, rig with anchors, and export to **Godot 4.6** (and generic formats).
 
-> **Status:** Early development (v0.1). Dock-UI-Shell steht, Editor-Tools folgen als Nächstes.
-
----
-
-## Inhaltsverzeichnis
-
-- [Schnellstart](#schnellstart)
-- [Dokumente (Docs Map)](#dokumente-docs-map)
-- [Begriffe (Mini-Glossar)](#begriffe-mini-glossar)
-- [Docs-Konventionen](#docs-konventionen)
-- [Wie du an der Doku mitarbeitest](#wie-du-an-der-doku-mitarbeitest)
+> Status: Early development (v0.1). UI shell with dock panels is in place. Editor tools come next.
 
 ---
 
-## Schnellstart
+## Goals
 
-Wenn du nur wissen willst, **worum es geht**:
-
-- Ziel: Pixel-first, grid-friendly, nearest-neighbor
-- Workflow: Animation (Frames/Timeline) + modulare Parts + Rig/Anchors + Pixel-Overrides
-- Export: Spritesheet PNG + JSON-Metadaten, später Godot-Import Helper
-
-Siehe auch die Projektübersicht im Repository-README.
+- **Pixel-first**: crisp pixels, nearest-neighbor, grid-friendly.
+- **Hybrid workflow**: modular parts + rigging **and** per-frame pixel overrides.
+- **Beginner-friendly UX**: clean layout, helpful tools (loop checks, diff views, markers).
+- **Exports that work**: spritesheets + JSON metadata + Godot-friendly import.
 
 ---
 
-## Dokumente (Docs Map)
+## Key Features (planned)
 
-> **Hinweis:** Diese Liste ist das “Docs-Rückgrat”. Jedes neue Doku-Thema bekommt eine eigene Datei hier.
+### Core (Animation / D1-first)
+- Frames, timeline, playback (FPS + per-frame duration)
+- Onion skin (prev/next range + intensity)
+- Markers: **Contact / Impact / Hold**
+- Diff view (frame-to-frame **and** **first ↔ last** for loop checking)
+- Auto-trim export with correct offsets
 
-### 1) Vision & Scope
+### Drawing Tools
+- Pen / Eraser / Fill
+- Selection (rect + lasso) + Move/Transform (flip/rotate/scale NN)
+- Eyedropper
+- Magic Wand selection (tolerance)
+- **Brush Stabilizer** (toggle on/off)
+- Symmetry / Mirror draw
+- Replace Color (with tolerance)
+- Outline tool (1px / 2px)
+- **Gradient tool with Dither settings** (ordered/noise/clustered)
 
-- **`vision-and-scope.md`**
-  - Ziele, Non-Goals, Zielgruppe, Release-Meilensteine
+### Modular + Rig (E3 / Hybrid)
+- Parts Library (reusable hands, heads, weapons, etc.)
+- Rig/Armature with **Anchors**
+- Pixel-snapped transforms (optional subpixel preview)
+- Per-frame pixel overrides (non-destructive)
 
-### 2) UX / UI
+### Palette (L1 + customization)
+- Curated palette presets
+- User-customizable palettes
+- Palette swap / replace color
+- Ramp builder (optional)
 
-- **`ux-ui.md`**
-  - Dock Panels: Top Bar, Tool Rail, Canvas, Right Tabs, Timeline
-  - Panel-Persistenz (localStorage)
-  - Interaktionsregeln (Zoom, Grid, Selection, Drag/Drop, Shortcuts)
+### Clipboard Workflow
+- Paste images **1:1** (no resampling)  
+- Paste images **Fit to Canvas** (nearest-neighbor)  
+- Copy selection/frame to clipboard (where supported)
 
-### 3) Datenmodell & Projektstruktur
-
-- **`data-model.md`**
-  - Kernobjekte: Project, Sprite, Animation, Frame, Layer, Palette, Part, Anchor/Rig
-  - IDs, Referenzen, Versionierung/Migration (falls nötig)
-
-### 4) Editor Tools
-
-- **`editor-tools.md`**
-  - Pen/Eraser/Fill
-  - Rect + Lasso Selection
-  - Transform (flip/rotate/scale) mit nearest-neighbor
-  - Eyedropper, Magic Wand (Tolerance)
-  - Stabilizer, Symmetry/Mirror
-  - Replace Color, Outline, Gradient+Dither
-
-### 5) Animation & Timeline
-
-- **`animation-timeline.md`**
-  - FPS + per-frame duration
-  - Onion Skin (range + intensity)
-  - Markers (Contact/Impact/Hold)
-  - Diff View (Frame-to-frame, First↔Last Loop-Check)
-
-### 6) Export & Godot 4.6
-
-- **`export.md`**
-  - Spritesheet PNG + JSON (Rects, Durations, Pivot/Origin, Offsets, Tags)
-  - Auto-trim + korrekte Offsets
-  - Optional: Einzel-Frames + JSON
-
-- **`godot-4-6-integration.md`**
-  - Empfohlene Import-Settings in Godot
-  - Geplantes Import-Helper-Script (Format/Mapping)
-
-### 7) Entwicklung / Beiträge
-
-- **`dev-setup.md`**
-  - Node.js 20+
-  - `npm install`, `npm run dev`, `npm run build`, `npm run preview`
-  - Branching: `main` (stable/pages), `dev` (active)
-  - GitHub Pages base path (`/spriteanvil/`)
-
-- **`contributing.md`**
-  - Branch/PR-Flow
-  - Code Style / Naming / TypeScript Regeln
-  - Commit-Konventionen
-  - “Definition of Done” (Tests, Lint, Doku-Update)
+### Export
+- Spritesheet PNG + JSON metadata (rects, durations, pivot/origin, offsets, tags)
+- Individual frame PNGs + JSON
+- Godot 4.5-friendly export + import helper script (planned)
 
 ---
 
-## Begriffe (Mini-Glossar)
+## UI Layout (Dock Panels)
 
-- **Frame**: Ein Einzelbild innerhalb einer Animation (mit eigener Dauer möglich).
-- **Onion Skin**: Überlagerung vorheriger/nächster Frames zum besseren Animieren.
-- **Marker**: Zeitmarken für Animation (z.B. Contact/Impact/Hold).
-- **Part**: Wiederverwendbares, modulares Sprite-Element (z.B. Hand, Kopf, Waffe).
-- **Anchor**: Fixpunkt für Parts/Rigging (pixel-snapped).
+- **Top Bar**: project + view + export + zoom slider + stabilizer toggle
+- **Left Tool Rail**: drawing/selection tools
+- **Center Canvas**: zoomable stage with configurable background (checkerboard/solid/greenscreen/bluescreen)
+- **Right Panel (tabs)**: Animation / Layers / Rig / Palette / Export
+- **Bottom Timeline**: frames, durations, markers, diff
 
----
-
-## Docs-Konventionen
-
-Damit alles “GitHub-clean” bleibt:
-
-- **Dateinamen:** kebab-case (`editor-tools.md`, nicht `EditorTools.md`)
-- **Überschriften:** genau ein `#` pro Datei, darunter `##`, `###` …
-- **Links:** relative Links verwenden (`./export.md`)
-- **Screenshots/Assets:** unter `docs/assets/` ablegen (wenn genutzt)
-- **Diagramme:** bevorzugt **Mermaid** (wenn sinnvoll), ansonsten ASCII/Markdown
+Panel sizes persist via localStorage.
 
 ---
 
-## Wie du an der Doku mitarbeitest
+## Development Setup
 
-1. Neues Thema? → Datei in `docs/` anlegen (siehe Docs Map)
-2. In **dieser** `docs/README.md` unter “Dokumente” verlinken
-3. Kurz prüfen:
-   - Ist es verständlich für Einsteiger?
-   - Sind Begriffe konsistent (Frame/Part/Anchor etc.)?
-   - Verweist es auf die “Source of Truth” (z.B. Export-Format)?
+### Recommended workflow in restricted networks
+If GitHub is blocked in your network, you can still work via **VS Code Remote Repositories**:
+
+1. Install the VS Code extension **Remote Repositories** (Microsoft).
+2. Sign in to GitHub in VS Code.
+3. `Remote Repositories: Open Remote Repository...`
+4. Select `mazer666/spriteanvil`
+5. Create & publish a branch (recommended: `dev`)
+
+> Note: Remote Repositories is great for editing and committing.  
+> If you need a full local runtime (`npm run dev`), use an environment that can install Node dependencies (e.g. a network/machine that allows it).
+
+### Local development (when available)
+Prerequisites:
+- Node.js 20+
+
+Install and run:
+```bash
+npm install
+npm run dev
+````
+
+Build:
+
+```bash
+npm run build
+npm run preview
+```
 
 ---
 
-## Nächste sinnvolle Doku (Empfehlung)
+## Branching & Releases
 
-Wenn wir nach diesem Index direkt die “wertvollste” Doku schreiben wollen:
+* `main` = development, deploys to GitHub Pages
 
-1) `export.md` (weil Export “Outputs that work” zentral ist)  
-2) `data-model.md` (damit Features & UI sauber daran andocken)  
-3) `editor-tools.md` (weil “Editor tools come next” im Status steht)
+---
+
+## GitHub Pages Deployment
+
+This repo is configured to deploy automatically via GitHub Actions when `main` is updated.
+
+The Vite base path is configured for:
+
+* `/spriteanvil/`
+
+If you rename the repository, update:
+
+* `vite.config.ts` → `base: "/<new-repo-name>/"`
+
+---
+
+## Roadmap (high level)
+
+* v0.1: Dock UI shell + basic settings
+* v0.1.1: Real canvas + pixel grid + pen/eraser + undo/redo
+* v0.2: Frames + playback + onion skin + export basics
+* v0.3: Selection/transform + fill + wand + clipboard
+* v0.4: Palette presets + swap + ramps
+* v0.5: Parts library + anchors + rig (no IK)
+* v0.6: Godot import helper + advanced export presets
+
+---
+
+## License
+
+Choose a license that fits your goals (MIT recommended for tooling).
+See `LICENSE` if included.
+
+---
+
+## Contributing
+
+This is currently a solo project. If you want to contribute later:
+
+* open an issue with a clear description
+* keep changes modular and well-commented
+* prioritize UX clarity and pixel correctness
+
+---
+
+## Name
+
+**SpriteAnvil**
+“Forge sprites. Shape motion.”
