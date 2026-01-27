@@ -1,75 +1,74 @@
-# SpriteAnvil Docs
+# SpriteAnvil Documentation (`/docs`)
 
-Diese `docs/`-Sektion ist die **Single Source of Truth** für Architektur, Module, Code-Standards und die wichtigsten Arbeitsabläufe.  
-Die Pläne/Specs sind so aufgebaut, dass **Einsteiger** das Projekt verstehen und erweitern können, ohne dass die Codequalität leidet.
+This folder contains **project plans** and **source-of-truth specifications** for SpriteAnvil.
 
----
-
-## Schnellstart: Welche Doku zuerst lesen?
-
-1. **Projekt-Roadmap & Vision:** [`PROJECT_PLAN.md`](./PROJECT_PLAN.md)  
-2. **Aktueller Integrationsstand + Architektur-Überblick:** [`FEATURE_INTEGRATION_PLAN.md`](./FEATURE_INTEGRATION_PLAN.md)  
-3. **System-Architektur (Source of Truth):** [`ARCHITECTURE.md`](./ARCHITECTURE.md)  
-4. **Modul-Landkarte & Verantwortlichkeiten:** [`MODULE_GUIDE.md`](./MODULE_GUIDE.md) *(to be created)*  
-5. **Coding Standards + Doku-Regeln:** [`CODE_STYLE.md`](./CODE_STYLE.md) *(to be created)*  
-6. **Häufige Aufgaben Schritt-für-Schritt:** [`COMMON_TASKS.md`](./COMMON_TASKS.md) *(to be created)*  
+- If you want the **big picture / roadmap** → start with `PROJECT_PLAN.md`
+- If you want the **current implementation status + how features were wired** → `FEATURE_INTEGRATION_PLAN.md`
+- If you want the **stable rules the code should follow** → the Core Specs below
 
 ---
 
-## Dokumente in diesem Ordner
+## Read this first (recommended order)
 
-### Pläne (bereits vorhanden)
+1. **Roadmap & priorities** → [`PROJECT_PLAN.md`](./PROJECT_PLAN.md)  
+2. **What is already built + integration notes** → [`FEATURE_INTEGRATION_PLAN.md`](./FEATURE_INTEGRATION_PLAN.md)  
+3. **Architecture (system structure + data flow)** → [`ARCHITECTURE.md`](./ARCHITECTURE.md)  
+4. **Module map (where code belongs)** → [`MODULE_GUIDE.md`](./MODULE_GUIDE.md)  
+5. **Coding standards (naming, TS, JSDoc, perf rules)** → [`CODE_STYLE.md`](./CODE_STYLE.md)  
+6. **How-to guides (beginner-safe step-by-step)** → [`COMMON_TASKS.md`](./COMMON_TASKS.md)  
 
-- [`PROJECT_PLAN.md`](./PROJECT_PLAN.md)  
-  Umfassender Entwicklungsplan: Feature-Parität (Aseprite-like) zuerst, dann Innovation (AI, Symmetrie, UX, Cloud).  
-  Definiert außerdem die Mindest-Doku, die in `docs/` existieren muss.
+---
 
-- [`FEATURE_INTEGRATION_PLAN.md`](./FEATURE_INTEGRATION_PLAN.md)  
-  Beschreibt, was bereits integriert wurde (z.B. Fill/Shapes/Selection), inklusive Code-Pfaden, Data Flow und Integrationsschritten.
+## Core Specs (source of truth)
 
-### Core Specs (werden als Nächstes erstellt)
+These documents define the **contracts** SpriteAnvil code should implement.
 
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md)  
-  **Ziel:** Ein klarer Überblick über App-Schichten (UI/Editor/Tools/History/Render), Datenfluss und Performance-Prinzipien.  
-  **Leser:** Jeder, der verstehen will, *wie* SpriteAnvil intern aufgebaut ist.
+  System overview: UI ↔ editor ↔ tools, data flow, rendering layers, performance principles.
 
-- `MODULE_GUIDE.md`  
-  **Ziel:** “Landkarte” der Ordner/Module mit Verantwortlichkeiten und Verlinkungen.  
-  **Leser:** Jeder, der schnell eine Stelle im Code finden oder ein Feature sauber erweitern will.
+- [`MODULE_GUIDE.md`](./MODULE_GUIDE.md)  
+  Practical map of `src/` + dependency rules (who may import whom).
 
-- `CODE_STYLE.md`  
-  **Ziel:** Einheitliche Regeln für Naming, Typen, JSDoc, Kommentare, Fehlerbehandlung und Architektur-Header in Files.  
-  **Leser:** Contributors & “Future You”.
+- [`CODE_STYLE.md`](./CODE_STYLE.md)  
+  “Documentation is a feature”: naming rules, file headers, JSDoc templates, error handling, perf rules.
 
-- `COMMON_TASKS.md`  
-  **Ziel:** Schritt-für-Schritt Guides für typische Änderungen (z.B. neues Tool hinzufügen, Undo/Redo erweitern, Preview-Overlay, Selection-Operation anschließen).  
-  **Leser:** Einsteiger, die “einfach etwas ändern wollen”, ohne das Projekt zu zerlegen.
+- [`COMMON_TASKS.md`](./COMMON_TASKS.md)  
+  Step-by-step guides: add a tool, add previews, selection ops, cut/copy/paste, shortcuts, overlays, history.
 
----
+- [`EXPORT_FORMAT.md`](./EXPORT_FORMAT.md)  
+  Export contract: spritesheet PNG + `*.spriteanvil.json` metadata (rects, durations, pivots, tags, trim semantics).
 
-## Dokumentations-Konventionen
-
-Damit die Docs “GitHub-clean” bleiben:
-
-- **Dateinamen:** `UPPER_SNAKE_CASE.md` für Core-Dokumente, konsistent mit bestehenden Files.
-- **Markdown:** klare Überschriften-Hierarchie (`#`, `##`, `###`), keine überlangen Absätze.
-- **Links:** relative Links (z.B. `./ARCHITECTURE.md`).
-- **Codeblöcke:** immer mit Sprache (` ```ts `, ` ```tsx `, ` ```css `).
-- **Keine Dopplung:**  
-  - Roadmap & Phasen gehören in `PROJECT_PLAN.md`.  
-  - “Was ist integriert und wie” gehört in `FEATURE_INTEGRATION_PLAN.md`.  
-  - “Wie ist das System gebaut” gehört in `ARCHITECTURE.md`.  
-  - “Wie finde ich was” gehört in `MODULE_GUIDE.md`.  
-  - “Wie schreibe ich Code hier” gehört in `CODE_STYLE.md`.  
-  - “Wie mache ich X” gehört in `COMMON_TASKS.md`.
+- [`SELECTION_MODEL.md`](./SELECTION_MODEL.md)  
+  Selection contract: mask model (`Uint8Array`), boolean ops, bounds, visualization rules, clipboard + transform integration.
 
 ---
 
-## Nächste Schritte (Docs-Backlog)
+## File naming convention in `/docs`
 
-1. `ARCHITECTURE.md` ✅ (dieses Dokument)
-2. `MODULE_GUIDE.md` erstellen  
-3. `CODE_STYLE.md` erstellen  
-4. `COMMON_TASKS.md` erstellen  
+To keep things consistent in this repo:
 
-> Danach folgen feature-spezifische Specs (Selection Model, Export Format, Timeline, etc.), sobald die Core-Doku steht.
+- Planning documents: already use `UPPER_SNAKE_CASE.md` (e.g. `PROJECT_PLAN.md`)
+- Core specs: also use `UPPER_SNAKE_CASE.md` (e.g. `ARCHITECTURE.md`)
+- If we add many future feature specs, we can group them later under `docs/specs/` (optional)
+
+---
+
+## Contribution rule for docs
+
+When you add or change any of these:
+- architecture boundaries
+- module responsibilities
+- export fields / semantics
+- selection behavior
+
+…update the matching doc **and** keep this `docs/README.md` index in sync.
+
+---
+
+## Next docs to create (recommended)
+
+After the current core specs, the next high-value docs are:
+
+1. `TIMELINE_GUIDE.md` (frames, durationMs, playback, onion skin, tags UI, virtualization rules)  
+2. `GODOT_INTEGRATION.md` (how to map export JSON → AtlasTexture/AnimatedSprite, recommended import settings)  
+3. `PALETTE_AND_COLOR.md` (palette formats, color math, replace/tolerance, dithering rules)

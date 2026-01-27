@@ -7,9 +7,18 @@ Selection is a foundational subsystem used by:
 - transforms (rotate/scale/flip)
 - filters & effects (apply to selection only)
 - AI inpainting (apply to selection only)
-- timeline workflows (optional copy across frames)
+- cross-frame workflows (optional future)
 
-> The goal is: a selection behaves predictably, is fast, and is easy to integrate everywhere.
+> The goal is: selection behaves predictably, is fast, and is easy to integrate everywhere.
+
+---
+
+## Status (today)
+
+- A selection system exists as an editor module (mask-based) and is referenced in the integration plan.
+- Some workflows (cut/copy/paste, transform-on-selection, marching ants) are still planned.
+
+Use this doc as the **contract** while wiring selection into UI and future features.
 
 ---
 
@@ -29,7 +38,7 @@ This is intentionally simple and fast.
 
 - O(1) membership test: “is pixel selected?”
 - Boolean operations become simple loops:
-  - union/intersection/subtract/invert
+  - union / intersection / subtract / invert
 - Predictable memory:
   - `width * height` bytes (1 byte per pixel)
 
@@ -198,32 +207,31 @@ h = maxY - minY + 1
 
 ## 7) Integration rules (how selection affects tools)
 
-### 7.1 “No selection” means “whole canvas”
-Most drawing tools should behave as:
-- if selection exists → only affect selected pixels
-- else → affect everything
+### 7.1 Default rule: selection clips modifications
+
+Recommended default behavior:
+- if selection exists → tools only affect selected pixels
+- else → tools affect the entire canvas
 
 This applies to:
 - fills
 - filters
 - transforms
+- pen/eraser (recommended: clip to selection)
 
-But for tools like Pen/Eraser, you may choose:
-- “clip to selection” (common in editors)
-- or “ignore selection” (less common)
+If a tool intentionally ignores selection, document it explicitly.
 
-**Recommended default:** clip pen/eraser to selection when selection exists.
+### 7.2 Selection should not slow down drawing
 
-### 7.2 Selection must not affect overlay rendering performance
-Selection visualization should:
-- avoid scanning full mask every frame
-- rely on cached bounds and edge maps (when implemented)
+Selection visualization must:
+- avoid scanning full mask every animation frame
+- use cached bounds and cached edge maps (once implemented)
 
 ---
 
 ## 8) Selection visualization (UI behavior)
 
-Selection visualization is a UI overlay, not a buffer mutation.
+Selection visualization is an overlay, not a buffer mutation.
 
 ### 8.1 Minimum viable visualization (v1)
 
@@ -267,7 +275,7 @@ Cut is:
 Paste should:
 - create a “paste preview” overlay
 - allow placement (move) before commit
-- commit to buffer on confirm (mouse up or enter)
+- commit to buffer on confirm
 - become one history entry
 
 ---
@@ -286,7 +294,7 @@ Common transforms:
 Rules:
 - transparent pixels remain transparent
 - out-of-bounds pixels are discarded or clipped
-- transformations should preserve pixel-perfect crispness
+- transformations preserve pixel-perfect crispness
 
 ---
 
@@ -313,14 +321,12 @@ Whenever a selection mask exists:
 - it must only contain `0` or `1`
 
 If invalid:
-- fail with clear error (dev mode)
-- auto-clear selection in production if necessary (safe fallback)
+- fail with a clear error (dev mode)
+- safe fallback: clear selection
 
 ---
 
 ## 13) Suggested file locations in code
-
-A good structure is:
 
 - `src/editor/selection.ts`  
   selection creation + boolean ops + bounds + validation helpers
@@ -339,9 +345,9 @@ Before merging any selection-related change:
 
 - [ ] selection stored as mask (`Uint8Array`)
 - [ ] boolean ops correct on small toy examples
-- [ ] bounds helper works and returns null on empty selection
+- [ ] bounds helper returns null on empty selection
 - [ ] selection changes undo/redo correctly
-- [ ] drawing tools respect selection (document exceptions)
+- [ ] drawing tools respect selection (or exception documented)
 - [ ] visualization does not mutate pixel buffer
 - [ ] performance: no full-mask scan per animation frame unless cached
 
