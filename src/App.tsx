@@ -84,7 +84,7 @@ export default function App() {
   const [settings, setSettings] = useState<UiSettings>(() => ({
     zoom: 8,
     brushStabilizerEnabled: true,
-    backgroundMode: "checker",
+    backgroundMode: "solidDark",
     checkerSize: 24,
     checkerA: "rgba(255,255,255,0.08)",
     checkerB: "rgba(0,0,0,0.10)",
@@ -93,7 +93,14 @@ export default function App() {
     showOnionSkin: true,
     onionPrev: 1,
     onionNext: 1,
-    primaryColor: "#f2ead7"
+    primaryColor: "#f2ead7",
+    secondaryColor: "#000000",
+    fillTolerance: 0,
+    gradientType: "linear",
+    ditheringType: "none",
+    symmetryMode: "none",
+    brushSize: 1,
+    wandTolerance: 32,
   }));
 
   const zoomLabel = useMemo(() => `${Math.round(settings.zoom * 100)}%`, [settings.zoom]);
@@ -178,6 +185,69 @@ export default function App() {
     const sel = new Uint8Array(canvasSpec.width * canvasSpec.height);
     sel.fill(1);
     setSelection(sel);
+  }
+
+  function handleInvertSelection() {
+    if (!selection) {
+      handleSelectAll();
+      return;
+    }
+    const inverted = new Uint8Array(canvasSpec.width * canvasSpec.height);
+    for (let i = 0; i < inverted.length; i++) {
+      inverted[i] = selection[i] ? 0 : 1;
+    }
+    setSelection(inverted);
+  }
+
+  function handleGrowSelection() {
+    if (!selection) return;
+    const grown = new Uint8Array(canvasSpec.width * canvasSpec.height);
+    for (let y = 0; y < canvasSpec.height; y++) {
+      for (let x = 0; x < canvasSpec.width; x++) {
+        const idx = y * canvasSpec.width + x;
+        if (selection[idx]) {
+          grown[idx] = 1;
+          if (x > 0) grown[idx - 1] = 1;
+          if (x < canvasSpec.width - 1) grown[idx + 1] = 1;
+          if (y > 0) grown[idx - canvasSpec.width] = 1;
+          if (y < canvasSpec.height - 1) grown[idx + canvasSpec.width] = 1;
+        }
+      }
+    }
+    setSelection(grown);
+  }
+
+  function handleShrinkSelection() {
+    if (!selection) return;
+    const shrunk = new Uint8Array(canvasSpec.width * canvasSpec.height);
+    for (let y = 0; y < canvasSpec.height; y++) {
+      for (let x = 0; x < canvasSpec.width; x++) {
+        const idx = y * canvasSpec.width + x;
+        if (selection[idx]) {
+          const hasUnselectedNeighbor =
+            (x === 0 || !selection[idx - 1]) ||
+            (x === canvasSpec.width - 1 || !selection[idx + 1]) ||
+            (y === 0 || !selection[idx - canvasSpec.width]) ||
+            (y === canvasSpec.height - 1 || !selection[idx + canvasSpec.width]);
+          if (!hasUnselectedNeighbor) {
+            shrunk[idx] = 1;
+          }
+        }
+      }
+    }
+    setSelection(shrunk);
+  }
+
+  function handleFeatherSelection(_radius: number) {
+  }
+
+  function handleBooleanUnion() {
+  }
+
+  function handleBooleanSubtract() {
+  }
+
+  function handleBooleanIntersect() {
   }
 
   function updateCurrentFrame(newPixels: Uint8ClampedArray) {
@@ -583,6 +653,7 @@ export default function App() {
           onDeletePalette: handleDeletePalette,
           onAddColorToPalette: handleAddColorToPalette,
           onRemoveColorFromPalette: handleRemoveColorFromPalette,
+          onSelectColor: handleSelectColor,
           onSwapColors: handleSwapColors,
         }}
         onTransformOperations={{
@@ -600,6 +671,17 @@ export default function App() {
           onInvert: handleInvert,
           onDesaturate: handleDesaturate,
           onPosterize: handlePosterize,
+        }}
+        onSelectionOperations={{
+          onSelectAll: handleSelectAll,
+          onDeselect: handleDeselect,
+          onInvertSelection: handleInvertSelection,
+          onGrow: handleGrowSelection,
+          onShrink: handleShrinkSelection,
+          onFeather: handleFeatherSelection,
+          onBooleanUnion: handleBooleanUnion,
+          onBooleanSubtract: handleBooleanSubtract,
+          onBooleanIntersect: handleBooleanIntersect,
         }}
         topBar={
           <div className="topbar">

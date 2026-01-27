@@ -27,31 +27,43 @@ export type ToolId =
   | "scale"
   | "flip";
 
+export type GradientType = "linear" | "radial" | "angle" | "reflected" | "diamond";
+export type DitheringType = "none" | "bayer" | "floyd";
+export type SymmetryMode = "none" | "horizontal" | "vertical" | "both" | "radial4" | "radial8";
+
 /**
- * UI/Editor Settings (v0.1).
- * Later we extend this with palette management, tool settings, export presets, etc.
+ * UI/Editor Settings.
  */
 export type UiSettings = {
-  zoom: number; // 1.0 = 100%
+  zoom: number;
   brushStabilizerEnabled: boolean;
 
   // Background & checkerboard customization (view-only, never exported)
   backgroundMode: BackgroundMode;
-  checkerSize: number; // px (visual squares size)
-  checkerA: string; // CSS color
-  checkerB: string; // CSS color
+  checkerSize: number;
+  checkerA: string;
+  checkerB: string;
 
   // Grid overlay (view-only)
   showGrid: boolean;
-  gridSize: number; // in sprite pixels (1 = pixel grid, 8 = 8px tile grid)
+  gridSize: number;
 
-  // Onion skin (later used when we have multiple frames)
+  // Onion skin
   showOnionSkin: boolean;
   onionPrev: number;
   onionNext: number;
 
   // Drawing
-  primaryColor: string; // "#RRGGBB"
+  primaryColor: string;
+  secondaryColor?: string;
+
+  // Tool-specific settings
+  fillTolerance: number;
+  gradientType: GradientType;
+  ditheringType: DitheringType;
+  symmetryMode: SymmetryMode;
+  brushSize: number;
+  wandTolerance: number;
 };
 
 export type CanvasSpec = {

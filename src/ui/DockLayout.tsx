@@ -62,6 +62,7 @@ type Props = {
     onDeletePalette: (id: string) => void;
     onAddColorToPalette: (paletteId: string, color: string) => void;
     onRemoveColorFromPalette: (paletteId: string, colorIndex: number) => void;
+    onSelectColor: (color: string) => void;
     onSwapColors: (fromColor: string, toColor: string) => void;
   };
 
@@ -81,6 +82,18 @@ type Props = {
     onInvert: () => void;
     onDesaturate: () => void;
     onPosterize: (levels: number) => void;
+  };
+
+  onSelectionOperations?: {
+    onSelectAll: () => void;
+    onDeselect: () => void;
+    onInvertSelection: () => void;
+    onGrow: () => void;
+    onShrink: () => void;
+    onFeather: (radius: number) => void;
+    onBooleanUnion: () => void;
+    onBooleanSubtract: () => void;
+    onBooleanIntersect: () => void;
   };
 
   topBar: ReactNode;
@@ -130,6 +143,7 @@ export default function DockLayout({
   onPaletteOperations,
   onTransformOperations,
   onColorAdjustOperations,
+  onSelectionOperations,
   topBar
 }: Props) {
   const [rightWidth, setRightWidth] = useState<number>(() => loadNumber("dock:rightWidth", 280));
@@ -223,6 +237,7 @@ export default function DockLayout({
 
         <div className="dock__right">
           <RightPanel
+            tool={tool}
             settings={settings}
             onChangeSettings={onChangeSettings}
             layers={layers}
@@ -234,6 +249,8 @@ export default function DockLayout({
             onPaletteOperations={onPaletteOperations}
             onTransformOperations={onTransformOperations}
             onColorAdjustOperations={onColorAdjustOperations}
+            hasSelection={selection !== null}
+            onSelectionOperations={onSelectionOperations}
           />
         </div>
       </div>

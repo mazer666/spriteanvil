@@ -1,15 +1,11 @@
 import React, { useMemo, useState } from "react";
-import { UiSettings, ToolId } from "../types";
+import { UiSettings, CanvasSpec, Frame } from "../types";
 import LayerPanel, { LayerData, BlendMode } from "./LayerPanel";
 import PalettePanel, { PaletteData } from "./PalettePanel";
 import TransformPanel from "./TransformPanel";
 import ColorAdjustPanel from "./ColorAdjustPanel";
-import ToolOptionsPanel from "./ToolOptionsPanel";
-import SelectionPanel from "./SelectionPanel";
-import AIPanel from "./AIPanel";
 
 type Props = {
-  tool: ToolId;
   settings: UiSettings;
   onChangeSettings: (next: UiSettings) => void;
 
@@ -38,7 +34,6 @@ type Props = {
     onDeletePalette: (id: string) => void;
     onAddColorToPalette: (paletteId: string, color: string) => void;
     onRemoveColorFromPalette: (paletteId: string, colorIndex: number) => void;
-    onSelectColor: (color: string) => void;
     onSwapColors: (fromColor: string, toColor: string) => void;
   };
 
@@ -59,23 +54,9 @@ type Props = {
     onDesaturate: () => void;
     onPosterize: (levels: number) => void;
   };
-
-  hasSelection?: boolean;
-  onSelectionOperations?: {
-    onSelectAll: () => void;
-    onDeselect: () => void;
-    onInvertSelection: () => void;
-    onGrow: () => void;
-    onShrink: () => void;
-    onFeather: (radius: number) => void;
-    onBooleanUnion: () => void;
-    onBooleanSubtract: () => void;
-    onBooleanIntersect: () => void;
-  };
 };
 
 export default function RightPanel({
-  tool,
   settings,
   onChangeSettings,
   layers,
@@ -87,14 +68,9 @@ export default function RightPanel({
   onPaletteOperations,
   onTransformOperations,
   onColorAdjustOperations,
-  hasSelection,
-  onSelectionOperations,
 }: Props) {
-  const tabs = useMemo(
-    () => ["Tool", "Layers", "Palette", "Transform", "Color", "Selection", "AI"] as const,
-    []
-  );
-  const [active, setActive] = useState<(typeof tabs)[number]>("Tool");
+  const tabs = useMemo(() => ["Settings", "Layers", "Palette", "Transform", "Color"] as const, []);
+  const [active, setActive] = useState<(typeof tabs)[number]>("Settings");
 
   return (
     <div className="rightpanel">
@@ -106,31 +82,100 @@ export default function RightPanel({
             onClick={() => setActive(t)}
           >
             {t}
-            {t === "Selection" && hasSelection && <span className="tab__badge">•</span>}
           </button>
         ))}
       </div>
 
-      <div className="rightpanel__content" style={{ height: "calc(100% - 40px)", overflow: "auto" }}>
-        {active === "Tool" && (
-          <ToolOptionsPanel tool={tool} settings={settings} onChangeSettings={onChangeSettings} />
+      <div className="rightpanel__content" style={{ height: 'calc(100% - 40px)', overflow: 'auto' }}>
+        {active === "Settings" && (
+          <section>
+            <h3>Settings</h3>
+
+            <div className="card">
+              <div className="card__row">
+                <span>Onion Skin</span>
+                <label className="ui-row">
+                  <input
+                    type="checkbox"
+                    checked={settings.showOnionSkin}
+                    onChange={(e) =>
+                      onChangeSettings({ ...settings, showOnionSkin: e.target.checked })
+                    }
+                  />
+                  <span>Enabled</span>
+                </label>
+              </div>
+
+              <div className="card__row">
+                <span>Prev / Next</span>
+                <div className="ui-row">
+                  <input
+                    type="number"
+                    min={0}
+                    max={15}
+                    value={settings.onionPrev}
+                    onChange={(e) =>
+                      onChangeSettings({ ...settings, onionPrev: Number(e.target.value) })
+                    }
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={15}
+                    value={settings.onionNext}
+                    onChange={(e) =>
+                      onChangeSettings({ ...settings, onionNext: Number(e.target.value) })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="card__row">
+                <span>Show Grid</span>
+                <label className="ui-row">
+                  <input
+                    type="checkbox"
+                    checked={settings.showGrid}
+                    onChange={(e) =>
+                      onChangeSettings({ ...settings, showGrid: e.target.checked })
+                    }
+                  />
+                  <span>Enabled</span>
+                </label>
+              </div>
+
+              <div className="card__row">
+                <span>Brush Stabilizer</span>
+                <label className="ui-row">
+                  <input
+                    type="checkbox"
+                    checked={settings.brushStabilizerEnabled}
+                    onChange={(e) =>
+                      onChangeSettings({ ...settings, brushStabilizerEnabled: e.target.checked })
+                    }
+                  />
+                  <span>Enabled</span>
+                </label>
+              </div>
+            </div>
+          </section>
         )}
 
-        {active === "Layers" && layers && activeLayerId && onLayerOperations && (
+        {active === "Layers" && layers && onLayerOperations && (
           <LayerPanel
             layers={layers}
-            activeLayerId={activeLayerId}
+            activeLayerId={activeLayerId || null}
             {...onLayerOperations}
           />
         )}
 
-        {active === "Palette" && palettes && activePaletteId && onPaletteOperations && (
+        {active === "Palette" && palettes && onPaletteOperations && (
           <PalettePanel
             palettes={palettes}
-            activePaletteId={activePaletteId}
+            activePaletteId={activePaletteId || null}
             primaryColor={settings.primaryColor}
-            secondaryColor={settings.secondaryColor}
             recentColors={recentColors || []}
+            onSelectColor={(color) => onChangeSettings({ ...settings, primaryColor: color })}
             {...onPaletteOperations}
           />
         )}
@@ -142,12 +187,6 @@ export default function RightPanel({
         {active === "Color" && onColorAdjustOperations && (
           <ColorAdjustPanel {...onColorAdjustOperations} />
         )}
-
-        {active === "Selection" && onSelectionOperations && (
-          <SelectionPanel hasSelection={!!hasSelection} {...onSelectionOperations} />
-        )}
-
-        {active === "AI" && <AIPanel enabled={false} />}
       </div>
     </div>
   );
