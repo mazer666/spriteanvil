@@ -4,16 +4,19 @@
 ## Phase 0: Code Organization & Documentation Standards (Apply Across All Phases)
 
 ### 1. Documentation & Code Clarity Foundation
-- Establish clear code organization with dedicated folders for each feature area with purpose-specific README files
-- Create comprehensive inline comments explaining the "why" not just the "what" for every function and complex logic block
-- Implement TypeScript with strict typing and explicit type definitions to make code intent clear
-- Add JSDoc comments for all functions, parameters, and return values with usage examples
-- Create beginner-friendly variable naming conventions avoiding abbreviations (use framePixelData instead of fpd)
-- Implement clear function names that describe exact purpose (use calculateZoomToFitCanvas instead of calcZoom)
+
+- *Establish clear code organization* with dedicated folders for each feature area with purpose-specific README files
+- *Create comprehensive inline comments* explaining the "why" not just the "what" for every function and complex logic block
+- *Implement TypeScript* with strict typing and explicit type definitions to make code intent clear
+- *Add JSDoc comments* for all functions, parameters, and return values with usage examples
+
+- Create *beginner-friendly variable naming conventions* avoiding abbreviations (use framePixelData instead of fpd)
+- *Implement clear function names* that describe exact purpose (use calculateZoomToFitCanvas instead of calcZoom)
 - Add "Architecture" comments at top of complex files explaining overall structure and data flow
-- Create detailed comments before algorithm sections explaining step-by-step logic (especially pixel operations, transforms)
-- Build modular functions keeping complexity low (single responsibility principle)
-- Add error message comments explaining what can go wrong and why
+- Create detailed comments before algorithm sections *explaining step-by-step logic* (especially pixel operations, transforms)
+- *Build modular functions* keeping complexity low (single responsibility principle)
+- *Add error message comments* explaining what can go wrong and why
+
 - Create "TODO" and "FIXME" comments with explanations for future improvements
 - Maintain a /docs folder with:
   - ARCHITECTURE.md explaining overall application structure
@@ -23,164 +26,173 @@
 
 ### 2. Development Workflow & Learning Resources
 
-Create /src/examples folder with commented example code showing how to use each API
-Build /src/constants.ts file centralizing all magic numbers with clear names and comments
-Implement clear separation between business logic (in /src/lib) and UI components (in /src/ui)
-Create utility function library in /src/utils with well-documented helper functions
-Add console logging at key points with descriptive messages for debugging (with log-level control)
-Create /CONTRIBUTING.md specifically for new developers explaining how to extend features
-Build interactive comments in code showing "Before" and "After" examples for complex transformations
-Implement type guards and assertions with clear error messages for type safety
-Create visual ASCII diagrams in comments for complex data structures and algorithms
-Add performance notes in comments where optimizations are critical
+- Create /src/examples folder with *commented example code* showing *how to use each API*
+- Build /src/constants.ts file *centralizing all magic numbers* with clear names and comments
+- Implement *clear separation between business logic* (in /src/lib) *and UI components* (in /src/ui)
+
+- *Create utility function library* in /src/utils with well-documented helper functions
+- Add *console logging* at key points with descriptive messages for debugging (with log-level control)
+- Create /CONTRIBUTING.md specifically for new developers explaining how to extend features
+- Build *interactive comments* in code showing "Before" and "After" examples for complex transformations
+
+- Implement *type guards and assertions* with clear error messages for type safety
+- Create *visual ASCII diagrams* in comments for complex data structures and algorithms
+- Add *performance notes in comments* where optimizations are critical
 
 ### 3. Configuration & Constants Management
 
-Create /src/config.ts centralizing all configuration values with documentation
-Build color palette constants with semantic naming (not just hex values)
-Document all magic numbers and their purpose (e.g., why 0.35 for stabilizer alpha)
-Create preset constants for common dimensions, speeds, and behaviors
-Add configuration comments explaining what each value controls and acceptable ranges
-Implement environment-based configuration for development vs. production
+- Create /src/config.ts *centralizing all configuration values* with documentation
+- Build *color palette constants* with semantic naming (not just hex values)
+- *Document all magic numbers* and their purpose (e.g., why 0.35 for stabilizer alpha)
+- Create *preset constants* for common dimensions, speeds, and behaviors
+- Add configuration comments explaining what each value controls and acceptable ranges
+- Implement environment-based configuration for development vs. production
 
 ## Phase 1: Responsive Foundation & Core Architecture
 
 ### 4. Responsive Layout System (Desktop-Priority Implementation)
 
-Implement CSS Grid-based responsive breakpoints: Desktop (1200px+), Tablet (768px-1199px), Mobile (320px-767px)
-Document in /src/styles/RESPONSIVE_GUIDE.md explaining breakpoint strategy and how to extend
-Create fluid panel system for Desktop with adaptive widths that scale proportionally with viewport
-Implement responsive panel stacking where right panel shifts below canvas on tablets
-Design collapsible tool rail that becomes hamburger menu on tablets and full-screen drawer on mobile
-Create floating minimap for easy navigation on constrained viewports
-Add gesture support for pinch-zoom on tablets and swipe navigation
-Implement horizontal scrollable timeline that adapts height based on screen real estate
-Create mobile-optimized touch interface with larger hit targets and haptic feedback
-Ensure all keyboard shortcuts have touch/gesture equivalents on mobile
-Implement persistent panel state per device type (desktop layout saved separately from mobile)
+- Implement *CSS Grid-based responsive breakpoints*: Desktop (1200px+), Tablet (768px-1199px), Mobile (320px-767px)
+  - Document in /src/styles/RESPONSIVE_GUIDE.md explaining *breakpoint strategy* and how to extend
+- Create *fluid panel system for Desktop* with adaptive widths that scale proportionally with viewport
+- Implement *responsive panel stacking* where right panel shifts below canvas on tablets
+- Design *collapsible tool rail* that becomes hamburger menu on tablets and full-screen drawer on mobile
+- Create *floating minimap* for easy navigation on constrained viewports
+
+- *Add gesture support* for pinch-zoom on tablets and swipe navigation
+- Implement *horizontal scrollable timeline* that adapts height based on screen real estate
+- Create *mobile-optimized touch interface* with larger hit targets and haptic feedback
+- Ensure *all keyboard shortcuts* have *touch/gesture equivalents* on mobile
+- Implement *persistent panel state* per device type (desktop layout saved separately from mobile)
 
 ### 5. Database Architecture for Complete Feature Set
 
-Create users table with encrypted API key storage (OpenAI, Stability AI, Hugging Face, custom endpoints)
-Add migrations file with comments explaining schema design and relationships
-Create projects table with metadata, creation date, last modified, preview thumbnail
-Create sprites table linking to projects with canvas dimensions and creation timestamp
-Create frames table storing RGBA pixel data as compressed base64 with duration and visibility flags
-Create layers table per frame with blend modes, opacity, lock status, and visibility
-Create undo_snapshots table for efficient history with delta compression
-Create palettes table with color definitions and tags for easy access
-Create brush_presets table storing custom brush shapes, sizes, and behavior
-Create animation_tags table for organizing multiple animations within single sprite
-Create selection_history table for tracking recently used selections
-Create export_presets table saving frequently used export configurations
-Implement real-time auto-save triggering every 30 seconds with conflict detection
-Add cloud backup with version history allowing restore to any previous save
-Create /src/database/SCHEMA_GUIDE.md with visual diagrams of all table relationships
+- Create users table with *encrypted API key storage* (OpenAI, Stability AI, Hugging Face, custom endpoints)
+- Add migrations file with comments explaining schema design and relationships
+
+- Create *projects table* with metadata, creation date, last modified, preview thumbnail
+- Create *sprites table* linking to projects with canvas dimensions and creation timestamp
+- Create *frames table* storing RGBA pixel data as compressed base64 with duration and visibility flags
+- Create *layers table* per frame with blend modes, opacity, lock status, and visibility
+- Create *undo_snapshots table* for efficient history with delta compression
+- Create *palettes table* with color definitions and tags for easy access
+- Create *brush_presets table* storing custom brush shapes, sizes, and behavior
+- Create *animation_tags table* for organizing multiple animations within single sprite
+- Create *selection_history table* for tracking recently used selections
+- Create *export_presets table* saving frequently used export configurations
+
+- Implement *real-time auto-save triggering* every 30 seconds with conflict detection
+- Add *cloud backup with version history* allowing restore to any previous save
+
+- Create /src/database/SCHEMA_GUIDE.md with visual diagrams of all table relationships
 
 ### 6. AI Integration Architecture (Multi-Provider)
 
-Create AI provider abstraction layer supporting: OpenAI DALL-E 3, Stability AI (API v1), Hugging Face Inference API, Replicate, local Ollama
-Document each provider's API in comments with rate limits and costs
-Implement secure credential management with client-side encryption and server-side storage in Bolt Database vault
-Create AI settings panel with provider selection, model configuration, and generation parameters
-Build generation queue system preventing simultaneous requests and managing rate limits
-Implement generation history with caching to avoid duplicate API calls
-Create smart prompt templates optimized for each provider's strengths in pixel art
-Create /src/ai/PROVIDER_GUIDE.md explaining how to add new AI providers
+- Create *AI provider abstraction layer* supporting: OpenAI DALL-E 3, Stability AI (API v1), Hugging Face Inference API, Replicate, local Ollama
+- Document each provider's API in comments with rate limits and costs
+- Implement *secure credential management with client-side encryption* and server-side storage in Bolt Database vault
+- Create *AI settings panel* with provider selection, model configuration, and generation parameters
+- Build *generation queue system* preventing simultaneous requests and managing rate limits
+- Implement *generation history* with caching to avoid duplicate API calls
+
+- Create *smart prompt templates* optimized for each provider's strengths in pixel art
+
+- Create /src/ai/PROVIDER_GUIDE.md explaining how to add new AI providers
 
 ## Phase 2: Complete Drawing & Selection Toolset (Aseprite Parity + Improvements)
 
 ### 7. Advanced Selection Tools
 
-Implement rectangular selection with fixed aspect ratio and snap-to-grid options
-Add detailed comments in selection algorithm explaining marching ants animation and rendering
-Create elliptical selection with circular constraint mode
-Add free-form lasso selection with smoothing and pressure sensitivity
-Implement magic wand with configurable tolerance and contiguous option
-Document flood fill algorithm with step-by-step comments
-Create smart select by color across entire image or current frame only
-Add grow, shrink, and feather selection commands with pixel-accurate previews
-Implement selection inversion, union, intersection, and difference operations
-Create quick mask mode for fine-tuning selections with brush
-Add ability to save/load named selections as reusable templates
-Implement selection animation showing marching ants with customizable speed
-Create /src/tools/selection/SELECTION_ALGORITHM.md with pseudocode and visual examples
+- Implement *rectangular selection* with fixed aspect ratio and snap-to-grid options
+- Add *detailed comments in selection algorithm* explaining marching ants animation and rendering
+- Create *elliptical selection* with circular constraint mode
+- Add *free-form lasso* selection with smoothing and pressure sensitivity
+- Implement *magic wand* with configurable tolerance and contiguous option
+- Document *flood fill algorithm* with step-by-step comments
+- Create *smart select by color* across entire image or current frame only
+- Add *grow, shrink, and feather selection* commands with pixel-accurate previews
+- Implement *selection inversion, union, intersection, and difference operations*
+- Create *quick mask mode* for fine-tuning selections with brush
+- Add ability to save/load named selections as reusable templates
+- Implement selection animation showing marching ants with customizable speed
+
+- Create /src/tools/selection/SELECTION_ALGORITHM.md with pseudocode and visual examples
 
 ### 8. Transform & Distortion Tools
 
-Build move tool with sub-pixel precision and grid snapping toggle
-Create rotation tool with free rotate, 90/180 degree quick buttons, and angle input
-Document rotation matrix math with clear variable names and step-by-step comments
-Implement scale tool with aspect ratio lock and pixel-perfect upscaling only
-Add flip commands (horizontal, vertical, diagonal) with preview
-Create perspective skew tool for isometric transformations
-Implement distort mesh for non-linear warping
-Build warp tool with customizable brush size and intensity
-Add transformation history allowing multiple sequential transforms before commit
-Create smart content-aware fill for gaps left by transforms
-Implement transform anchor point control for precise rotation/scale pivot
-Add visual comments showing before/after for each transformation type
+- Build move tool with sub-pixel precision and grid snapping toggle
+- Create rotation tool with free rotate, 90/180 degree quick buttons, and angle input
+- Document rotation matrix math with clear variable names and step-by-step comments
+- Implement scale tool with aspect ratio lock and pixel-perfect upscaling only
+- Add flip commands (horizontal, vertical, diagonal) with preview
+- Create perspective skew tool for isometric transformations
+- Implement distort mesh for non-linear warping
+- Build warp tool with customizable brush size and intensity
+- Add transformation history allowing multiple sequential transforms before commit
+- Create smart content-aware fill for gaps left by transforms
+- Implement transform anchor point control for precise rotation/scale pivot
+- Add visual comments showing before/after for each transformation type
 
-# 9. Advanced Brush & Drawing System
+### 9. Advanced Brush & Drawing System
 
-Create 15+ default brush shapes (circle, square, diamond, star, custom patterns)
-Document brush shape generation algorithms with comments explaining each step
-Implement brush size, hardness, opacity, and flow controls
-Add dynamics system responding to pressure, tilt, and speed
-Create color picker from artwork with picker-following crosshair
-Implement stroke preview before committing
-Add edge smoothing with configurable algorithms (linear, quadratic, catmull-rom)
-Include mathematical formulas as comments explaining each smoothing algorithm
-Create scatter and texture brush modes
-Implement stroke stabilization with multiple preset curves
-Add anti-alias toggle for smooth or crisp edges per brush
-Create custom brush builder from existing artwork
-Create /src/tools/brush/BRUSH_GUIDE.md showing how to create and register new brush types
+- Create 15+ default brush shapes (circle, square, diamond, star, custom patterns)
+- Document brush shape generation algorithms with comments explaining each step
+- Implement brush size, hardness, opacity, and flow controls
+- Add dynamics system responding to pressure, tilt, and speed
+- Create color picker from artwork with picker-following crosshair
+- Implement stroke preview before committing
+- Add edge smoothing with configurable algorithms (linear, quadratic, catmull-rom)
+- Include mathematical formulas as comments explaining each smoothing algorithm
+- Create scatter and texture brush modes
+- Implement stroke stabilization with multiple preset curves
+- Add anti-alias toggle for smooth or crisp edges per brush
+- Create custom brush builder from existing artwork
+- Create /src/tools/brush/BRUSH_GUIDE.md showing how to create and register new brush types
 
-# 10. Fill & Gradient Tools
+### 10. Fill & Gradient Tools
 
-Build intelligent fill tool with edge detection and minimum gap closure
-Document flood fill algorithm implementation with visual ASCII art showing traversal
-Implement flood fill with pattern and gradient fill modes
-Add bucket fill with neighbor matching algorithm
-Create gradient tool with 20+ preset gradient types and custom stops
-Add comments explaining each gradient type (linear, radial, spiral, etc.)
-Implement gradient dithering modes (ordered, noise, clustered)
-Document dithering algorithms with mathematical explanations
-Add symmetrical fill that fills across mirror lines simultaneously
-Create content-aware fill for smart background inpainting
-Implement stroke-to-outline tool converting brushstrokes to pixel-perfect outlines
+- Build intelligent fill tool with edge detection and minimum gap closure
+- Document flood fill algorithm implementation with visual ASCII art showing traversal
+- Implement flood fill with pattern and gradient fill modes
+- Add bucket fill with neighbor matching algorithm
+- Create gradient tool with 20+ preset gradient types and custom stops
+- Add comments explaining each gradient type (linear, radial, spiral, etc.)
+- Implement gradient dithering modes (ordered, noise, clustered)
+- Document dithering algorithms with mathematical explanations
+- Add symmetrical fill that fills across mirror lines simultaneously
+- Create content-aware fill for smart background inpainting
+- Implement stroke-to-outline tool converting brushstrokes to pixel-perfect outlines
 
-# 11. Symmetry & Mirror Modes
+### 11. Symmetry & Mirror Modes
 
-Implement horizontal and vertical mirror drawing
-Create radial symmetry for circular patterns
-Add custom symmetry axis with angle control
-Build symmetry preview showing all mirrored regions
-Create diagonal and multi-axis symmetry modes
-Add symmetry drawing across multiple selected regions
-Implement per-tool symmetry preferences
-Create /src/tools/symmetry/SYMMETRY_MATH.md with visual diagrams of reflection/rotation math
+- Implement horizontal and vertical mirror drawing
+- Create radial symmetry for circular patterns
+- Add custom symmetry axis with angle control
+- Build symmetry preview showing all mirrored regions
+- Create diagonal and multi-axis symmetry modes
+- Add symmetry drawing across multiple selected regions
+- Implement per-tool symmetry preferences
+- Create /src/tools/symmetry/SYMMETRY_MATH.md with visual diagrams of reflection/rotation math
 
 ## Phase 3: Animation & Timeline Mastery
 
-# 12. Frame & Animation Timeline
+### 12. Frame & Animation Timeline
 
-Build infinite-scroll timeline with frame thumbnails and lazy loading
-Document virtualization strategy in comments explaining which frames render
-Create frame insertion, duplication, deletion with keyboard shortcuts
-Implement drag-to-reorder with visual displacement preview
-Add frame duration display and edit with keyboard shortcuts
-Create frame ranges for quick multi-frame selection
-Build tagging system for organizing animations (Walk, Run, Jump, Idle, etc.)
-Implement animation preview with adjustable playback speed
-Add frame locking to prevent accidental modification
-Create frame linking where modifying linked frame affects all linked copies
-Build reverse and pingpong playback modes
-Add frame rate calculator showing exact millisecond durations
-Create /src/animation/TIMELINE_GUIDE.md with ASCII diagrams showing data structure
+- Build infinite-scroll timeline with frame thumbnails and lazy loading
+- Document virtualization strategy in comments explaining which frames render
+- Create frame insertion, duplication, deletion with keyboard shortcuts
+- Implement drag-to-reorder with visual displacement preview
+- Add frame duration display and edit with keyboard shortcuts
+- Create frame ranges for quick multi-frame selection
+- Build tagging system for organizing animations (Walk, Run, Jump, Idle, etc.)
+- Implement animation preview with adjustable playback speed
+- Add frame locking to prevent accidental modification
+- Create frame linking where modifying linked frame affects all linked copies
+- Build reverse and pingpong playback modes
+- Add frame rate calculator showing exact millisecond durations
+- Create /src/animation/TIMELINE_GUIDE.md with ASCII diagrams showing data structure
 
-# 13. Onion Skin & Preview
+### 13. Onion Skin & Preview
 
 Implement configurable onion skin showing 1-15 previous and next frames
 Document rendering layers and opacity blending calculations
@@ -193,7 +205,7 @@ Implement motion trails showing ghost images of object across multiple frames
 Add keyframe-based onion skin showing only marked frames
 Create custom onion skin opacity per frame
 
-# 14. Animation Playback & Export
+### 14. Animation Playback & Export
 
 Build frame-accurate playback engine with variable speed
 Document frame timing calculation with comments explaining frame rate conversions
@@ -210,7 +222,7 @@ Add comments explaining each export format's advantages and use cases
 
 ## Phase 4: Layers, Palette & Color Management
 
-# 15. Complete Layer System
+### 15. Complete Layer System
 
 Build layer panel showing all layers with thumbnails
 Document layer rendering order and compositor with detailed comments
@@ -227,7 +239,8 @@ Create layer clipping mask support
 Build layer effects (drop shadow, outer glow, stroke) non-destructively
 Implement layer search and filtering
 Create /src/layers/BLEND_MODES.md with visual examples of each blend mode
-# 16. Palette & Color System
+
+### 16. Palette & Color System
 
 Build default palette library with curated color sets
 Create custom palette editor allowing color addition, removal, reordering
@@ -243,7 +256,7 @@ Add color replacement history for undo support
 Create palette animation for cycling color ranges over frames
 Add comments explaining color space conversions (RGB to HSL, etc.)
 
-# 17. Advanced Color Controls
+### 17. Advanced Color Controls
 
 Implement hue shift, saturation, brightness adjustment tools
 Document HSL conversion formulas in comments
@@ -257,9 +270,10 @@ Include ASCII diagrams showing dithering pattern for each algorithm
 Create color quantization with configurable palette size
 Build color space conversion support (RGB, HSL, Lab)
 Create /src/color/COLOR_MATH.md with formulas and algorithm pseudocode
+
 ## Phase 5: AI-Powered Features
 
-# 18. AI Image Generation Integration
+### 18. AI Image Generation Integration
 
 Implement AI generation panel with provider dropdown and API key management
 Document API key encryption process with clear security comments
@@ -276,7 +290,8 @@ Add local caching preventing duplicate API calls
 Document cache key generation and invalidation strategy
 Build cost calculator showing estimated API usage
 Create /src/ai/GENERATION_GUIDE.md with example prompts and results for each provider
-19. AI Post-Processing
+
+### 19. AI Post-Processing
 
 Implement AI upscaling models (Real-ESRGAN, Super Resolution)
 Create palette extraction from generated images
@@ -288,7 +303,8 @@ Add animation frame interpolation using optical flow
 Build sprite animation generation from single image
 Implement content-aware padding for edge artifacts
 Add detailed comments explaining each AI model's input/output format
-20. ML-Assisted Drawing
+
+### 20. ML-Assisted Drawing
 
 Create smart edge detection snapping to object boundaries
 Implement predictive stroke completion suggesting likely paths
@@ -298,9 +314,10 @@ Create automatic outline generation from painted areas
 Implement similarity-based color suggestion during painting
 Add outline thickness suggestion based on drawn strokes
 Document machine learning model outputs and confidence thresholds
-Phase 6: Professional UX & Accessibility
 
-21. Command Palette & Keyboard System
+## Phase 6: Professional UX & Accessibility
+
+### 21. Command Palette & Keyboard System
 
 Build command palette (Cmd+K) searching all functions with descriptions
 Document command registration system with example commands
@@ -314,7 +331,8 @@ Implement key repeat for continuous operations (painting, panning)
 Add toggle shortcuts for checkboxes and radio options
 Build number input shortcuts for sliders (press key then number)
 Create /src/input/KEYBOARD_GUIDE.md listing all shortcuts and how to customize
-22. Interface Polish & Accessibility
+
+### 22. Interface Polish & Accessibility
 
 Implement dark theme as default with optional light theme
 Create high-contrast mode for visibility
@@ -329,7 +347,8 @@ Build help system with video guides per feature
 Implement gesture support on touchscreen devices
 Add haptic feedback for button presses and tool actions
 Document accessibility standards used (WCAG 2.1 AA) in code comments
-23. Performance & Memory
+
+### 23. Performance & Memory
 
 Implement Web Worker offloading for expensive operations
 Document which operations run in workers and why
@@ -343,9 +362,10 @@ Add compression of frame data in storage
 Document compression algorithm choice (zlib vs LZ4 vs others) with performance notes
 Build hardware-accelerated canvas rendering when available
 Create /src/performance/OPTIMIZATION_GUIDE.md with profiling instructions
-Phase 7: Clipboard & Import/Export Excellence
 
-24. Clipboard Operations
+## Phase 7: Clipboard & Import/Export Excellence
+
+### 24. Clipboard Operations
 
 Implement full clipboard read/write for images
 Document Clipboard API and fallback strategies in comments
@@ -355,7 +375,8 @@ Build copy-to-clipboard for entire frames or selections
 Implement copy-as-spritesheet functionality
 Create paste-align with alignment snap guides
 Add paste animation blending modes during placement preview
-25. Import & Project Loading
+
+### 25. Import & Project Loading
 
 Build image import with automatic canvas sizing or fit-to-canvas
 Document image format detection and conversion process
@@ -370,7 +391,8 @@ Add clipboard import for images from other applications
 Build batch import processing multiple files
 Create import preview before committing
 Create /src/import/FORMAT_GUIDE.md documenting supported formats and conversions
-26. Export Flexibility
+
+### 26. Export Flexibility
 
 Build spritesheet export with multiple layout algorithms (packed, grid, row, column)
 Document each algorithm with visual ASCII diagrams
@@ -384,9 +406,10 @@ Create export preview showing exact output
 Add compression options for file size optimization
 Build watermark options for social sharing
 Create /src/export/ENGINE_INTEGRATION_GUIDE.md with code examples for each engine
-Phase 8: Collaboration & Cloud Features
 
-27. Cloud Synchronization
+## Phase 8: Collaboration & Cloud Features
+
+### 27. Cloud Synchronization
 
 Implement auto-save to Bolt Database every 30 seconds
 Document sync conflict resolution strategy in comments
@@ -399,7 +422,8 @@ Build comment system on frames for feedback
 Implement activity feed showing all project changes
 Create backups with automatic daily archival
 Create /src/sync/SYNC_PROTOCOL.md documenting data format and conflict handling
-28. Project Management
+
+### 28. Project Management
 
 Build project gallery with thumbnail previews
 Create project search and filtering by tags and date
@@ -413,7 +437,7 @@ Create project archival for old projects
 Add detailed comments in project listing/search logic
 Phase 9: Aseprite-Unique Improvements
 
-29. Better Symmetry & Mirror
+### 29. Better Symmetry & Mirror
 
 Add line symmetry with custom angle control (not just horizontal/vertical)
 Document symmetry axis calculations with mathematical comments
@@ -423,7 +447,8 @@ Add symmetry fill across multiple axes simultaneously
 Build symmetry modes that apply to selection, transformation, and fill
 Implement smart symmetry that detects natural symmetry axes in artwork
 Create /src/tools/symmetry/SYMMETRY_ALGORITHMS.md with mathematical derivations
-30. Enhanced Animation Tools
+
+### 30. Enhanced Animation Tools
 
 Build animation tweening with easing curves
 Document easing function math (quadratic, cubic, elastic, etc.)
@@ -434,7 +459,8 @@ Build frame duration curve for speed ramping animations
 Implement collision detection helpers for platformer sprites
 Create physics preview for gravity and bounce
 Add comments explaining each easing curve's visual effect
-31. Advanced Pixel Operations
+
+### 31. Advanced Pixel Operations
 
 Implement smart outline generation with configurable thickness
 Build edge detection showing boundaries
@@ -444,7 +470,8 @@ Implement smart palette reduction preserving detail
 Create dithering preview with multiple algorithms
 Build anti-alias removal for pixel-perfect conversions
 Document each algorithm with step-by-step comments and complexity analysis
-32. Developer-Friendly Features
+
+### 32. Developer-Friendly Features
 
 Export sprite data in multiple programming formats (C arrays, JavaScript objects)
 Create animation frame timing data in JSON/XML/YAML
@@ -457,7 +484,7 @@ Implement layer data export preserving structure
 Create /src/export/DEV_FORMAT_GUIDE.md with code examples in multiple languages
 Phase 10: Mobile & Tablet Optimization (Secondary Priority)
 
-33. Touch & Gesture Interface
+### 33. Touch & Gesture Interface
 
 Implement pinch-zoom with momentum scrolling
 Document gesture detection and momentum calculation
@@ -469,7 +496,8 @@ Create tool selection via swipe gestures
 Add layer navigation via horizontal swipe
 Build timeline scrubbing with finger drag
 Implement toolbox accessibility via floating buttons
-34. Mobile Layout Adaptations
+
+### 34. Mobile Layout Adaptations
 
 Design full-screen canvas mode with floating toolbar
 Create simplified tool palette on mobile
@@ -482,7 +510,7 @@ Implement orientation change handling with layout preservation
 Create /src/mobile/TOUCH_GUIDE.md documenting gesture detection strategy
 Code Documentation Best Practices Applied Throughout All Phases
 
-Every Feature Implementation Includes:
+### Every Feature Implementation Includes:
 
 Header Comments explaining what the feature does and why it matters
 Architecture Comments at top of complex files showing data flow
@@ -494,7 +522,8 @@ Performance Comments noting optimization opportunities or bottlenecks
 Example Comments showing how to use APIs and functions
 Edge Case Comments documenting known limitations and special cases
 TODO Comments with clear explanations for future improvements
-Summary
+
+## Summary
 
 This comprehensive plan delivers a professional sprite editor that achieves complete Aseprite parity while introducing significant innovations: intelligent AI assistance across multiple providers, superior responsive design prioritizing Desktop first with tablet and mobile support, and proprietary features like advanced symmetry modes, AI-assisted drawing, and multi-axis mirror painting that exceed the market standard.
 
