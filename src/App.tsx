@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import DockLayout from "./ui/DockLayout";
+import ExportPanel from "./ui/ExportPanel";
 import { CanvasSpec, ToolId, UiSettings, Frame } from "./types";
 import { HistoryStack } from "./editor/history";
 import { cloneBuffer, createBuffer } from "./editor/pixels";
@@ -29,6 +30,8 @@ export default function App() {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const playbackTimerRef = useRef<number | null>(null);
+
+  const [showExportPanel, setShowExportPanel] = useState(false);
 
   const historyRef = useRef<HistoryStack>(new HistoryStack());
   const [canUndo, setCanUndo] = useState(false);
@@ -263,7 +266,8 @@ export default function App() {
   }
 
   return (
-    <DockLayout
+    <>
+      <DockLayout
       settings={settings}
       onChangeSettings={setSettings}
       tool={tool}
@@ -299,6 +303,16 @@ export default function App() {
             </button>
             <button className="uiBtn" onClick={handleRedo} disabled={!canRedo} title="Redo (Ctrl+Y)">
               Redo
+            </button>
+          </div>
+
+          <div className="topbar__group">
+            <button
+              className="uiBtn uiBtn--primary"
+              onClick={() => setShowExportPanel(true)}
+              title="Export Sprite"
+            >
+              Export
             </button>
           </div>
 
@@ -419,6 +433,15 @@ export default function App() {
         </div>
       }
     />
+
+      {showExportPanel && (
+        <ExportPanel
+          frames={frames}
+          canvasSpec={canvasSpec}
+          onClose={() => setShowExportPanel(false)}
+        />
+      )}
+    </>
   );
 }
 
