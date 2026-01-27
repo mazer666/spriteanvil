@@ -1,4 +1,3 @@
-```md
 # SpriteAnvil Architecture
 
 This document describes **how SpriteAnvil is structured internally**, how **data flows** from user input to pixels on screen, and which **modules own which responsibilities**.
@@ -340,4 +339,5 @@ PointerUp    -> endStroke()
 ├─ commit pixels (if preview tool)
 ├─ push undo snapshot (if changed)
 └─ redraw
+
 
