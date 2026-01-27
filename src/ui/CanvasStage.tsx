@@ -225,7 +225,11 @@ export default function CanvasStage(props: {
     ctx.clearRect(0, 0, w, h);
 
     // Prepare an ImageData from the buffer (sprite pixels).
-    const img = new ImageData(bufRef.current, canvasSpec.width, canvasSpec.height);
+    const img = new ImageData(
+      new Uint8ClampedArray(bufRef.current),
+      canvasSpec.width,
+      canvasSpec.height
+    );
 
     // We draw sprite pixels scaled by zoom in the center.
     ctx.imageSmoothingEnabled = false;
