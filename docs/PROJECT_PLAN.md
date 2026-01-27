@@ -5,20 +5,21 @@
 
 ### 1. Documentation & Code Clarity Foundation
 
-- *Establish clear code organization* with dedicated folders for each feature area with purpose-specific README files
-- *Create comprehensive inline comments* explaining the "why" not just the "what" for every function and complex logic block
-- *Implement TypeScript* with strict typing and explicit type definitions to make code intent clear
-- *Add JSDoc comments* for all functions, parameters, and return values with usage examples
+1. **Establish clear code organization** with dedicated folders for each feature area with purpose-specific README files
+2. **Create comprehensive inline comments** explaining the "why" not just the "what" for every function and complex logic block
+3. **Implement TypeScript** with strict typing and explicit type definitions to make code intent clear
+4. **Add JSDoc comments** for all functions, parameters, and return values with usage examples
 
-- Create *beginner-friendly variable naming conventions* avoiding abbreviations (use framePixelData instead of fpd)
-- *Implement clear function names* that describe exact purpose (use calculateZoomToFitCanvas instead of calcZoom)
-- Add "Architecture" comments at top of complex files explaining overall structure and data flow
-- Create detailed comments before algorithm sections *explaining step-by-step logic* (especially pixel operations, transforms)
-- *Build modular functions* keeping complexity low (single responsibility principle)
-- *Add error message comments* explaining what can go wrong and why
+5. Create **beginner-friendly variable naming conventions** avoiding abbreviations (use framePixelData instead of fpd)
+6. Implement **clear function names** that describe exact purpose (use calculateZoomToFitCanvas instead of calcZoom)
+7. Add **Architecture comments** at top of complex files explaining overall structure and data flow
+8. Create detailed comments before algorithm sections **explaining step-by-step logic** (especially pixel operations, transforms)
+9. Build **modular functions** keeping complexity **low** (single responsibility principle)
+10. Add **error message comments** explaining what can go wrong and why
 
-- Create "TODO" and "FIXME" comments with explanations for future improvements
-- Maintain a /docs folder with:
+11. Create "TODO" and "FIXME" comments with explanations for future improvements
+
+12. Maintain a /docs folder with:
   - ARCHITECTURE.md explaining overall application structure
   -  MODULE_GUIDE.md breaking down each feature module
   -  CODE_STYLE.md documenting naming conventions and organization patterns
@@ -26,199 +27,202 @@
 
 ### 2. Development Workflow & Learning Resources
 
-- Create /src/examples folder with *commented example code* showing *how to use each API*
-- Build /src/constants.ts file *centralizing all magic numbers* with clear names and comments
-- Implement *clear separation between business logic* (in /src/lib) *and UI components* (in /src/ui)
+1. Create /src/examples folder with **commented example code** showing *how to use each API*
+2. Build /src/constants.ts file **centralizing all magic numbers** with clear names and comments
+3. Implement **clear separation between business logic** (in /src/lib) and **UI components** (in /src/ui)
 
-- *Create utility function library* in /src/utils with well-documented helper functions
-- Add *console logging* at key points with descriptive messages for debugging (with log-level control)
-- Create /CONTRIBUTING.md specifically for new developers explaining how to extend features
-- Build *interactive comments* in code showing "Before" and "After" examples for complex transformations
+4. Create **utility function library** in /src/utils with well-documented helper functions
+5. Add **console logging** at key points with descriptive messages for debugging (with log-level control)
+6. Create /CONTRIBUTING.md specifically for new developers explaining how to extend features
+7. Build **interactive comments** in code showing "Before" and "After" examples for complex transformations
 
-- Implement *type guards and assertions* with clear error messages for type safety
-- Create *visual ASCII diagrams* in comments for complex data structures and algorithms
-- Add *performance notes in comments* where optimizations are critical
+8. Implement **type guards and assertions** with clear error messages for type safety
+9. Create **visual ASCII diagrams** in comments for complex data structures and algorithms
+10. Add **performance notes in comments** where optimizations are critical
 
 ### 3. Configuration & Constants Management
 
-- Create /src/config.ts *centralizing all configuration values* with documentation
-- Build *color palette constants* with semantic naming (not just hex values)
-- *Document all magic numbers* and their purpose (e.g., why 0.35 for stabilizer alpha)
-- Create *preset constants* for common dimensions, speeds, and behaviors
-- Add configuration comments explaining what each value controls and acceptable ranges
-- Implement environment-based configuration for development vs. production
+1. Create /src/config.ts **centralizing all configuration values** with documentation
+2. Build **color palette constants* with semantic naming (not just hex values)
+3. **Document all magic numbers** and their purpose (e.g., why 0.35 for stabilizer alpha)
+4. Create **preset constants** for common dimensions, speeds, and behaviors
+5. Add configuration comments explaining what each value controls and acceptable ranges
+6. Implement environment-based configuration for development vs. production
 
 ## Phase 1: Responsive Foundation & Core Architecture
 
 ### 4. Responsive Layout System (Desktop-Priority Implementation)
 
-- Implement *CSS Grid-based responsive breakpoints*: Desktop (1200px+), Tablet (768px-1199px), Mobile (320px-767px)
-  - Document in /src/styles/RESPONSIVE_GUIDE.md explaining *breakpoint strategy* and how to extend
-- Create *fluid panel system for Desktop* with adaptive widths that scale proportionally with viewport
-- Implement *responsive panel stacking* where right panel shifts below canvas on tablets
-- Design *collapsible tool rail* that becomes hamburger menu on tablets and full-screen drawer on mobile
-- Create *floating minimap* for easy navigation on constrained viewports
+1. Implement **CSS Grid-based responsive breakpoints**: Desktop (1200px+), Tablet (768px-1199px), Mobile (320px-767px)
+- Document in /src/styles/RESPONSIVE_GUIDE.md explaining *breakpoint strategy* and how to extend
+2. Create **fluid panel system for Desktop** with adaptive widths that scale proportionally with viewport
+3. Implement **responsive panel stacking** where right panel shifts below canvas on tablets
+4. Design **collapsible tool rail** that becomes hamburger menu on tablets and full-screen drawer on mobile
+5. Create **floating minimap** for easy navigation on constrained viewports
 
-- *Add gesture support* for pinch-zoom on tablets and swipe navigation
-- Implement *horizontal scrollable timeline* that adapts height based on screen real estate
-- Create *mobile-optimized touch interface* with larger hit targets and haptic feedback
-- Ensure *all keyboard shortcuts* have *touch/gesture equivalents* on mobile
-- Implement *persistent panel state* per device type (desktop layout saved separately from mobile)
+6. Add **gesture support** for pinch-zoom on tablets and swipe navigation
+7. Implement **horizontal scrollable timeline** that adapts height based on screen real estate
+8. Create **mobile-optimized touch interface** with larger hit targets and haptic feedback
+9. Ensure **all keyboard shortcuts** have **touch/gesture equivalents** on mobile
+10. Implement **persistent panel state** per device type (desktop layout saved separately from mobile)
 
 ### 5. Database Architecture for Complete Feature Set
 
-- Create users table with *encrypted API key storage* (OpenAI, Stability AI, Hugging Face, custom endpoints)
-- Add migrations file with comments explaining schema design and relationships
+1. Create users table with **encrypted API key storage** (OpenAI, Stability AI, Hugging Face, custom endpoints)
+2. Add migrations file with comments explaining schema design and relationships
 
-- Create *projects table* with metadata, creation date, last modified, preview thumbnail
-- Create *sprites table* linking to projects with canvas dimensions and creation timestamp
-- Create *frames table* storing RGBA pixel data as compressed base64 with duration and visibility flags
-- Create *layers table* per frame with blend modes, opacity, lock status, and visibility
-- Create *undo_snapshots table* for efficient history with delta compression
-- Create *palettes table* with color definitions and tags for easy access
-- Create *brush_presets table* storing custom brush shapes, sizes, and behavior
-- Create *animation_tags table* for organizing multiple animations within single sprite
-- Create *selection_history table* for tracking recently used selections
-- Create *export_presets table* saving frequently used export configurations
+3. Create **projects table** with metadata, creation date, last modified, preview thumbnail
+4. Create **sprites table** linking to projects with canvas dimensions and creation timestamp
+5. Create **frames table** storing RGBA pixel data as compressed base64 with duration and visibility flags
+6. Create **layers table** per frame with blend modes, opacity, lock status, and visibility
+7. Create **undo_snapshots table** for efficient history with delta compression
+8. Create **palettes table** with color definitions and tags for easy access
+9. Create **brush_presets table** storing custom brush shapes, sizes, and behavior
+10. Create **animation_tags table** for organizing multiple animations within single sprite
+11. Create **selection_history table** for tracking recently used selections
+12. Create **export_presets table** saving frequently used export configurations
 
-- Implement *real-time auto-save triggering* every 30 seconds with conflict detection
-- Add *cloud backup with version history* allowing restore to any previous save
+13. Implement **real-time auto-save triggering** every 30 seconds with conflict detection
+14. Add **cloud backup with version history** allowing restore to any previous save
 
-- Create /src/database/SCHEMA_GUIDE.md with visual diagrams of all table relationships
+15. Create /src/database/SCHEMA_GUIDE.md with visual diagrams of all table relationships
 
 ### 6. AI Integration Architecture (Multi-Provider)
 
-- Create *AI provider abstraction layer* supporting: OpenAI DALL-E 3, Stability AI (API v1), Hugging Face Inference API, Replicate, local Ollama
-- Document each provider's API in comments with rate limits and costs
-- Implement *secure credential management with client-side encryption* and server-side storage in Bolt Database vault
-- Create *AI settings panel* with provider selection, model configuration, and generation parameters
-- Build *generation queue system* preventing simultaneous requests and managing rate limits
-- Implement *generation history* with caching to avoid duplicate API calls
+1. Create **AI provider abstraction layer** supporting: OpenAI DALL-E 3, Stability AI (API v1), Hugging Face Inference API, Replicate, local Ollama
+2. Document each provider's API in comments with rate limits and costs
+3. Implement **secure credential management with client-side encryption** and server-side storage in Bolt Database vault
+4. Create **AI settings panel** with provider selection, model configuration, and generation parameters
+5. Build **generation queue system** preventing simultaneous requests and managing rate limits
+6. Implement **generation history** with caching to avoid duplicate API calls
 
-- Create *smart prompt templates* optimized for each provider's strengths in pixel art
+7. Create *smart prompt templates* optimized for each provider's strengths in pixel art
 
-- Create /src/ai/PROVIDER_GUIDE.md explaining how to add new AI providers
+8. Create /src/ai/PROVIDER_GUIDE.md explaining how to add new AI providers
 
 ## Phase 2: Complete Drawing & Selection Toolset (Aseprite Parity + Improvements)
 
 ### 7. Advanced Selection Tools
 
-- Implement *rectangular selection* with fixed aspect ratio and snap-to-grid options
-- Add *detailed comments in selection algorithm* explaining marching ants animation and rendering
-- Create *elliptical selection* with circular constraint mode
-- Add *free-form lasso* selection with smoothing and pressure sensitivity
-- Implement *magic wand* with configurable tolerance and contiguous option
-- Document *flood fill algorithm* with step-by-step comments
-- Create *smart select by color* across entire image or current frame only
-- Add *grow, shrink, and feather selection* commands with pixel-accurate previews
-- Implement *selection inversion, union, intersection, and difference operations*
-- Create *quick mask mode* for fine-tuning selections with brush
-- Add ability to save/load named selections as reusable templates
-- Implement selection animation showing marching ants with customizable speed
+1. Implement **rectangular selection** with fixed aspect ratio and snap-to-grid options
+2. Add **detailed comments in selection algorithm** explaining marching ants animation and rendering
+3. Create **elliptical selection** with circular constraint mode
+4. Add **free-form lasso** selection with smoothing and pressure sensitivity
+5. Implement **magic wand** with configurable tolerance and contiguous option
+6. Document **flood fill algorithm** with step-by-step comments
+7. Create **smart select by color** across entire image or current frame only
+8. Add **grow, shrink, and feather selection** commands with pixel-accurate previews
+9. Implement **selection inversion, union, intersection, and difference operations**
+10. Create **quick mask mode** for fine-tuning selections with brush
+11. Add ability to save/load named selections as reusable templates
+12. Implement selection animation showing marching ants with customizable speed
 
-- Create /src/tools/selection/SELECTION_ALGORITHM.md with pseudocode and visual examples
+13. Create /src/tools/selection/SELECTION_ALGORITHM.md with pseudocode and visual examples
 
 ### 8. Transform & Distortion Tools
 
-- Build move tool with sub-pixel precision and grid snapping toggle
-- Create rotation tool with free rotate, 90/180 degree quick buttons, and angle input
-- Document rotation matrix math with clear variable names and step-by-step comments
-- Implement scale tool with aspect ratio lock and pixel-perfect upscaling only
-- Add flip commands (horizontal, vertical, diagonal) with preview
-- Create perspective skew tool for isometric transformations
-- Implement distort mesh for non-linear warping
-- Build warp tool with customizable brush size and intensity
-- Add transformation history allowing multiple sequential transforms before commit
-- Create smart content-aware fill for gaps left by transforms
-- Implement transform anchor point control for precise rotation/scale pivot
-- Add visual comments showing before/after for each transformation type
+1. Build **move tool with sub-pixel precision** and grid snapping toggle
+2. Create **rotation tool** with free rotate, 90/180 degree quick buttons, and angle input
+3. Document rotation matrix math with clear variable names and step-by-step comments
+4. Implement **scale tool** with aspect ratio lock and pixel-perfect upscaling only
+5. Add **flip commands** (horizontal, vertical, diagonal) with preview
+6. Create **perspective skew tool** for isometric transformations
+7. Implement **distort mesh** for non-linear warping
+8. Build **warp tool** with customizable brush size and intensity
+9. Add **transformation history** allowing multiple sequential transforms before commit
+10. Create **smart content-aware fill** for gaps left by transforms
+11. Implement **transform anchor point control** for precise rotation/scale pivot
+12. Add **visual comments** showing before/after for each transformation type
 
 ### 9. Advanced Brush & Drawing System
 
-- Create 15+ default brush shapes (circle, square, diamond, star, custom patterns)
-- Document brush shape generation algorithms with comments explaining each step
-- Implement brush size, hardness, opacity, and flow controls
-- Add dynamics system responding to pressure, tilt, and speed
-- Create color picker from artwork with picker-following crosshair
-- Implement stroke preview before committing
-- Add edge smoothing with configurable algorithms (linear, quadratic, catmull-rom)
-- Include mathematical formulas as comments explaining each smoothing algorithm
-- Create scatter and texture brush modes
-- Implement stroke stabilization with multiple preset curves
-- Add anti-alias toggle for smooth or crisp edges per brush
-- Create custom brush builder from existing artwork
-- Create /src/tools/brush/BRUSH_GUIDE.md showing how to create and register new brush types
+1. Create **15+ default brush shapes** (circle, square, diamond, star, custom patterns)
+2. Document brush shape generation algorithms with comments explaining each step
+3. Implement **brush size, hardness, opacity, and flow controls**
+4. Add **dynamics system** responding to pressure, tilt, and speed
+5. Create **color picker** from artwork with picker-following crosshair
+6. Implement **stroke preview** before committing
+7. Add **edge smoothing** with configurable algorithms (linear, quadratic, catmull-rom)
+8. Include mathematical formulas as comments explaining each smoothing algorithm
+9. Create **scatter and texture brush modes**
+10. Implement **stroke stabilization** with multiple preset curves
+11. Add **anti-alias toggle** for smooth or crisp edges per brush
+12. Create **custom brush builder** from existing artwork
+
+13. Create /src/tools/brush/BRUSH_GUIDE.md showing how to create and register new brush types
 
 ### 10. Fill & Gradient Tools
 
-- Build intelligent fill tool with edge detection and minimum gap closure
-- Document flood fill algorithm implementation with visual ASCII art showing traversal
-- Implement flood fill with pattern and gradient fill modes
-- Add bucket fill with neighbor matching algorithm
-- Create gradient tool with 20+ preset gradient types and custom stops
-- Add comments explaining each gradient type (linear, radial, spiral, etc.)
-- Implement gradient dithering modes (ordered, noise, clustered)
-- Document dithering algorithms with mathematical explanations
-- Add symmetrical fill that fills across mirror lines simultaneously
-- Create content-aware fill for smart background inpainting
-- Implement stroke-to-outline tool converting brushstrokes to pixel-perfect outlines
+1. Build **intelligent fill tool** with edge detection and minimum gap closure
+2. Document flood fill algorithm implementation with visual ASCII art showing traversal
+3. Implement flood fill with **pattern and gradient fill modes**
+4. Add **bucket fill** with neighbor matching algorithm
+5. Create **gradient tool** with 20+ preset gradient types and custom stops
+6. Add comments explaining each gradient type (linear, radial, spiral, etc.)
+7. Implement **gradient dithering modes** (ordered, noise, clustered)
+8. Document dithering algorithms with mathematical explanations
+9. Add **symmetrical fill** that fills across mirror lines simultaneously
+10. Create **content-aware fill for smart background inpainting**
+11. Implement **stroke-to-outline tool** converting brushstrokes to pixel-perfect outlines
 
 ### 11. Symmetry & Mirror Modes
 
-- Implement horizontal and vertical mirror drawing
-- Create radial symmetry for circular patterns
-- Add custom symmetry axis with angle control
-- Build symmetry preview showing all mirrored regions
-- Create diagonal and multi-axis symmetry modes
-- Add symmetry drawing across multiple selected regions
-- Implement per-tool symmetry preferences
-- Create /src/tools/symmetry/SYMMETRY_MATH.md with visual diagrams of reflection/rotation math
+1. Implement horizontal and vertical **mirror drawing**
+2. Create **radial symmetry** for circular patterns
+3. Add **custom symmetry axis** with angle control
+4. Build **symmetry preview** showing all mirrored regions
+5. Create **diagonal and multi-axis** symmetry modes
+6. Add symmetry drawing across multiple selected regions
+7. Implement per-tool symmetry preferences
+
+8. Create /src/tools/symmetry/SYMMETRY_MATH.md with visual diagrams of reflection/rotation math
 
 ## Phase 3: Animation & Timeline Mastery
 
 ### 12. Frame & Animation Timeline
 
-- Build infinite-scroll timeline with frame thumbnails and lazy loading
-- Document virtualization strategy in comments explaining which frames render
-- Create frame insertion, duplication, deletion with keyboard shortcuts
-- Implement drag-to-reorder with visual displacement preview
-- Add frame duration display and edit with keyboard shortcuts
-- Create frame ranges for quick multi-frame selection
-- Build tagging system for organizing animations (Walk, Run, Jump, Idle, etc.)
-- Implement animation preview with adjustable playback speed
-- Add frame locking to prevent accidental modification
-- Create frame linking where modifying linked frame affects all linked copies
-- Build reverse and pingpong playback modes
-- Add frame rate calculator showing exact millisecond durations
-- Create /src/animation/TIMELINE_GUIDE.md with ASCII diagrams showing data structure
+1. Build **infinite-scroll timeline** with frame thumbnails and lazy loading
+2. Document virtualization strategy in comments explaining which frames render
+3. Create **frame insertion, duplication, deletion** with keyboard shortcuts
+4. Implement **drag-to-reorder** with visual displacement preview
+5. Add **frame duration display** and edit with keyboard shortcuts
+6. Create **frame ranges** for quick multi-frame selection
+7. Build **tagging system** for organizing animations (Walk, Run, Jump, Idle, etc.)
+8. Implement **animation preview** with adjustable playback speed
+9. Add **frame locking** to prevent accidental modification
+10. Create **frame linking** where modifying linked frame affects all linked copies
+11. Build **reverse and pingpong playback modes**
+12. Add **frame rate calculator** showing exact millisecond durations
+
+13. Create /src/animation/TIMELINE_GUIDE.md with ASCII diagrams showing data structure
 
 ### 13. Onion Skin & Preview
 
-Implement configurable onion skin showing 1-15 previous and next frames
-Document rendering layers and opacity blending calculations
-Add color tinting for onion skin frames (default red/blue)
-Create opacity slider for onion skin intensity
-Add difference highlighting showing pixel changes between frames
-Build auto-onion that intelligently shows relevant frames based on timeline position
-Create loop checker showing first and last frame for seamless loop validation
-Implement motion trails showing ghost images of object across multiple frames
-Add keyframe-based onion skin showing only marked frames
-Create custom onion skin opacity per frame
+1. Implement **configurable onion skin** showing 1-15 previous and next frames
+2. Document rendering layers and opacity blending calculations
+3. Add **color tinting** for onion skin frames (default red/blue)
+4. Create **opacity slider for onion skin** intensity
+5. Add **difference highlighting** showing pixel changes between frames
+6. Build **auto-onion** that intelligently shows relevant frames based on timeline position
+7. Create **loop checker** showing first and last frame for seamless loop validation
+8. Implement **motion trails** showing ghost images of object across multiple frames
+9. Add **keyframe-based onion skin** showing only marked frames
+10. Create **custom onion skin opacity** per frame
 
 ### 14. Animation Playback & Export
 
-Build frame-accurate playback engine with variable speed
-Document frame timing calculation with comments explaining frame rate conversions
-Implement playback looping modes and single-play mode
-Create scrubber with frame-accurate seeking
-Add playback preview to timeline with colored region indicator
-Build GIF export with optimization, color reduction, and dithering
-Create WebM and MP4 video export with quality settings
-Implement PNG sequence export with JSON metadata
-Add Godot AtlasTexture-friendly spritesheet export
-Create APNG export for browsers supporting it
-Build custom spritesheet layout with JSON metadata (frame rects, durations, pivot points)
-Add comments explaining each export format's advantages and use cases
+1. Build **frame-accurate playback engine** with variable speed
+2. Document frame timing calculation with comments explaining frame rate conversions
+3. Implement **playback looping modes** and **single-play mode**
+4. Create **scrubber** with frame-accurate seeking
+5. Add **playback preview to timeline** with colored region indicator
+6. Build **GIF export** with optimization, color reduction, and dithering
+7. Create **WebM and MP4 video export** with quality settings
+8. Implement **PNG sequence export** with JSON metadata
+9. Add **Godot AtlasTexture-friendly spritesheet export**
+10. Create **APNG export** for browsers supporting it
+11. Build **custom spritesheet layout** with JSON metadata (frame rects, durations, pivot points)
+12. Add comments explaining each export format's advantages and use cases
 
 ## Phase 4: Layers, Palette & Color Management
 
