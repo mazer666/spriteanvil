@@ -105,7 +105,16 @@ export default function DockLayout({
   }
 
   return (
-    <div className="dock" onPointerMove={onDragMove} onPointerUp={endDrag} onPointerCancel={endDrag}>
+    <div
+      className="dock"
+      onPointerMove={onDragMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      style={{
+        "--rightPanelWidth": `${sizes.rightWidth}px`,
+        "--timelineHeight": `${sizes.timelineHeight}px`,
+      } as React.CSSProperties}
+    >
       <div className="dock__top">{topBar}</div>
 
       <div className="dock__body">
@@ -131,7 +140,7 @@ export default function DockLayout({
           onPointerDown={(e) => beginDrag("right", e)}
         />
 
-        <div className="dock__right" style={{ width: sizes.rightWidth }}>
+        <div className="dock__right">
           <RightPanel
             settings={settings}
             onChangeSettings={onChangeSettings}
@@ -145,7 +154,7 @@ export default function DockLayout({
         onPointerDown={(e) => beginDrag("timeline", e)}
       />
 
-      <div className="dock__bottom" style={{ height: sizes.timelineHeight }}>
+      <div className="dock__bottom">
         <Timeline settings={settings} onChangeSettings={onChangeSettings} />
       </div>
     </div>
