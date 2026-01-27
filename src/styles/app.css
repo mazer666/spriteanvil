@@ -66,17 +66,20 @@ body{
 }
 
 .dock__body{
-  display: grid;
-  grid-template-columns: 64px 1fr 6px auto;
+  display: flex;
+  flex-direction: row;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+  flex: 1;
 }
 
 .dock__left{
   background: var(--panel);
   border-right: 1px solid var(--border);
   min-height: 0;
+  width: 64px;
+  flex-shrink: 0;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -99,8 +102,7 @@ body{
 .dock__center{
   min-width: 0;
   min-height: 0;
-  width: 100%;
-  height: 100%;
+  flex: 1;
   position: relative;
   overflow: hidden;
 }
@@ -111,7 +113,9 @@ body{
   min-height: 0;
   min-width: 240px;
   max-width: 500px;
-  overflow: hidden;
+  flex-shrink: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .dock__bottom{
@@ -125,9 +129,11 @@ body{
 /* Splitters */
 .splitter{
   background: rgba(255,255,255,0.06);
+  flex-shrink: 0;
 }
 .splitter--v{
   cursor: col-resize;
+  width: 6px;
 }
 .splitter--h{
   cursor: row-resize;
