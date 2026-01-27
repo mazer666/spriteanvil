@@ -53,8 +53,9 @@ It is intentionally written to be **beginner-friendly** while still being a reli
 
 ## File / folder map (current)
 
-> This is a *logical* map based on the current repo layout described in docs.
+This is a *logical* map based on the repo layout described in docs.
 
+```text
 src/
 ├── editor/
 │   ├── pixels.ts           # Core pixel operations (setPixel, drawLine, etc.)
@@ -70,30 +71,31 @@ src/
 │   └── Timeline.tsx        # Frame timeline UI
 ├── types.ts                # TypeScript types (ToolId etc.)
 └── App.tsx                 # Top-level composition and state wiring
-
+```
 
 ---
+
 ## Core data flow (end-to-end)
 
 This is the **main pipeline** for “user draws something”:
 
+```text
 User Input (pointer/keyboard)
-↓
+      ↓
 UI: ToolRail (select tool) / CanvasStage (pointer events)
-↓
+      ↓
 App State: current tool + settings (colors, brush, etc.)
-↓
+      ↓
 CanvasStage: interprets event for current tool
-↓
+      ↓
 Editor/Tools: pure functions mutate pixel buffer (Uint8ClampedArray)
-↓
+      ↓
 Editor/History: commit undo snapshot when stroke completes
-↓
+      ↓
 Canvas rendering: draw pixel buffer to screen + overlays (preview/selection/grid)
-↓
+      ↓
 Visual output
-
----
+```
 
 ### Why this works well
 
@@ -111,11 +113,12 @@ SpriteAnvil uses a **typed array pixel buffer**:
 - Format: **RGBA** repeating
 - Pixel index: `(y * width + x) * 4`
 
-Example:
+Example (conceptual):
 
+```text
 [R, G, B, A,  R, G, B, A,  R, G, B, A,  ...]
-pixel 0       pixel 1       pixel 2
-
+  pixel 0       pixel 1       pixel 2
+```
 
 ### Why typed arrays?
 
@@ -146,12 +149,11 @@ Tools live under:
 
 - `src/editor/tools/`
 
-The **rule**:
+The rule:
 - Prefer **pure functions**: `(buffer, width, height, ...) -> mutated buffer / stats`
 - Keep UI-only preview logic in `CanvasStage.tsx`
 
-Examples already described in integration plan:
-
+Examples already described in the integration plan:
 - `fill.ts` implements scanline flood fill
 - `shapes.ts` implements pixel-perfect shapes (Bresenham/midpoint style algorithms)
 
@@ -161,7 +163,7 @@ Examples already described in integration plan:
 
 `src/ui/CanvasStage.tsx` is the “bridge” between UI input and editor algorithms.
 
-### Owns:
+### Owns
 
 1. **Pointer lifecycle**
    - `beginStroke` (pointer down)
@@ -180,7 +182,7 @@ Examples already described in integration plan:
 4. **Calling history commit**
    - On stroke end, if pixels changed: push an undo snapshot
 
-### What should *not* live in CanvasStage
+### What should not live in CanvasStage
 
 - Heavy algorithms (fill, selection ops, shape rasterization)
 - Reusable editor logic that can be tested without UI
@@ -189,7 +191,7 @@ Examples already described in integration plan:
 
 ## Selection system (foundation for many features)
 
-Selection is stored as a **mask**:
+Selection is stored as a mask:
 
 - `Uint8Array` (1 byte per pixel)
 - Value `1` = selected, `0` = not selected
@@ -233,10 +235,10 @@ History lives in `src/editor/history.ts`.
 
 ### Snapshot strategy (current vs planned)
 
-- **Current (likely):** store full buffer snapshots for simplicity
-- **Planned (from project plan):** delta compression / efficient undo snapshots
+- Current (likely): store full buffer snapshots for simplicity
+- Planned (from project plan): delta compression / efficient undo snapshots
 
-> Keep the first version beginner-friendly; optimize after correctness.
+Keep the first version beginner-friendly; optimize after correctness.
 
 ---
 
@@ -244,9 +246,9 @@ History lives in `src/editor/history.ts`.
 
 Rendering is logically split into layers:
 
-1. **Base pixels**
+1. Base pixels
    - Convert pixel buffer → ImageData → draw to canvas
-2. **Overlays**
+2. Overlays
    - Grid overlay (optional)
    - Selection outline (“marching ants”, later)
    - Shape previews (semi-transparent)
@@ -267,7 +269,7 @@ Overlays should be drawn in canvas space, so previews don’t affect undo/redo a
 3. **Batch drawing**
    - Prefer “draw once per frame” if needed (`requestAnimationFrame`)
 4. **Algorithm choice matters**
-   - Scanline fill > naive flood fill recursion (stack safe + faster)
+   - Scanline fill > naive recursive flood fill (stack safe + faster)
    - Bresenham/midpoint integer math > floating math
 
 ---
@@ -277,27 +279,32 @@ Overlays should be drawn in canvas space, so previews don’t affect undo/redo a
 These are future modules planned in `PROJECT_PLAN.md` (not necessarily implemented yet):
 
 ### Layers
+
 - New data model:
   - layers per frame
   - compositing pipeline before rendering
 - Blend modes & opacity
 
 ### Animation engine
+
 - Timeline virtualization for many frames
 - Onion skin rendering with controlled alpha blending
 - Playback engine with ms-accurate timing
 
 ### Import/export
+
 - PNG sequence
 - Spritesheet packers (grid/packed/row/column)
 - Metadata formats (JSON primary)
 
 ### AI integration (multi-provider)
+
 - Provider interface layer
 - Secure key storage
 - Generation queue + caching
 
 ### Persistence / cloud
+
 - Project save/load
 - Autosave
 - Conflict resolution (later)
@@ -322,22 +329,21 @@ When adding a feature, verify:
 
 ### Pixel index
 
-
+```text
 index = (y * width + x) * 4
 R = buf[index + 0]
 G = buf[index + 1]
 B = buf[index + 2]
 A = buf[index + 3]
-
-`
+```
 
 ### Typical tool lifecycle
 
+```text
 PointerDown  -> beginStroke()
 PointerMove  -> moveStroke()
 PointerUp    -> endStroke()
-├─ commit pixels (if preview tool)
-├─ push undo snapshot (if changed)
-└─ redraw
-
-
+                 ├─ commit pixels (if preview tool)
+                 ├─ push undo snapshot (if changed)
+                 └─ redraw
+```

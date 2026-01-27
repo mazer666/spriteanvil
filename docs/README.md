@@ -9,7 +9,7 @@ Die Pläne/Specs sind so aufgebaut, dass **Einsteiger** das Projekt verstehen un
 
 1. **Projekt-Roadmap & Vision:** [`PROJECT_PLAN.md`](./PROJECT_PLAN.md)  
 2. **Aktueller Integrationsstand + Architektur-Überblick:** [`FEATURE_INTEGRATION_PLAN.md`](./FEATURE_INTEGRATION_PLAN.md)  
-3. **System-Architektur (Source of Truth):** [`ARCHITECTURE.md`](./ARCHITECTURE.md) *(to be created)*  
+3. **System-Architektur (Source of Truth):** [`ARCHITECTURE.md`](./ARCHITECTURE.md)  
 4. **Modul-Landkarte & Verantwortlichkeiten:** [`MODULE_GUIDE.md`](./MODULE_GUIDE.md) *(to be created)*  
 5. **Coding Standards + Doku-Regeln:** [`CODE_STYLE.md`](./CODE_STYLE.md) *(to be created)*  
 6. **Häufige Aufgaben Schritt-für-Schritt:** [`COMMON_TASKS.md`](./COMMON_TASKS.md) *(to be created)*  
@@ -29,7 +29,7 @@ Die Pläne/Specs sind so aufgebaut, dass **Einsteiger** das Projekt verstehen un
 
 ### Core Specs (werden als Nächstes erstellt)
 
-- `ARCHITECTURE.md`  
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md)  
   **Ziel:** Ein klarer Überblick über App-Schichten (UI/Editor/Tools/History/Render), Datenfluss und Performance-Prinzipien.  
   **Leser:** Jeder, der verstehen will, *wie* SpriteAnvil intern aufgebaut ist.
 
@@ -51,7 +51,7 @@ Die Pläne/Specs sind so aufgebaut, dass **Einsteiger** das Projekt verstehen un
 
 Damit die Docs “GitHub-clean” bleiben:
 
-- **Dateinamen:** `UPPER_SNAKE_CASE.md` für Core-Dokumente (wie oben), konsistent mit bestehenden Files.
+- **Dateinamen:** `UPPER_SNAKE_CASE.md` für Core-Dokumente, konsistent mit bestehenden Files.
 - **Markdown:** klare Überschriften-Hierarchie (`#`, `##`, `###`), keine überlangen Absätze.
 - **Links:** relative Links (z.B. `./ARCHITECTURE.md`).
 - **Codeblöcke:** immer mit Sprache (` ```ts `, ` ```tsx `, ` ```css `).
@@ -67,7 +67,7 @@ Damit die Docs “GitHub-clean” bleiben:
 
 ## Nächste Schritte (Docs-Backlog)
 
-1. `ARCHITECTURE.md` erstellen  
+1. `ARCHITECTURE.md` ✅ (dieses Dokument)
 2. `MODULE_GUIDE.md` erstellen  
 3. `CODE_STYLE.md` erstellen  
 4. `COMMON_TASKS.md` erstellen  
