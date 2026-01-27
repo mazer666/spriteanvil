@@ -1,7 +1,7 @@
 # Plan: Professional AI-Powered Sprite Editor  
-## Complete Aseprite Parity + Innovations (Beginner-Friendly, Fully Documented)
+## Complete Best in Class Solution Parity + Innovations (Beginner-Friendly, Fully Documented)
 
-This document is the end-to-end development plan for building a **professional sprite editor** that reaches **feature parity with Aseprite**, and then goes beyond it with **AI assistance, advanced symmetry, better UX**, and **cloud/collaboration**.
+This document is the end-to-end development plan for building a **professional sprite editor** that reaches **feature parity with best in class solution**, and then goes beyond it with **AI assistance, advanced symmetry, better UX**, and **cloud/collaboration**.
 
 A core principle throughout every phase: **code and architecture must be understandable for beginners** while staying professional-grade.
 
@@ -12,14 +12,14 @@ A core principle throughout every phase: **code and architecture must be underst
 - [Guiding Principles](#guiding-principles)
 - [Phase 0: Code Organization & Documentation Standards](#phase-0-code-organization--documentation-standards-apply-across-all-phases)
 - [Phase 1: Responsive Foundation & Core Architecture](#phase-1-responsive-foundation--core-architecture)
-- [Phase 2: Complete Drawing & Selection Toolset](#phase-2-complete-drawing--selection-toolset-aseprite-parity--improvements)
+- [Phase 2: Complete Drawing & Selection Toolset](#phase-2-complete-drawing--selection-toolset-parity--improvements)
 - [Phase 3: Animation & Timeline Mastery](#phase-3-animation--timeline-mastery)
 - [Phase 4: Layers, Palette & Color Management](#phase-4-layers-palette--color-management)
 - [Phase 5: AI-Powered Features](#phase-5-ai-powered-features)
 - [Phase 6: Professional UX & Accessibility](#phase-6-professional-ux--accessibility)
 - [Phase 7: Clipboard & Import/Export Excellence](#phase-7-clipboard--importexport-excellence)
 - [Phase 8: Collaboration & Cloud Features](#phase-8-collaboration--cloud-features)
-- [Phase 9: Aseprite-Unique Improvements](#phase-9-aseprite-unique-improvements)
+- [Phase 9: Best in class solution-Unique Improvements](#phase-9-unique-improvements)
 - [Phase 10: Mobile & Tablet Optimization](#phase-10-mobile--tablet-optimization-secondary-priority)
 - [Documentation Best Practices Applied Throughout](#code-documentation-best-practices-applied-throughout-all-phases)
 - [Summary](#summary)
@@ -28,7 +28,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ## Guiding Principles
 
-- **Aseprite parity first, then innovation.**
+- **Current best in class solution parity first, then innovation.**
 - **Documentation is a feature.** (Every complex decision explained in code and docs.)
 - **Separation of concerns.** Business logic vs. UI, reusable libs, clear module boundaries.
 - **Predictable performance.** Pixel ops, transforms, timeline virtualization, caching.
@@ -77,9 +77,9 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 0.3 Configuration & Constants Management
 
-- [ ] Create `/src/config.ts` as a centralized configuration hub (fully documented).
+- [ ] Create `/src/config.ts` as a **centralized configuration hub** (fully documented).
 - [ ] Create color palette constants with **semantic names** (not only hex).
-- [ ] Document magic numbers and why they exist (e.g. why stabilizer alpha is `0.35`).
+- [ ] Document **magic numbers** and why they exist (e.g. why stabilizer alpha is `0.35`).
 - [ ] Preset constants for common dimensions/speeds/behaviors.
 - [ ] Document acceptable ranges and what each value controls.
 - [ ] Environment-based configuration for development vs. production.
@@ -90,18 +90,18 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 1.1 Responsive Layout System (Desktop-Priority Implementation)
 
-- [ ] CSS Grid-based breakpoints:
+- [ ] **CSS Grid-based breakpoints**:
   - Desktop: `1200px+`
   - Tablet: `768px–1199px`
   - Mobile: `320px–767px`
 - [ ] Add `/src/styles/RESPONSIVE_GUIDE.md` describing breakpoint strategy + extension rules.
 - [ ] Desktop: fluid panel system with proportional scaling.
 - [ ] Tablet: right panel stacks below canvas (adaptive layout).
-- [ ] Tool rail: collapsible → hamburger menu on tablet → full-screen drawer on mobile.
+- [ ] **Tool rail**: collapsible → hamburger menu on tablet → full-screen drawer on mobile.
 - [ ] Floating minimap for constrained viewports.
-- [ ] Gesture support: pinch-zoom (tablet/mobile), swipe navigation.
-- [ ] Timeline: horizontally scrollable, adaptive height based on screen real estate.
-- [ ] Mobile touch UX:
+- [ ] **Gesture support**: pinch-zoom (tablet/mobile), swipe navigation.
+- [ ] **Timeline**: horizontally scrollable, adaptive height based on screen real estate.
+- [ ] **Mobile touch UX**:
   - larger hit targets
   - optional haptic feedback
 - [ ] Ensure all keyboard shortcuts have touch/gesture equivalents.
@@ -109,7 +109,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 1.2 Database Architecture for Complete Feature Set
 
-- [ ] `users` table with encrypted API key storage (OpenAI, Stability, Hugging Face, custom endpoints).
+- [ ] `users` table with **encrypted API key storage** (OpenAI, Stability, Hugging Face, custom endpoints).
 - [ ] Migrations file with comments explaining schema design and relationships.
 - [ ] `projects` table: metadata, create date, last modified, preview thumbnail.
 - [ ] `sprites` table: link to project, dimensions, created timestamp.
@@ -134,10 +134,10 @@ A core principle throughout every phase: **code and architecture must be underst
   - Replicate
   - Local Ollama
 - [ ] Document each provider: rate limits, costs, known pitfalls.
-- [ ] Secure credential management:
+- [ ] **Secure credential management**:
   - client-side encryption
   - server-side storage in Bolt Database vault
-- [ ] AI settings panel: provider selection, model configuration, generation parameters.
+- [ ] **AI settings panel**: provider selection, model configuration, generation parameters.
 - [ ] Generation queue: prevent simultaneous requests + handle rate limits.
 - [ ] Generation history + caching to avoid duplicate API calls.
 - [ ] Smart prompt templates optimized for each provider (pixel art focus).
@@ -145,25 +145,25 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ---
 
-## Phase 2: Complete Drawing & Selection Toolset (Aseprite Parity + Improvements)
+## Phase 2: Complete Drawing & Selection Toolset (Best in Class Solution Parity + Improvements)
 
 ### 2.1 Advanced Selection Tools
 
-- [ ] Rectangular selection:
+- [ ] **Rectangular selection**:
   - fixed aspect ratio
   - snap-to-grid
 - [ ] Document marching-ants rendering + animation.
-- [ ] Elliptical selection with circular constraint.
-- [ ] Free-form lasso:
+- [ ] **Elliptical selection** with circular constraint.
+- [ ] **Free-form lasso**:
   - smoothing
   - pressure sensitivity
-- [ ] Magic wand:
+- [ ] **Magic wand**:
   - tolerance setting
   - contiguous option
 - [ ] Document flood fill selection algorithm step-by-step.
 - [ ] Smart select by color (whole image or current frame only).
 - [ ] Grow/shrink/feather with pixel-accurate previews.
-- [ ] Boolean ops:
+- [ ] **Boolean ops**:
   - invert
   - union
   - intersection
@@ -175,24 +175,24 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 2.2 Transform & Distortion Tools
 
-- [ ] Move tool:
+- [ ] **Move tool**:
   - sub-pixel precision
   - grid snapping toggle
-- [ ] Rotation tool:
+- [ ] **Rotation tool**:
   - free rotate
   - 90/180 quick buttons
   - angle input
 - [ ] Document rotation matrix math with clear variable names.
-- [ ] Scale tool:
+- [ ] **Scale tool**:
   - aspect lock
   - pixel-perfect upscaling only
-- [ ] Flip:
+- [ ] **Flip**:
   - horizontal
   - vertical
   - diagonal
-- [ ] Perspective skew (isometric transformations).
-- [ ] Distort mesh (non-linear warping).
-- [ ] Warp tool with brush size + intensity control.
+- [ ] **Perspective skew** (isometric transformations).
+- [ ] **Distort mesh** (non-linear warping).
+- [ ] **Warp tool** with brush size + intensity control.
 - [ ] Transformation “staging”:
   - allow multiple transforms before commit
   - transformation history
@@ -202,16 +202,16 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 2.3 Advanced Brush & Drawing System
 
-- [ ] 15+ default brush shapes:
+- [ ] 15+ default **brush shapes**:
   - circle, square, diamond, star, patterns, etc.
 - [ ] Document brush shape generation algorithms.
 - [ ] Controls: size, hardness, opacity, flow.
 - [ ] Dynamics: pressure, tilt, speed.
-- [ ] Color picker:
+- [ ] **Color picker**:
   - from artwork
   - picker-following crosshair
 - [ ] Stroke preview before commit.
-- [ ] Edge smoothing algorithms:
+- [ ] **Edge smoothing** algorithms:
   - linear
   - quadratic
   - catmull-rom
@@ -224,13 +224,13 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 2.4 Fill & Gradient Tools
 
-- [ ] Intelligent fill with edge detection + minimum gap closure.
+- [ ] **Intelligent fill** with edge detection + minimum gap closure.
 - [ ] Flood fill modes:
   - solid
   - pattern
   - gradient
 - [ ] Bucket fill with neighbor matching algorithm.
-- [ ] Gradient tool:
+- [ ] **Gradient tool**:
   - 20+ preset types
   - custom stops
 - [ ] Explain each gradient type (linear, radial, spiral, etc.).
@@ -245,7 +245,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 2.5 Symmetry & Mirror Modes
 
-- [ ] Horizontal and vertical mirror drawing.
+- [ ] Horizontal and vertical **mirror drawing**.
 - [ ] Radial symmetry (circular patterns).
 - [ ] Custom symmetry axis with angle control.
 - [ ] Symmetry preview overlay (all mirrored regions).
@@ -260,11 +260,11 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 3.1 Frame & Animation Timeline
 
-- [ ] Infinite-scroll timeline:
+- [ ] **Infinite-scroll timeline**:
   - thumbnails
   - lazy loading
 - [ ] Document virtualization strategy (which frames render and why).
-- [ ] Frame ops:
+- [ ] **Frame ops**:
   - insert
   - duplicate
   - delete
@@ -282,13 +282,13 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 3.2 Onion Skin & Preview
 
-- [ ] Onion skin:
+- [ ] **Onion skin**:
   - 1–15 previous/next frames
 - [ ] Document blending calculations + rendering order.
 - [ ] Tinting (default red/blue), configurable.
 - [ ] Opacity slider for onion intensity.
-- [ ] Difference highlighting (pixel changes between frames).
-- [ ] Auto-onion: show relevant frames based on timeline position.
+- [ ] **Difference highlighting** (pixel changes between frames).
+- [ ] **Auto-onion**: show relevant frames based on timeline position.
 - [ ] Loop checker: compare first/last frame for seamless loops.
 - [ ] Motion trails (ghosting across multiple frames).
 - [ ] Keyframe-only onion skin mode.
@@ -316,7 +316,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 4.1 Complete Layer System
 
-- [ ] Layer panel with thumbnails.
+- [ ] **Layer panel** with thumbnails.
 - [ ] Document layer compositor + render order with detailed comments.
 - [ ] Create/delete/reorder layers (drag & drop).
 - [ ] Naming + color coding.
@@ -325,14 +325,14 @@ A core principle throughout every phase: **code and architecture must be underst
   - Normal, Multiply, Screen, Overlay, Add, Subtract, Darken, Lighten
 - [ ] Include formulas as comments for each blend mode.
 - [ ] Opacity slider per layer.
-- [ ] Lock modes:
+- [ ] **Lock modes**:
   - transparent pixels only
   - image content
   - position
 - [ ] Visibility toggle (eye icon).
 - [ ] Merge down + flatten.
 - [ ] Clipping masks.
-- [ ] Non-destructive effects:
+- [ ] **Non-destructive effects**:
   - drop shadow
   - outer glow
   - stroke
@@ -342,7 +342,7 @@ A core principle throughout every phase: **code and architecture must be underst
 ### 4.2 Palette & Color System
 
 - [ ] Default palette library (curated sets).
-- [ ] Custom palette editor:
+- [ ] **Custom palette editor**:
   - add/remove/reorder colors
 - [ ] Import/export formats:
   - ASE, PAL, GPL
@@ -351,7 +351,7 @@ A core principle throughout every phase: **code and architecture must be underst
 - [ ] Palette ramp builder (smooth gradients).
 - [ ] Color harmony suggestions (complementary/triadic/etc.).
 - [ ] Color history (recent 20).
-- [ ] Eyedropper sampling across frames.
+- [ ] **Eyedropper sampling across frames**.
 - [ ] Replace color with tolerance settings.
 - [ ] Color replacement history (undo support).
 - [ ] Palette animation (cycling color ranges over frames).
@@ -359,7 +359,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 4.3 Advanced Color Controls
 
-- [ ] Hue/Saturation/Brightness tools.
+- [ ] **Hue/Saturation/Brightness tools**.
 - [ ] Document HSL formulas.
 - [ ] Curves with control points.
 - [ ] Levels adjustment (input/output mapping).
@@ -387,7 +387,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 5.1 AI Image Generation Integration
 
-- [ ] AI generation panel:
+- [ ] **AI generation panel**:
   - provider dropdown
   - API key management
 - [ ] Document key encryption process (security rationale).
@@ -407,13 +407,13 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 5.2 AI Post-Processing
 
-- [ ] AI upscaling:
+- [ ] **AI upscaling**:
   - Real-ESRGAN
   - Super Resolution
 - [ ] Palette extraction from generated images.
 - [ ] Harmony suggestions from AI output.
 - [ ] AI background fill for partial sprites.
-- [ ] Sketch-to-pixel (scribble-to-image).
+- [ ] **Sketch-to-pixel** (scribble-to-image).
 - [ ] Style transfer to existing sprites.
 - [ ] Frame interpolation using optical flow.
 - [ ] Animation generation from a single image.
@@ -422,7 +422,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 5.3 ML-Assisted Drawing
 
-- [ ] Edge detection snapping.
+- [ ] **Edge detection** snapping.
 - [ ] Predictive stroke completion.
 - [ ] Object detection for similar shapes.
 - [ ] Pattern recognition for tile-friendly edits.
@@ -490,7 +490,7 @@ A core principle throughout every phase: **code and architecture must be underst
 - [ ] Full clipboard image read/write.
 - [ ] Document Clipboard API + fallback strategies.
 - [ ] Paste-as-new-layer.
-- [ ] Paste Special:
+- [ ] **Paste Special**:
   - 1:1
   - fit-to-canvas
   - tile
@@ -501,7 +501,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 7.2 Import & Project Loading
 
-- [ ] Image import:
+- [ ] **Image import**:
   - auto canvas sizing
   - fit-to-canvas options
 - [ ] Document format detection + conversion.
@@ -521,18 +521,18 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 7.3 Export Flexibility
 
-- [ ] Spritesheet layouts:
+- [ ] **Spritesheet layouts**:
   - packed
   - grid
   - row
   - column
 - [ ] Document each layout with ASCII diagrams.
-- [ ] Metadata export:
+- [ ] **Metadata export**:
   - JSON
   - XML
   - YAML
 - [ ] Engine-specific exports:
-  - Godot
+  - **Godot**
   - Unity
   - Unreal
   - Phaser
@@ -551,7 +551,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 8.1 Cloud Synchronization
 
-- [ ] Auto-save to Bolt Database every 30 seconds.
+- [ ] **Auto-save** to Bolt Database every 30 seconds.
 - [ ] Document conflict resolution strategy.
 - [ ] Manual save with version snapshots.
 - [ ] Version history restore.
@@ -578,7 +578,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ---
 
-## Phase 9: Aseprite-Unique Improvements
+## Phase 9: Best in Class Solution-Unique Improvements
 
 ### 9.1 Better Symmetry & Mirror
 
@@ -596,9 +596,9 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 9.2 Enhanced Animation Tools
 
-- [ ] Tweening with easing curves.
+- [ ] **Tweening** with easing curves.
 - [ ] Document easing math (quadratic, cubic, elastic, etc.).
-- [ ] Frame interpolation (in-between generation).
+- [ ] **Frame interpolation** (in-between generation).
 - [ ] Animation blending between sequences.
 - [ ] Onion-skin-driven animation assistant.
 - [ ] Duration curves (speed ramping).
@@ -608,13 +608,13 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 9.3 Advanced Pixel Operations
 
-- [ ] Smart outline generation (config thickness).
+- [ ] **Smart outline generation** (config thickness).
 - [ ] Edge detection boundary visualization.
 - [ ] Pixel spread algorithm (noise effects).
 - [ ] Mipmap preview (multiple scales).
-- [ ] Smart palette reduction preserving detail.
+- [ ] **Smart palette reduction** preserving detail.
 - [ ] Dithering preview with multiple algorithms.
-- [ ] Anti-alias removal for pixel-perfect conversions.
+- [ ] **Anti-alias removal** for pixel-perfect conversions.
 - [ ] Document complexity analysis + edge cases for each algorithm.
 
 ### 9.4 Developer-Friendly Features
@@ -638,7 +638,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 10.1 Touch & Gesture Interface
 
-- [ ] Pinch-zoom with momentum scrolling.
+- [ ] **Pinch-zoom** with **momentum scrolling**.
 - [ ] Document gesture detection + momentum calculation.
 - [ ] Two-finger pan for canvas movement.
 - [ ] Three-finger undo/redo.
@@ -667,14 +667,14 @@ A core principle throughout every phase: **code and architecture must be underst
 
 Every feature implementation includes:
 
-- Header comments: what the feature does and why it matters  
+- **Header comments**: what the feature does and why it matters  
 - Architecture comments: data flow and module boundaries  
 - Algorithm comments: step-by-step logic for complex operations  
 - Parameter comments: input meaning and valid ranges  
 - Return value comments: what returns and under what conditions  
 - Side effects: warnings about mutation/state impacts  
 - Performance notes: bottlenecks and optimization targets  
-- Usage examples: how to call/use APIs correctly  
+- **Usage examples**: how to call/use APIs correctly  
 - Edge cases: limitations and special behaviors  
 - TODO/FIXME with rationale and intended future direction  
 
@@ -684,7 +684,7 @@ Every feature implementation includes:
 
 This plan delivers a **professional, production-grade sprite editor** that:
 
-- Reaches **complete Aseprite parity**
+- Reaches **complete Best in Class Solution (e.g. Aseprite) parity** / no copy only
 - Adds **multi-provider AI generation and assistance**
 - Provides **superior symmetry tools, ML-assisted workflows, and advanced pixel ops**
 - Implements **desktop-first responsive UX** with tablet and mobile support
