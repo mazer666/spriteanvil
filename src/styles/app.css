@@ -97,7 +97,7 @@ body{
   grid-area: main;
   display: grid;
   grid-template-areas: "left center vsplitter right";
-  grid-template-columns: 64px 1fr 4px var(--rightPanelWidth);
+  grid-template-columns: 56px 1fr 4px var(--rightPanelWidth);
   grid-template-rows: 100%;
   min-height: 0;
   min-width: 0;
@@ -240,8 +240,8 @@ body{
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 8px 6px;
-  gap: 6px;
+  padding: 8px 8px;
+  gap: 4px;
 }
 .toolrail__sectionTitle{
   font-size: 10px;
@@ -261,13 +261,13 @@ body{
 }
 
 .toolbtn{
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   border: 1px solid var(--border);
   background: rgba(0,0,0,0.18);
   color: var(--ink);
-  font-size: 22px;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
