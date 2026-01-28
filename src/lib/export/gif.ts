@@ -9,7 +9,7 @@ export type GIFExportOptions = {
 };
 
 export async function exportToGIF(options: GIFExportOptions): Promise<Blob> {
-  const { width, height, frames, loop } = options;
+  const { width, height, frames, loop, quality } = options;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -24,7 +24,7 @@ export async function exportToGIF(options: GIFExportOptions): Promise<Blob> {
 
   const gif = new GIF({
     workers: 2,
-    quality: 10,
+    quality,
     width,
     height,
     repeat: loop ? 0 : -1,
