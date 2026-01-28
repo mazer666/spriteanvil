@@ -24,52 +24,51 @@ Bridge between roadmap and coding.
 
 ## Recommended next implementation sequence
 
-### 1) Selection UI wiring + clipboard MVP
+### 1) Tool integrations (gradient, lasso, magic wand)
 
 Deliverables:
-- rectangle select tool works end-to-end
-- selection overlay (MVP)
-- copy / cut / paste with paste preview + single history commit
+- gradient tool renders and applies on drag
+- lasso selection creates a custom mask
+- magic wand selects by tolerance
 
 Docs (source of truth):
+- `UI_SPEC.md`
 - `SELECTION_MODEL.md`
-- `COMMON_TASKS.md`
+
+Likely files:
+- `src/ui/CanvasStage.tsx`
+- `src/editor/tools/gradient.ts`
+- `src/editor/tools/lasso.ts`
+
+### 2) Selection operations & constraints
+
+Deliverables:
+- boolean selection operations (union/subtract/intersect)
+- selection constraints for drawing
+- feather operation wiring
+
+Docs:
+- `SELECTION_MODEL.md`
 
 Likely files:
 - `src/editor/selection.ts`
 - `src/ui/CanvasStage.tsx`
-- `src/editor/history.ts`
-- `src/types.ts`
-- `src/ui/ToolRail.tsx`
+- `src/App.tsx`
 
-### 2) Timeline correctness + playback + onion skin toggle
+### 3) Export & transform polish
 
 Deliverables:
-- insert/duplicate/delete
-- playback uses `durationMs`
-- tag playback direction
-- onion skin toggle + before/after counts
-
-Docs:
-- `TIMELINE_GUIDE.md`
-
-Likely files:
-- `src/ui/Timeline.tsx`
-- `src/ui/CanvasStage.tsx`
-- `src/types.ts`
-
-### 3) Export pipeline MVP (spritesheet PNG + JSON)
-
-Deliverables:
-- grid spritesheet export
-- `*.spriteanvil.json` metadata per spec
+- export format selector (PNG/JSON/GIF)
+- JSON/GIF wiring in `ExportPanel`
+- transform scale apply action
 
 Docs:
 - `EXPORT_FORMAT.md`
 
 Likely files:
-- `src/lib/export/*` (recommended)
-- export button UI (top bar or right panel)
+- `src/ui/ExportPanel.tsx`
+- `src/lib/export/*`
+- `src/ui/TransformPanel.tsx`
 
 ---
 
