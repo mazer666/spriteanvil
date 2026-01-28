@@ -1,4 +1,12 @@
 # SpriteAnvil Implementation Status
+## Related docs
+
+- Docs index: [`/docs/README.md`](./README.md)
+- Current status: [`/STATUS_UPDATE.md`](../STATUS_UPDATE.md)
+- Implementation snapshot: [`/IMPLEMENTATION_COMPLETE.md`](../IMPLEMENTATION_COMPLETE.md)
+
+---
+
 
 This document tracks implementation progress against the [PROJECT_PLAN.md](./PROJECT_PLAN.md) through Phase 8.
 
