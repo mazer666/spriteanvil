@@ -8,9 +8,6 @@ type Props = {
   onGrow: () => void;
   onShrink: () => void;
   onFeather: (radius: number) => void;
-  onBooleanUnion: () => void;
-  onBooleanSubtract: () => void;
-  onBooleanIntersect: () => void;
 };
 
 export default function SelectionPanel({
@@ -21,9 +18,6 @@ export default function SelectionPanel({
   onGrow,
   onShrink,
   onFeather,
-  onBooleanUnion,
-  onBooleanSubtract,
-  onBooleanIntersect,
 }: Props) {
   return (
     <div className="panel">
@@ -74,29 +68,8 @@ export default function SelectionPanel({
         <div className="option-group">
           <div className="option-label">Boolean Operations</div>
           <div className="option-hint">
-            Make a new selection to apply boolean ops
+            Hold Shift to add, Alt to subtract, Shift+Alt to intersect.
           </div>
-          <button
-            className="uiBtn uiBtn--full"
-            onClick={onBooleanUnion}
-            disabled={!hasSelection}
-          >
-            Add to Selection (Shift)
-          </button>
-          <button
-            className="uiBtn uiBtn--full"
-            onClick={onBooleanSubtract}
-            disabled={!hasSelection}
-          >
-            Subtract from Selection (Alt)
-          </button>
-          <button
-            className="uiBtn uiBtn--full"
-            onClick={onBooleanIntersect}
-            disabled={!hasSelection}
-          >
-            Intersect with Selection (Shift+Alt)
-          </button>
         </div>
 
         {hasSelection && (

@@ -25,12 +25,7 @@ import {
   desaturate,
   posterize,
 } from "./editor/tools/coloradjust";
-import {
-  invertSelection,
-  selectionIntersection,
-  selectionSubtract,
-  selectionUnion,
-} from "./editor/selection";
+import { invertSelection } from "./editor/selection";
 
 export default function App() {
   const [canvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
@@ -50,7 +45,6 @@ export default function App() {
 
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [selection, setSelection] = useState<Uint8Array | null>(null);
-  const previousSelectionRef = useRef<Uint8Array | null>(null);
   const clipboardRef = useRef<ClipboardData | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -288,30 +282,6 @@ export default function App() {
   }
 
   function handleFeatherSelection(_radius: number) {
-  }
-
-  function handleBooleanUnion() {
-    if (!selection || !previousSelectionRef.current) return;
-    const merged = new Uint8Array(previousSelectionRef.current);
-    selectionUnion(merged, selection);
-    previousSelectionRef.current = null;
-    handleChangeSelection(merged);
-  }
-
-  function handleBooleanSubtract() {
-    if (!selection || !previousSelectionRef.current) return;
-    const merged = new Uint8Array(previousSelectionRef.current);
-    selectionSubtract(merged, selection);
-    previousSelectionRef.current = null;
-    handleChangeSelection(merged);
-  }
-
-  function handleBooleanIntersect() {
-    if (!selection || !previousSelectionRef.current) return;
-    const merged = new Uint8Array(previousSelectionRef.current);
-    selectionIntersection(merged, selection);
-    previousSelectionRef.current = null;
-    handleChangeSelection(merged);
   }
 
   function updateCurrentFrameComposite(frameId: string, nextLayers: LayerData[]) {
@@ -743,7 +713,6 @@ export default function App() {
   }, !showCommandPalette);
 
   function handleChangeSelection(next: Uint8Array | null) {
-    previousSelectionRef.current = selection ? new Uint8Array(selection) : null;
     setSelection(next);
   }
 
@@ -825,9 +794,6 @@ export default function App() {
           onGrow: handleGrowSelection,
           onShrink: handleShrinkSelection,
           onFeather: handleFeatherSelection,
-          onBooleanUnion: handleBooleanUnion,
-          onBooleanSubtract: handleBooleanSubtract,
-          onBooleanIntersect: handleBooleanIntersect,
         }}
         topBar={
           <div className="topbar">

@@ -91,9 +91,6 @@ type Props = {
     onGrow: () => void;
     onShrink: () => void;
     onFeather: (radius: number) => void;
-    onBooleanUnion: () => void;
-    onBooleanSubtract: () => void;
-    onBooleanIntersect: () => void;
   };
 
   topBar: ReactNode;
