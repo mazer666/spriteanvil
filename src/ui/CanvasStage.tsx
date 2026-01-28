@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CanvasSpec, ToolId, UiSettings } from "../types";
 import { cloneBuffer, drawLine, hexToRgb, getPixel } from "../editor/pixels";
-import { floodFill } from "../editor/tools/fill";
+import { floodFill, floodFillWithTolerance } from "../editor/tools/fill";
+import { applyFloydSteinbergDither, drawGradient } from "../editor/tools/gradient";
 import {
   drawRectangle,
   fillRectangle,
@@ -10,7 +11,8 @@ import {
   drawEllipse,
   fillEllipse
 } from "../editor/tools/shapes";
-import { selectRectangle, selectEllipse } from "../editor/selection";
+import { selectRectangle, selectEllipse, selectMagicWand } from "../editor/selection";
+import { createLassoSelection, smoothLassoPoints } from "../editor/tools/lasso";
 
 import { Frame } from "../types";
 
@@ -39,6 +41,7 @@ export default function CanvasStage(props: {
     endX: number;
     endY: number;
   } | null>(null);
+  const [lassoPreview, setLassoPreview] = useState<{ x: number; y: number }[] | null>(null);
 
   // Animation frame counter for marching ants
   const [animFrame, setAnimFrame] = useState(0);
@@ -58,7 +61,7 @@ export default function CanvasStage(props: {
     bufRef.current = buffer;
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB, shapePreview, selection, animFrame]);
+  }, [buffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB, shapePreview, lassoPreview, selection, animFrame]);
 
   const strokeRef = useRef<{
     active: boolean;
@@ -193,16 +196,40 @@ export default function CanvasStage(props: {
     }
 
     if (tool === "fill") {
-      const pixelsChanged = floodFill(
+      const pixelsChanged = settings.fillTolerance > 0
+        ? floodFillWithTolerance(
+          bufRef.current,
+          canvasSpec.width,
+          canvasSpec.height,
+          p.x,
+          p.y,
+          c,
+          settings.fillTolerance
+        )
+        : floodFill(
+          bufRef.current,
+          canvasSpec.width,
+          canvasSpec.height,
+          p.x,
+          p.y,
+          c
+        );
+      if (pixelsChanged > 0) st.changed = true;
+      draw();
+      endStroke();
+      return;
+    }
+
+    if (tool === "selectWand") {
+      const newSelection = selectMagicWand(
         bufRef.current,
         canvasSpec.width,
         canvasSpec.height,
         p.x,
         p.y,
-        c
+        settings.wandTolerance
       );
-      if (pixelsChanged > 0) st.changed = true;
-      draw();
+      onChangeSelection(newSelection);
       endStroke();
       return;
     }
@@ -213,7 +240,12 @@ export default function CanvasStage(props: {
       draw();
     }
 
-    if (tool === "line" || tool === "rectangle" || tool === "rectangleFilled" || tool === "circle" || tool === "circleFilled" || tool === "ellipse" || tool === "ellipseFilled" || tool === "selectRect" || tool === "selectEllipse") {
+    if (tool === "selectLasso") {
+      setLassoPreview([{ x: p.x, y: p.y }]);
+      return;
+    }
+
+    if (tool === "line" || tool === "rectangle" || tool === "rectangleFilled" || tool === "circle" || tool === "circleFilled" || tool === "ellipse" || tool === "ellipseFilled" || tool === "selectRect" || tool === "selectEllipse" || tool === "gradient") {
       setShapePreview({ startX: p.x, startY: p.y, endX: p.x, endY: p.y });
     }
   }
@@ -243,7 +275,14 @@ export default function CanvasStage(props: {
       draw();
     }
 
-    if (tool === "line" || tool === "rectangle" || tool === "rectangleFilled" || tool === "circle" || tool === "circleFilled" || tool === "ellipse" || tool === "ellipseFilled" || tool === "selectRect" || tool === "selectEllipse") {
+    if (tool === "selectLasso") {
+      setLassoPreview((prev) => {
+        const next = prev ? [...prev, { x: p0.x, y: p0.y }] : [{ x: p0.x, y: p0.y }];
+        return next;
+      });
+    }
+
+    if (tool === "line" || tool === "rectangle" || tool === "rectangleFilled" || tool === "circle" || tool === "circleFilled" || tool === "ellipse" || tool === "ellipseFilled" || tool === "selectRect" || tool === "selectEllipse" || tool === "gradient") {
       setShapePreview({ startX: st.startX, startY: st.startY, endX: p0.x, endY: p0.y });
     }
   }
@@ -255,6 +294,20 @@ export default function CanvasStage(props: {
     st.active = false;
 
     const c = getDrawColor();
+
+    if (lassoPreview && tool === "selectLasso") {
+      const points = lassoPreview.length > 1
+        ? lassoPreview
+        : [...lassoPreview, { x: st.lastX, y: st.lastY }];
+      const smoothedPoints = smoothLassoPoints(points);
+      const newSelection = createLassoSelection(
+        canvasSpec.width,
+        canvasSpec.height,
+        smoothedPoints
+      );
+      onChangeSelection(newSelection);
+      setLassoPreview(null);
+    }
 
     if (shapePreview) {
       const { startX, startY, endX, endY } = shapePreview;
@@ -360,6 +413,41 @@ export default function CanvasStage(props: {
         onChangeSelection(newSelection);
       }
 
+      if (tool === "gradient") {
+        const { r: startR, g: startG, b: startB } = hexToRgb(settings.primaryColor);
+        const endHex = settings.secondaryColor || "#000000";
+        const { r: endR, g: endG, b: endB } = hexToRgb(endHex);
+        const startColor = { r: startR, g: startG, b: startB, a: 255 };
+        const endColor = { r: endR, g: endG, b: endB, a: 255 };
+        const ditherType = settings.ditheringType === "bayer" ? "bayer" : "none";
+
+        const did = drawGradient(
+          bufRef.current,
+          canvasSpec.width,
+          canvasSpec.height,
+          startX,
+          startY,
+          endX,
+          endY,
+          startColor,
+          endColor,
+          settings.gradientType,
+          ditherType
+        );
+
+        if (did && settings.ditheringType === "floyd") {
+          const dithered = applyFloydSteinbergDither(
+            bufRef.current,
+            canvasSpec.width,
+            canvasSpec.height,
+            [startColor, endColor]
+          );
+          bufRef.current.set(dithered);
+        }
+
+        if (did) st.changed = true;
+      }
+
       setShapePreview(null);
     }
 
@@ -450,7 +538,7 @@ export default function CanvasStage(props: {
       const x2 = originX + endX * zoom;
       const y2 = originY + endY * zoom;
 
-      if (tool === "line") {
+      if (tool === "line" || tool === "gradient") {
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
@@ -499,6 +587,25 @@ export default function CanvasStage(props: {
       }
 
       ctx.globalAlpha = 1;
+    }
+
+    if (lassoPreview && lassoPreview.length > 0) {
+      ctx.save();
+      ctx.strokeStyle = settings.primaryColor;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      lassoPreview.forEach((point, index) => {
+        const px = originX + point.x * zoom;
+        const py = originY + point.y * zoom;
+        if (index === 0) {
+          ctx.moveTo(px, py);
+        } else {
+          ctx.lineTo(px, py);
+        }
+      });
+      ctx.stroke();
+      ctx.restore();
     }
 
     // Render selection with marching ants
