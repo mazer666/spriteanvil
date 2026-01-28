@@ -27,6 +27,28 @@ export type ToolId =
   | "scale"
   | "flip";
 
+export type BlendMode =
+  | "normal"
+  | "multiply"
+  | "screen"
+  | "overlay"
+  | "add"
+  | "subtract"
+  | "darken"
+  | "lighten"
+  | "difference"
+  | "exclusion";
+
+export type LayerData = {
+  id: string;
+  name: string;
+  opacity: number;
+  blend_mode: BlendMode;
+  is_visible: boolean;
+  is_locked: boolean;
+  pixels?: Uint8ClampedArray;
+};
+
 export type GradientType = "linear" | "radial" | "angle" | "reflected" | "diamond";
 export type DitheringType = "none" | "bayer" | "floyd";
 export type SymmetryMode = "none" | "horizontal" | "vertical" | "both" | "radial4" | "radial8";
