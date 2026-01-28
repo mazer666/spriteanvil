@@ -632,6 +632,13 @@ export default function CanvasStage(props: {
       ctx.restore();
     }
 
+    if (settings.symmetryMode !== "none") {
+      ctx.save();
+      ctx.translate(originX, originY);
+      drawSymmetryGuides(ctx, canvasSpec.width, canvasSpec.height, settings.symmetryMode, zoom);
+      ctx.restore();
+    }
+
     if (shapePreview) {
       const { startX, startY, endX, endY } = shapePreview;
 
