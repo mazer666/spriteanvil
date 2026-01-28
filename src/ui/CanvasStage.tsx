@@ -4,7 +4,7 @@ import { cloneBuffer, drawLine, hexToRgb, getPixel, setPixel } from "../editor/p
 import { compositeLayers } from "../editor/layers";
 import { floodFill, floodFillWithTolerance } from "../editor/tools/fill";
 import { applyFloydSteinbergDither, drawGradient } from "../editor/tools/gradient";
-import { drawSymmetryGuides, getSymmetryPoints } from "../editor/symmetry";
+import { drawSymmetryGuides } from "../editor/symmetry";
 import {
   drawRectangle,
   fillRectangle,
@@ -632,6 +632,13 @@ export default function CanvasStage(props: {
       ctx.restore();
     }
 
+    if (settings.symmetryMode !== "none") {
+      ctx.save();
+      ctx.translate(originX, originY);
+      drawSymmetryGuides(ctx, canvasSpec.width, canvasSpec.height, settings.symmetryMode, zoom);
+      ctx.restore();
+    }
+
     if (shapePreview) {
       const { startX, startY, endX, endY } = shapePreview;
 
@@ -948,39 +955,102 @@ function drawLineWithSymmetry(
   }
 
   let changedAny = false;
+  const transforms = getSymmetryTransforms(width, height, symmetryMode);
+  const seenLines = new Set<string>();
 
-  let dx = Math.abs(x1 - x0);
-  let dy = Math.abs(y1 - y0);
+  transforms.forEach((transform) => {
+    const start = transform(x0, y0);
+    const end = transform(x1, y1);
+    const key = `${start.x},${start.y},${end.x},${end.y}`;
+    if (seenLines.has(key)) return;
+    seenLines.add(key);
 
-  const sx = x0 < x1 ? 1 : -1;
-  const sy = y0 < y1 ? 1 : -1;
-
-  let err = dx - dy;
-
-  while (true) {
-    const points = getSymmetryPoints(width, height, x0, y0, symmetryMode);
-    points.forEach((point) => {
-      if (selection) {
-        const idx = point.y * width + point.x;
-        if (!selection[idx]) return;
-      }
-      if (setPixel(buf, width, height, point.x, point.y, rgba)) changedAny = true;
-    });
-
-    if (x0 === x1 && y0 === y1) break;
-
-    const e2 = 2 * err;
-    if (e2 > -dy) {
-      err -= dy;
-      x0 += sx;
-    }
-    if (e2 < dx) {
-      err += dx;
-      y0 += sy;
-    }
-  }
+    const did = selection
+      ? drawLineWithSelection(buf, width, height, start.x, start.y, end.x, end.y, rgba, selection)
+      : drawLine(buf, width, height, start.x, start.y, end.x, end.y, rgba);
+    if (did) changedAny = true;
+  });
 
   return changedAny;
+}
+
+function getSymmetryTransforms(
+  width: number,
+  height: number,
+  symmetryMode: UiSettings["symmetryMode"]
+): Array<(x: number, y: number) => { x: number; y: number }> {
+  const cx = Math.floor(width / 2);
+  const cy = Math.floor(height / 2);
+
+  const transforms: Array<(x: number, y: number) => { x: number; y: number }> = [];
+  const seen = new Set<string>();
+
+  function addTransform(fn: (x: number, y: number) => { x: number; y: number }) {
+    const sampleA = fn(0, 0);
+    const sampleB = fn(1, 0);
+    const key = `${sampleA.x},${sampleA.y}|${sampleB.x},${sampleB.y}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    transforms.push(fn);
+  }
+
+  const identity = (x: number, y: number) => ({ x, y });
+  addTransform(identity);
+
+  if (symmetryMode === "horizontal" || symmetryMode === "both") {
+    addTransform((x, y) => ({ x: 2 * cx - x, y }));
+  }
+
+  if (symmetryMode === "vertical" || symmetryMode === "both") {
+    addTransform((x, y) => ({ x, y: 2 * cy - y }));
+  }
+
+  if (symmetryMode === "both") {
+    addTransform((x, y) => ({ x: 2 * cx - x, y: 2 * cy - y }));
+  }
+
+  if (symmetryMode === "radial4" || symmetryMode === "radial8") {
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx - dy, y: cy + dx };
+    });
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx - dx, y: cy - dy };
+    });
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx + dy, y: cy - dx };
+    });
+  }
+
+  if (symmetryMode === "radial8") {
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx + dy, y: cy + dx };
+    });
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx - dy, y: cy - dx };
+    });
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx - dx, y: cy + dy };
+    });
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx + dx, y: cy - dy };
+    });
+  }
+
+  return transforms;
 }
 
 function applySelectionMask(

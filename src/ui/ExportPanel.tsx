@@ -73,10 +73,7 @@ export default function ExportPanel({ frames, canvasSpec, onClose }: Props) {
         }
       }
 
-      setTimeout(() => {
-        setExporting(false);
-        onClose();
-      }, 500);
+      setTimeout(onClose, 500);
     } catch (error) {
       console.error("Export failed:", error);
       setErrorMessage(

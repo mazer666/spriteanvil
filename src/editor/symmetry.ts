@@ -45,8 +45,6 @@ export function getSymmetryPoints(
 
     if (mode === "radial8") {
       addPoint(cx + dy, cy + dx);
-      addPoint(cx - dy, cy + dx);
-      addPoint(cx + dy, cy - dx);
       addPoint(cx - dy, cy - dx);
       addPoint(cx - dx, cy + dy);
       addPoint(cx + dx, cy - dy);
