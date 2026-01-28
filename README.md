@@ -41,6 +41,7 @@ The full roadmap lives in `/docs/PROJECT_PLAN.md`.
 Start here:
 
 - Docs index: [`/docs/README.md`](./docs/README.md)
+- UI target vision: [`/docs/UI_SPEC.md`](./docs/UI_SPEC.md)
 - Roadmap: [`/docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md)
 - Current integration notes: [`/docs/FEATURE_INTEGRATION_PLAN.md`](./docs/FEATURE_INTEGRATION_PLAN.md)
 
