@@ -77,16 +77,15 @@ export default function App() {
     };
   }
 
-  const [frameLayers, setFrameLayers] = useState<Record<string, LayerData[]>>(() => {
+  const [frameLayers, setFrameLayers] = useState<Record<string, LayerData[]>>({});
+  const [frameActiveLayerIds, setFrameActiveLayerIds] = useState<Record<string, string>>({});
+
+  useEffect(() => {
     const baseLayer = createLayer("Layer 1");
-    return {
-      [initialFrameId]: [baseLayer],
-    };
-  });
-  const [frameActiveLayerIds, setFrameActiveLayerIds] = useState<Record<string, string>>(() => {
-    const baseLayer = frameLayers[initialFrameId]?.[0];
-    return baseLayer ? { [initialFrameId]: baseLayer.id } : {};
-  });
+    setFrameLayers({ [initialFrameId]: [baseLayer] });
+    setFrameActiveLayerIds({ [initialFrameId]: baseLayer.id });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const layers = frameLayers[currentFrame.id] || [];
   const activeLayerId = frameActiveLayerIds[currentFrame.id] || layers[0]?.id || null;
