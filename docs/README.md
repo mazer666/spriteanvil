@@ -13,11 +13,12 @@ This folder contains **project plans** and **source-of-truth specifications** fo
 1. [`PROJECT_PLAN.md`](./PROJECT_PLAN.md)
 2. [`FEATURE_INTEGRATION_PLAN.md`](./FEATURE_INTEGRATION_PLAN.md)
 3. [`ARCHITECTURE.md`](./ARCHITECTURE.md)
-4. [`MODULE_GUIDE.md`](./MODULE_GUIDE.md)
-5. [`CODE_STYLE.md`](./CODE_STYLE.md)
-6. [`COMMON_TASKS.md`](./COMMON_TASKS.md)
-7. [`IMPLEMENTATION_CHECKLIST.md`](./IMPLEMENTATION_CHECKLIST.md)
-8. [`STATE_MODEL.md`](./STATE_MODEL.md)
+4. [`UI_SPEC.md`](./UI_SPEC.md)
+5. [`MODULE_GUIDE.md`](./MODULE_GUIDE.md)
+6. [`CODE_STYLE.md`](./CODE_STYLE.md)
+7. [`COMMON_TASKS.md`](./COMMON_TASKS.md)
+8. [`IMPLEMENTATION_CHECKLIST.md`](./IMPLEMENTATION_CHECKLIST.md)
+9. [`STATE_MODEL.md`](./STATE_MODEL.md)
 
 ---
 
