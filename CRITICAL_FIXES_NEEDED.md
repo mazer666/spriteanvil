@@ -1,7 +1,7 @@
 # Critical Fixes Needed - Action Plan
 
 ## Status: In Progress
-**Date**: 2026-01-27
+**Date**: 2026-01-28
 
 ---
 
@@ -23,82 +23,26 @@
 
 ### 🔴 **CRITICAL** - Breaks Core Functionality
 
-#### 1. Selection System (BROKEN)
-**Issue**: Selection doesn't work properly
+#### 1. Layer Compositing (NOT WORKING)
+**Issue**: Layers exist in UI, but drawing always targets a single buffer.
+
+**Fix Required**:
+- Create a pixel buffer per layer
+- Composite visible layers to the canvas
+- Apply layer opacity + blend modes during compositing
+
+#### 2. Selection System (PARTIAL)
+**Issue**: Basic selection and operations work, but key behaviors are missing.
 - ✅ Deselect works (Escape/Cmd+D)
-- ❌ Invert selection not implemented
-- ❌ Can't paste multiple times (clipboard clears after first paste)
-- ❌ Can't move pasted content
-- ❌ No visual selection bounds/handles
-- ❌ Can draw outside selection (should be constrained)
-- ❌ Boolean operations (union, subtract, intersect) not implemented
+- ✅ Invert/grow/shrink operations implemented
+- ❌ Boolean operations (union, subtract, intersect) still stubs
+- ❌ Drawing is not constrained to active selection
+- ❌ Selection move/transform missing
 
 **Fix Required**:
-- Add `invertSelection()` function in `src/editor/selection.ts`
-- Modify clipboard system to keep data after paste
-- Add selection transform (move, scale, rotate)
-- Add boolean selection operations
+- Implement boolean selection operations
 - Restrict drawing to selection mask when active
-
-#### 2. App.tsx Settings Defaults (MISSING)
-**Issue**: New settings properties cause undefined errors
-
-**Fix Required**:
-```typescript
-// In App.tsx, update settings initialization:
-const [settings, setSettings] = useState<UiSettings>(() => ({
-  // ... existing settings ...
-  primaryColor: "#f2ead7",
-  secondaryColor: "#000000",  // ADD THIS
-  fillTolerance: 0,            // ADD THIS
-  gradientType: "linear",      // ADD THIS
-  ditheringType: "none",       // ADD THIS
-  symmetryMode: "none",        // ADD THIS
-  brushSize: 1,                // ADD THIS
-  wandTolerance: 32,           // ADD THIS
-}));
-```
-
-#### 3. Selection Handlers in App.tsx (MISSING)
-**Fix Required**:
-```typescript
-// Add to App.tsx:
-function handleInvertSelection() {
-  if (!selection) return;
-  const inverted = new Uint8Array(canvasSpec.width * canvasSpec.height);
-  for (let i = 0; i < inverted.length; i++) {
-    inverted[i] = selection[i] ? 0 : 1;
-  }
-  setSelection(inverted);
-}
-
-function handleGrowSelection() { /* TODO */ }
-function handleShrinkSelection() { /* TODO */ }
-function handleFeatherSelection(radius: number) { /* TODO */ }
-function handleBooleanUnion() { /* TODO */ }
-function handleBooleanSubtract() { /* TODO */ }
-function handleBooleanIntersect() { /* TODO */ }
-```
-
-#### 4. Pass Selection Operations to DockLayout (MISSING)
-**Fix Required** in App.tsx:
-```typescript
-<DockLayout
-  // ... existing props ...
-  onSelectionOperations={{
-    onSelectAll: handleSelectAll,
-    onDeselect: handleDeselect,
-    onInvertSelection: handleInvertSelection,
-    onGrow: handleGrowSelection,
-    onShrink: handleShrinkSelection,
-    onFeather: handleFeatherSelection,
-    onBooleanUnion: handleBooleanUnion,
-    onBooleanSubtract: handleBooleanSubtract,
-    onBooleanIntersect: handleBooleanIntersect,
-  }}
-  // ...
-/>
-```
+- Add selection transform (move, scale, rotate)
 
 ---
 
@@ -133,14 +77,6 @@ function handleBooleanIntersect() { /* TODO */ }
 - Add format selector (PNG / GIF / JSON)
 - Show format-specific options
 - Wire up `src/lib/export/gif.ts` and `src/lib/export/metadata.ts`
-
-#### 9. Layer Compositing (NOT WORKING)
-**Issue**: Layers exist but all drawing goes to single buffer
-
-**Fix Required**:
-- Canvas needs to composite multiple layer buffers
-- Each layer needs its own pixel buffer
-- Respect layer visibility, opacity, and blend mode
 
 ---
 
@@ -196,24 +132,20 @@ function handleBooleanIntersect() { /* TODO */ }
 ## Recommended Fix Order
 
 **Phase 1: Make it work** (3-4 hours)
-1. ✅ Fix App.tsx settings defaults (5 min)
-2. ✅ Add selection operation handlers (30 min)
-3. ✅ Wire up selection operations (10 min)
-4. ⬜ Fix gradient tool integration (45 min)
-5. ⬜ Fix lasso/wand integration (45 min)
-6. ⬜ Fix transform scale apply button (10 min)
-7. ⬜ Fix export panel formats (30 min)
+1. ⬜ Fix gradient tool integration (45 min)
+2. ⬜ Fix lasso/wand integration (45 min)
+3. ⬜ Fix transform scale apply button (10 min)
+4. ⬜ Fix export panel formats (30 min)
 
 **Phase 2: Make it better** (2-3 hours)
-8. ⬜ Implement invert selection (15 min)
-9. ⬜ Fix boolean selection ops (1 hour)
-10. ⬜ Add fill tolerance support (30 min)
-11. ⬜ Apply symmetry mode (45 min)
+5. ⬜ Fix boolean selection ops (1 hour)
+6. ⬜ Add fill tolerance support (30 min)
+7. ⬜ Apply symmetry mode (45 min)
 
 **Phase 3: Make it great** (3-4 hours)
-12. ⬜ Multi-layer compositing (2 hours)
-13. ⬜ Selection move/transform (1 hour)
-14. ⬜ Tool grouping UI (1 hour)
+8. ⬜ Multi-layer compositing (2 hours)
+9. ⬜ Selection move/transform (1 hour)
+10. ⬜ Tool grouping UI (1 hour)
 
 ---
 

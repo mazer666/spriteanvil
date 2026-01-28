@@ -10,7 +10,7 @@
 
 This document tracks implementation progress against the [PROJECT_PLAN.md](./PROJECT_PLAN.md) through Phase 8.
 
-Last updated: 2026-01-27 (Final Update)
+Last updated: 2026-01-28
 
 ---
 
@@ -99,42 +99,48 @@ The current layout works but is not fully responsive with breakpoints as specifi
 **Status:** ⏳ **50% Complete**
 
 ### 2.1 Advanced Selection Tools
-**Status:** ⏳ **40% Complete**
+**Status:** ⏳ **50% Complete**
 
 **Implemented:**
 - ✅ Rectangular selection (`src/editor/selection.ts`)
 - ✅ Elliptical selection (`src/editor/selection.ts`)
-- ✅ Magic wand (flood fill selection) (`src/editor/selection.ts`)
-- ✅ Boolean operations (union, intersection, subtract, invert) (`src/editor/selection.ts`)
 - ✅ Marching ants animation (`src/ui/CanvasStage.tsx`)
 - ✅ Get selection bounds (`src/editor/selection.ts`)
 - ✅ Copy/cut/paste operations (`src/editor/clipboard.ts`)
+- ✅ Select all / deselect / invert / grow / shrink wiring (`src/App.tsx`, `src/ui/RightPanel.tsx`)
 
 **Files:**
-- `src/editor/selection.ts` - All selection algorithms
+- `src/editor/selection.ts` - Selection algorithms
 - `src/editor/clipboard.ts` - Copy/cut/paste
 - `src/ui/CanvasStage.tsx` - Selection UI integration
 
 **Missing:**
-- ⏳ Free-form lasso tool
+- ⏳ Free-form lasso tool integration
+- ⏳ Magic wand tool integration
+- ⏳ Boolean operations (union, subtract, intersect) wiring
+- ⏳ Feather operation
+- ⏳ Selection move/transform
+- ⏳ Drawing constrained to selection mask
 - ⏳ Fixed aspect ratio mode
 - ⏳ Snap-to-grid option
-- ⏳ Grow/shrink/feather operations
 - ⏳ Quick mask mode
 - ⏳ Save/load named selections
 - ⏳ Marching ants customization
 
 ### 2.2 Transform & Distortion Tools
-**Status:** ❌ **Not Implemented**
+**Status:** ⏳ **40% Complete**
+
+**Implemented:**
+- ✅ Flip horizontal/vertical
+- ✅ Rotate 90°/180°
+- ✅ Scale inputs + transform logic (apply action still missing)
 
 **Missing:**
-- Move tool
-- Rotation tool
-- Scale tool
-- Flip (horizontal/vertical/diagonal)
-- Perspective skew
-- Distort mesh
-- Warp tool
+- ⏳ Move tool
+- ⏳ Scale apply button wiring
+- ⏳ Perspective skew
+- ⏳ Distort mesh
+- ⏳ Warp tool
 
 ### 2.3 Advanced Brush & Drawing System
 **Status:** ⏳ **30% Complete**
@@ -157,32 +163,34 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ⏳ Custom brush builder
 
 ### 2.4 Fill & Gradient Tools
-**Status:** ⏳ **40% Complete**
+**Status:** ⏳ **35% Complete**
 
 **Implemented:**
 - ✅ Flood fill tool (`src/editor/tools/fill.ts`)
-- ✅ Flood fill with tolerance (`src/editor/tools/fill.ts`)
 - ✅ Scanline algorithm for efficient filling
 
 **Files:**
 - `src/editor/tools/fill.ts` - Flood fill algorithms
 
 **Missing:**
+- ⏳ Flood fill tolerance wiring (`settings.fillTolerance`)
 - ⏳ Intelligent fill with edge detection
 - ⏳ Pattern fill mode
-- ⏳ Gradient tool (20+ preset types)
+- ⏳ Gradient tool integration
 - ⏳ Gradient dithering
 - ⏳ Content-aware fill
 - ⏳ Stroke-to-outline tool
 
 ### 2.5 Symmetry & Mirror Modes
-**Status:** ❌ **Not Implemented**
+**Status:** ⏳ **25% Complete**
+
+**Implemented:**
+- ✅ Symmetry helper functions (`src/editor/symmetry.ts`)
 
 **Missing:**
-- Horizontal/vertical mirror drawing
-- Radial symmetry
-- Custom symmetry axis
-- Diagonal and multi-axis symmetry
+- ⏳ Canvas drawing integration
+- ⏳ Symmetry axis guides
+- ⏳ Custom symmetry axis
 
 ---
 
@@ -236,7 +244,7 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ⏳ Keyframe-only mode
 
 ### 3.3 Animation Playback & Export
-**Status:** ✅ **90% Complete**
+**Status:** ⏳ **70% Complete**
 
 **Implemented:**
 - ✅ Frame-accurate playback engine (`src/App.tsx`)
@@ -244,23 +252,23 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ✅ Uses frame `durationMs` for timing
 - ✅ FPS display
 - ✅ **Spritesheet PNG export** (`src/lib/export/spritesheet.ts`)
-- ✅ **JSON metadata export** (`src/lib/export/metadata.ts`)
 - ✅ Grid/horizontal/vertical layouts
 - ✅ Configurable padding and spacing
 - ✅ Multiple scale options (1x-8x)
-- ✅ Export UI panel (`src/ui/ExportPanel.tsx`)
+- ✅ Export UI panel (`src/ui/ExportPanel.tsx`) (PNG only)
 
 **Files:**
 - `src/lib/export/spritesheet.ts` - Spritesheet generation
-- `src/lib/export/metadata.ts` - JSON metadata per spec
+- `src/lib/export/metadata.ts` - JSON metadata per spec (not wired)
 - `src/ui/ExportPanel.tsx` - Export configuration UI
 - `docs/EXPORT_FORMAT.md` - Export format specification
 
 **Missing:**
+- ⏳ JSON metadata export wiring
+- ⏳ GIF export with optimization
 - ⏳ Variable playback speed
 - ⏳ Loop modes (reverse, pingpong)
 - ⏳ Scrubber with seeking
-- ⏳ GIF export with optimization
 - ⏳ Video export (WebM/MP4)
 - ⏳ PNG sequence export
 - ⏳ APNG export
@@ -270,58 +278,63 @@ The current layout works but is not fully responsive with breakpoints as specifi
 
 ## Phase 4: Layers, Palette & Color Management
 
-**Status:** ❌ **20% Complete**
+**Status:** ⏳ **35% Complete**
 
 ### 4.1 Complete Layer System
-**Status:** ❌ **10% Complete**
+**Status:** ⏳ **35% Complete**
 
 **Database:**
 - ✅ `layers` table exists with RLS
 - ✅ Supports blend modes, opacity, lock status, visibility
 
-**Missing UI:**
-- ⏳ Layer panel UI
-- ⏳ Create/delete/reorder layers
-- ⏳ Blend mode selector
-- ⏳ Opacity slider per layer
-- ⏳ Lock modes UI
-- ⏳ Visibility toggle
+**UI Implemented:**
+- ✅ Layer panel UI with create/delete/reorder
+- ✅ Blend mode selector
+- ✅ Opacity slider per layer
+- ✅ Lock/visibility toggles
+
+**Missing:**
+- ⏳ Multi-layer compositing in the canvas
 - ⏳ Merge down/flatten
 - ⏳ Clipping masks
 - ⏳ Non-destructive effects
 
 ### 4.2 Palette & Color System
-**Status:** ❌ **10% Complete**
+**Status:** ⏳ **40% Complete**
 
 **Database:**
 - ✅ `palettes` table exists with RLS
 - ✅ Supports color definitions and tags
 
-**Missing UI:**
-- ⏳ Palette panel UI
+**UI Implemented:**
+- ✅ Palette panel UI
+- ✅ Custom palette creation/deletion
+- ✅ Recent colors history
+
+**Missing:**
 - ⏳ Default palette library
-- ⏳ Custom palette editor
 - ⏳ Import/export formats (ASE, PAL, GPL)
 - ⏳ Color swap system
 - ⏳ Palette ramp builder
 - ⏳ Color harmony suggestions
-- ⏳ Recent colors history
 - ⏳ Eyedropper across frames
 - ⏳ Replace color with tolerance
 
 ### 4.3 Advanced Color Controls
-**Status:** ❌ **Not Implemented**
+**Status:** ⏳ **45% Complete**
+
+**Implemented:**
+- ✅ Hue/Saturation/Brightness tools
+- ✅ Invert/posterize/desaturate
 
 **Missing:**
-- Hue/Saturation/Brightness tools
-- Curves with control points
-- Levels adjustment
-- Color balance
-- Color range selection
-- Invert/posterize/desaturate
-- Dithering algorithms (Bayer, Floyd-Steinberg, Atkinson)
-- Color quantization
-- Color space conversions (RGB/HSL/Lab)
+- ⏳ Curves with control points
+- ⏳ Levels adjustment
+- ⏳ Color balance
+- ⏳ Color range selection
+- ⏳ Dithering algorithms (Bayer, Floyd-Steinberg, Atkinson)
+- ⏳ Color quantization
+- ⏳ Color space conversions (RGB/HSL/Lab)
 
 ---
 
@@ -331,7 +344,7 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ✅ Pen
 - ✅ Eraser
 - ✅ Eyedropper
-- ✅ Fill (flood fill with tolerance)
+- ✅ Fill (flood fill; tolerance wiring pending)
 - ✅ Line
 
 ### Shape Tools
@@ -345,7 +358,6 @@ The current layout works but is not fully responsive with breakpoints as specifi
 ### Selection Tools
 - ✅ Rectangle selection
 - ✅ Ellipse selection
-- ✅ Magic wand (in code, not in UI yet)
 
 ### Edit Operations
 - ✅ Undo/Redo
@@ -374,8 +386,8 @@ The current layout works but is not fully responsive with breakpoints as specifi
 | Phase 0: Documentation | ✅ | 80% |
 | Phase 1: Foundation | ⏳ | 60% |
 | Phase 2: Drawing Tools | ⏳ | 50% |
-| Phase 3: Animation | ✅ | 75% |
-| Phase 4: Layers & Color | ❌ | 20% |
+| Phase 3: Animation | ⏳ | 70% |
+| Phase 4: Layers & Color | ⏳ | 35% |
 
 ---
 
@@ -384,25 +396,23 @@ The current layout works but is not fully responsive with breakpoints as specifi
 To reach full Phase 4 completion:
 
 ### High Priority (Core Functionality)
-1. **Layer Panel UI** - Connect existing layer database to UI
-2. **Palette Panel UI** - Connect existing palette database to UI
-3. **Animation Tags UI** - Add tag management to timeline
-4. **Transform Tools** - Move, flip, rotate basics
-5. **Color Adjustment Panel** - Basic hue/saturation/brightness
+1. **Layer Compositing** - Draw to active layer buffers and composite on render
+2. **Gradient Tool Integration** - Wire gradient tool to canvas
+3. **Lasso/Magic Wand Integration** - Hook tools into selection pipeline
+4. **Export Panel Formats** - Wire JSON/GIF formats into UI
+5. **Transform Scale Apply** - Add apply action for scale inputs
 
 ### Medium Priority (Polish)
-6. Lasso selection tool
-7. Grow/shrink selection operations
-8. GIF export
-9. Gradient tool basics
-10. Responsive layout with breakpoints
+6. Boolean selection operations
+7. Fill tolerance support
+8. Symmetry mode integration
+9. Responsive layout with breakpoints
 
 ### Lower Priority (Advanced Features)
-11. Symmetry modes
-12. Advanced brush dynamics
-13. Content-aware fill
-14. AI integration
-15. Collaboration features (Phase 8)
+10. Advanced brush dynamics
+11. Content-aware fill
+12. AI integration
+13. Collaboration features (Phase 8)
 
 ---
 
