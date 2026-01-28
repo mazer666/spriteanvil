@@ -1,4 +1,12 @@
 # SpriteAnvil Module Guide
+## Related docs
+
+- Docs index: [`/docs/README.md`](./README.md)
+- Current status: [`/STATUS_UPDATE.md`](../STATUS_UPDATE.md)
+- Implementation snapshot: [`/IMPLEMENTATION_COMPLETE.md`](../IMPLEMENTATION_COMPLETE.md)
+
+---
+
 
 This document is a **practical map** of the codebase: what each module is responsible for, where it lives, and how modules depend on each other.
 

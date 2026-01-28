@@ -85,7 +85,10 @@ export default function App() {
   const activeLayerId = frameActiveLayerIds[currentFrame.id] || layers[0]?.id || null;
   const activeLayer = layers.find((layer) => layer.id === activeLayerId) || layers[0] || null;
   const buffer = activeLayer?.pixels || createEmptyPixels();
-  const compositeBuffer = currentFrame.pixels;
+  const compositeBuffer = useMemo(() => {
+    if (!layers.length) return currentFrame.pixels;
+    return compositeLayers(layers, canvasSpec.width, canvasSpec.height);
+  }, [canvasSpec.height, canvasSpec.width, currentFrame.pixels, layers]);
   const isActiveLayerLocked = activeLayer?.is_locked ?? false;
 
   const [palettes, setPalettes] = useState<PaletteData[]>([
@@ -311,9 +314,11 @@ export default function App() {
   }
 
   function handleInsertFrame() {
+    const newLayer = createLayer("Layer 1");
+    const composite = compositeLayers([newLayer], canvasSpec.width, canvasSpec.height);
     const newFrame: Frame = {
       id: crypto.randomUUID(),
-      pixels: createEmptyPixels(),
+      pixels: composite,
       durationMs: 100
     };
 
@@ -322,7 +327,6 @@ export default function App() {
       updated.splice(currentFrameIndex + 1, 0, newFrame);
       return updated;
     });
-    const newLayer = createLayer("Layer 1");
     setFrameLayers((prev) => ({ ...prev, [newFrame.id]: [newLayer] }));
     setFrameActiveLayerIds((prev) => ({ ...prev, [newFrame.id]: newLayer.id }));
 
@@ -330,9 +334,17 @@ export default function App() {
   }
 
   function handleDuplicateFrame() {
+    const currentLayers = frameLayers[currentFrame.id] || [];
+    const duplicatedLayers = currentLayers.map((layer) => ({
+      ...layer,
+      id: crypto.randomUUID(),
+      name: `${layer.name} copy`,
+      pixels: layer.pixels ? cloneBuffer(layer.pixels) : createEmptyPixels(),
+    }));
+    const composite = compositeLayers(duplicatedLayers, canvasSpec.width, canvasSpec.height);
     const duplicate: Frame = {
       id: crypto.randomUUID(),
-      pixels: cloneBuffer(currentFrame.pixels),
+      pixels: composite,
       durationMs: currentFrame.durationMs
     };
 
@@ -341,13 +353,6 @@ export default function App() {
       updated.splice(currentFrameIndex + 1, 0, duplicate);
       return updated;
     });
-    const currentLayers = frameLayers[currentFrame.id] || [];
-    const duplicatedLayers = currentLayers.map((layer) => ({
-      ...layer,
-      id: crypto.randomUUID(),
-      name: `${layer.name} copy`,
-      pixels: layer.pixels ? cloneBuffer(layer.pixels) : createEmptyPixels(),
-    }));
     setFrameLayers((prev) => ({ ...prev, [duplicate.id]: duplicatedLayers }));
     const activeIndex = currentLayers.findIndex((layer) => layer.id === activeLayerId);
     const nextActive = duplicatedLayers[Math.max(0, activeIndex)]?.id || duplicatedLayers[0]?.id || "";

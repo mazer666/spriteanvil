@@ -1,4 +1,12 @@
 # SpriteAnvil Timeline Guide
+## Related docs
+
+- Docs index: [`/docs/README.md`](./README.md)
+- Current status: [`/STATUS_UPDATE.md`](../STATUS_UPDATE.md)
+- Implementation snapshot: [`/IMPLEMENTATION_COMPLETE.md`](../IMPLEMENTATION_COMPLETE.md)
+
+---
+
 
 This document defines the **timeline + animation model** for SpriteAnvil:
 - how frames are stored and ordered

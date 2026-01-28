@@ -1,4 +1,12 @@
 # SpriteAnvil Architecture
+## Related docs
+
+- Docs index: [`/docs/README.md`](./README.md)
+- Current status: [`/STATUS_UPDATE.md`](../STATUS_UPDATE.md)
+- Implementation snapshot: [`/IMPLEMENTATION_COMPLETE.md`](../IMPLEMENTATION_COMPLETE.md)
+
+---
+
 
 This document describes **how SpriteAnvil is structured internally**, how **data flows** from user input to pixels on screen, and which **modules own which responsibilities**.
 
