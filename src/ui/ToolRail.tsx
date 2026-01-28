@@ -55,9 +55,7 @@ export default function ToolRail({ tool, onChangeTool }: Props) {
       <div className="toolrail__spacer" />
 
       <div className="toolrail__sectionTitle">View</div>
-      <button className="toolbtn toolbtn--disabled" title="Pan (Space) — coming next" disabled>
-        ✋
-      </button>
+      {btn("move", "✋", "Move Selection (V)")}
     </div>
   );
 }

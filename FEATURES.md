@@ -1,20 +1,19 @@
 # SpriteAnvil - Complete Feature List
 
 **Version**: 0.8.0 (Phase 8 Implementation)
-**Last Updated**: 2026-01-27
+**Last Updated**: 2026-01-28
 
 ---
 
 ## ✅ Fully Implemented & Working Features
 
-### 🎨 Drawing Tools (12 tools)
+### 🎨 Drawing Tools (5 tools)
 
 1. **Pen Tool** (B) - Freehand pixel-perfect drawing
 2. **Eraser Tool** (E) - Remove pixels
 3. **Eyedropper Tool** (I) - Pick colors from canvas
-4. **Fill Tool** (F) - Flood fill with scanline algorithm
-5. **Gradient Tool** (G) - 5 gradient types with dithering
-6. **Line Tool** (L) - Draw straight lines
+4. **Fill Tool** (F) - Flood fill with scanline algorithm + tolerance control
+5. **Line Tool** (L) - Draw straight lines
 
 ### 📐 Shape Tools (6 tools)
 
@@ -30,7 +29,7 @@
 13. **Rectangle Selection** (M) - Rectangular marquee
 14. **Ellipse Selection** (Shift+M) - Elliptical marquee
 15. **Lasso Selection** (W) - Free-form polygon selection
-16. **Magic Wand** - Color-based selection with tolerance
+16. **Magic Wand** - Tolerance-based selection
 
 **Selection Operations:**
 - Copy (Cmd+C)
@@ -38,10 +37,11 @@
 - Paste (Cmd+V)
 - Select All (Cmd+A)
 - Deselect (Cmd+D / Escape)
-- Boolean operations (union, subtract, intersect)
+- Invert / Grow / Shrink
+- Boolean add/subtract/intersect via Shift/Alt modifiers
 - Marching ants animation
 
-### 🖼️ Layer System (Complete)
+### 🖼️ Layer System (UI + Compositing)
 
 **Features:**
 - Create, delete, duplicate layers
@@ -62,6 +62,8 @@
   - Difference
   - Exclusion
 - Merge down functionality
+
+**Note**: Drawing targets the active layer, and previews composite all visible layers.
 
 **Access**: Right Panel → Layers tab
 
@@ -142,18 +144,11 @@
    - Vertical strip
    - Configurable padding/spacing
    - Scale multiplier (1x-8x)
-
-2. **JSON Metadata**
-   - Frame data
-   - Animation tags
-   - Canvas dimensions
-   - Godot-compatible format
-
-3. **GIF Animation**
-   - Loop control
-   - Frame timing
-   - Quality settings
-   - Browser-compatible
+2. **GIF Animation**
+   - Loop toggle
+   - Quality slider
+3. **JSON Metadata**
+   - SpriteAnvil metadata spec
 
 **Access**: Top bar → Export button (Cmd+E)
 
@@ -180,6 +175,7 @@
 - O: Filled Ellipse / Shift+O: Ellipse
 - M: Rectangle Selection / Shift+M: Ellipse Selection
 - W: Lasso Selection
+- V: Move Selection
 
 **View Controls:**
 - Cmd+=: Zoom in
@@ -187,6 +183,7 @@
 - Cmd+0: Reset zoom to 100%
 - Cmd+': Toggle grid
 - Cmd+;: Toggle onion skin
+- Space + drag: Pan canvas
 
 **Transform:**
 - Cmd+H: Flip horizontal
@@ -236,7 +233,7 @@
 - Brush stabilizer
 - Checker size & colors
 
-**Access**: Right Panel → Settings tab
+**Access**: Right Panel → Tool tab
 
 ### 💾 History System
 
@@ -267,7 +264,7 @@
 - Bayer matrix (ordered)
 - Floyd-Steinberg (error diffusion)
 
-### Symmetry Modes (Ready, not yet exposed in UI)
+### Symmetry Modes (Applied, Custom Axis Pending)
 
 **Implemented in `src/editor/symmetry.ts`:**
 - Horizontal mirror
@@ -277,15 +274,14 @@
 - Radial 8-way
 - Visual guides
 
-*Note: Available via API but not yet in UI*
+*Note: Symmetry applies to pen/eraser, line, shapes, and gradients; custom symmetry axes are still pending.*
 
-### Selection Tools
+### Selection Tools (Integrated)
 
 **Lasso Selection:**
 - Free-form polygon drawing
 - Point-in-polygon algorithm
 - Path smoothing
-- Implemented in `src/editor/tools/lasso.ts`
 
 **Magic Wand:**
 - Color tolerance selection
@@ -397,40 +393,39 @@ src/
 
 | Phase | Features | Status | Notes |
 |-------|----------|--------|-------|
-| **Phase 0** | Documentation | 90% | Comprehensive docs |
-| **Phase 1** | Foundation | 85% | Database 100% complete |
-| **Phase 2** | Drawing Tools | 90% | All tools implemented |
-| **Phase 3** | Animation | 95% | GIF export added |
-| **Phase 4** | Layers & Color | 98% | Fully functional |
+| **Phase 0** | Documentation | 80% | Core docs in place |
+| **Phase 1** | Foundation | 60% | Database 100% complete |
+| **Phase 2** | Drawing Tools | 70% | Core tools + gradient/lasso/wand wired |
+| **Phase 3** | Animation | 80% | PNG/GIF/JSON export working |
+| **Phase 4** | Layers & Color | 45% | UI + compositing working |
 | **Phase 5** | AI Features | 5% | Database ready |
-| **Phase 6** | Professional UX | 85% | Complete with shortcuts |
-| **Phase 7** | Export | 90% | All formats working |
+| **Phase 6** | Professional UX | 70% | Shortcuts + command palette done |
+| **Phase 7** | Export | 80% | PNG/GIF/JSON UI available |
 | **Phase 8** | Collaboration | 10% | Infrastructure only |
 
-**Overall: ~78% Complete**
+**Overall: ~68% Complete**
 
 ---
 
 ## 🚀 What's Production-Ready
 
-### Core Functionality (100%)
-- ✅ Complete drawing toolset
-- ✅ Selection system with boolean operations
-- ✅ Layer management with blend modes
-- ✅ Palette system
-- ✅ Animation timeline
-- ✅ Export to PNG/JSON/GIF
-- ✅ Transform operations
-- ✅ Color adjustments
-- ✅ Keyboard shortcuts
-- ✅ Command palette
+### Core Functionality (Partial)
+- ✅ Core drawing tools (pen/eraser/line/shapes)
+- ✅ Rectangle/ellipse selections + basic ops
+- ✅ Palette and color adjustment panels
+- ✅ Animation timeline + playback
+- ✅ PNG spritesheet export
+- ✅ Keyboard shortcuts + command palette
 - ✅ Undo/redo system
+- ⏳ Gradient/lasso/magic wand integration
+- ⏳ Layer compositing
+- ⏳ JSON/GIF export wiring
 
-### User Experience (85%)
-- ✅ Responsive UI
+### User Experience (70%)
 - ✅ Keyboard navigation
 - ✅ Command palette
 - ✅ Contextual help (shortcuts)
+- ⏳ Responsive UI
 - ⏳ Tutorial system
 - ⏳ Help documentation
 
@@ -513,7 +508,7 @@ src/
 
 6. **Export**
    - Press Cmd+E or click Export button
-   - Choose format (PNG spritesheet, JSON, or GIF)
+   - Export a PNG spritesheet
    - Configure export settings
    - Download your sprite!
 
@@ -538,11 +533,11 @@ src/
 ## 🏆 Best-in-Class Features
 
 1. **Pixel-Perfect Precision** - No anti-aliasing, true pixel art
-2. **Layer Blend Modes** - 10 professional blend modes
-3. **Advanced Selection** - Boolean operations, magic wand, lasso
+2. **Layer Controls** - Rich layer UI (compositing pending)
+3. **Selection Workflow** - Rectangle/ellipse selections with growth/shrink
 4. **Command Palette** - Vim/VSCode-style quick command access
 5. **Comprehensive Shortcuts** - 30+ keyboard shortcuts
-6. **Export Flexibility** - Multiple formats with detailed control
+6. **Export Flexibility** - PNG spritesheets today, JSON/GIF planned
 7. **Database-Backed** - Cloud-ready with Supabase integration
 8. **Type-Safe** - Full TypeScript with strict typing
 
