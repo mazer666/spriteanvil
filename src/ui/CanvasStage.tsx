@@ -4,6 +4,7 @@ import { cloneBuffer, drawLine, hexToRgb, getPixel, setPixel } from "../editor/p
 import { compositeLayers } from "../editor/layers";
 import { floodFill, floodFillWithTolerance } from "../editor/tools/fill";
 import { applyFloydSteinbergDither, drawGradient } from "../editor/tools/gradient";
+import { drawSymmetryGuides } from "../editor/symmetry";
 import {
   drawRectangle,
   fillRectangle,
@@ -304,19 +305,18 @@ export default function CanvasStage(props: {
     }
 
     if (tool === "pen" || tool === "eraser") {
-      const did = selection
-        ? drawLineWithSelection(
-            bufRef.current,
-            canvasSpec.width,
-            canvasSpec.height,
-            p.x,
-            p.y,
-            p.x,
-            p.y,
-            c,
-            selection
-          )
-        : drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, p.x, p.y, p.x, p.y, c);
+      const did = drawLineWithSymmetry(
+        bufRef.current,
+        canvasSpec.width,
+        canvasSpec.height,
+        p.x,
+        p.y,
+        p.x,
+        p.y,
+        c,
+        settings.symmetryMode,
+        selection ?? undefined
+      );
       if (did) st.changed = true;
       draw();
     }
@@ -347,19 +347,18 @@ export default function CanvasStage(props: {
       if (x === st.lastX && y === st.lastY) return;
 
       const c = getDrawColor();
-      const did = selection
-        ? drawLineWithSelection(
-            bufRef.current,
-            canvasSpec.width,
-            canvasSpec.height,
-            st.lastX,
-            st.lastY,
-            x,
-            y,
-            c,
-            selection
-          )
-        : drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, st.lastX, st.lastY, x, y, c);
+      const did = drawLineWithSymmetry(
+        bufRef.current,
+        canvasSpec.width,
+        canvasSpec.height,
+        st.lastX,
+        st.lastY,
+        x,
+        y,
+        c,
+        settings.symmetryMode,
+        selection ?? undefined
+      );
       if (did) st.changed = true;
 
       st.lastX = x;
@@ -624,6 +623,13 @@ export default function CanvasStage(props: {
 
     if (settings.showGrid && zoom >= 6) {
       drawGrid(ctx, originX, originY, canvasSpec.width, canvasSpec.height, zoom, settings.gridSize);
+    }
+
+    if (settings.symmetryMode !== "none") {
+      ctx.save();
+      ctx.translate(originX, originY);
+      drawSymmetryGuides(ctx, canvasSpec.width, canvasSpec.height, settings.symmetryMode, zoom);
+      ctx.restore();
     }
 
     if (shapePreview) {
@@ -921,6 +927,123 @@ function drawLineWithSelection(
   }
 
   return changedAny;
+}
+
+function drawLineWithSymmetry(
+  buf: Uint8ClampedArray,
+  width: number,
+  height: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  rgba: { r: number; g: number; b: number; a: number },
+  symmetryMode: UiSettings["symmetryMode"],
+  selection?: Uint8Array
+): boolean {
+  if (symmetryMode === "none") {
+    return selection
+      ? drawLineWithSelection(buf, width, height, x0, y0, x1, y1, rgba, selection)
+      : drawLine(buf, width, height, x0, y0, x1, y1, rgba);
+  }
+
+  let changedAny = false;
+  const transforms = getSymmetryTransforms(width, height, symmetryMode);
+  const seenLines = new Set<string>();
+
+  transforms.forEach((transform) => {
+    const start = transform(x0, y0);
+    const end = transform(x1, y1);
+    const key = `${start.x},${start.y},${end.x},${end.y}`;
+    if (seenLines.has(key)) return;
+    seenLines.add(key);
+
+    const did = selection
+      ? drawLineWithSelection(buf, width, height, start.x, start.y, end.x, end.y, rgba, selection)
+      : drawLine(buf, width, height, start.x, start.y, end.x, end.y, rgba);
+    if (did) changedAny = true;
+  });
+
+  return changedAny;
+}
+
+function getSymmetryTransforms(
+  width: number,
+  height: number,
+  symmetryMode: UiSettings["symmetryMode"]
+): Array<(x: number, y: number) => { x: number; y: number }> {
+  const cx = Math.floor(width / 2);
+  const cy = Math.floor(height / 2);
+
+  const transforms: Array<(x: number, y: number) => { x: number; y: number }> = [];
+  const seen = new Set<string>();
+
+  function addTransform(fn: (x: number, y: number) => { x: number; y: number }) {
+    const sampleA = fn(0, 0);
+    const sampleB = fn(1, 0);
+    const key = `${sampleA.x},${sampleA.y}|${sampleB.x},${sampleB.y}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    transforms.push(fn);
+  }
+
+  const identity = (x: number, y: number) => ({ x, y });
+  addTransform(identity);
+
+  if (symmetryMode === "horizontal" || symmetryMode === "both") {
+    addTransform((x, y) => ({ x: 2 * cx - x, y }));
+  }
+
+  if (symmetryMode === "vertical" || symmetryMode === "both") {
+    addTransform((x, y) => ({ x, y: 2 * cy - y }));
+  }
+
+  if (symmetryMode === "both") {
+    addTransform((x, y) => ({ x: 2 * cx - x, y: 2 * cy - y }));
+  }
+
+  if (symmetryMode === "radial4" || symmetryMode === "radial8") {
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx - dy, y: cy + dx };
+    });
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx - dx, y: cy - dy };
+    });
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx + dy, y: cy - dx };
+    });
+  }
+
+  if (symmetryMode === "radial8") {
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx + dy, y: cy + dx };
+    });
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx - dy, y: cy - dx };
+    });
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx - dx, y: cy + dy };
+    });
+    addTransform((x, y) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      return { x: cx + dx, y: cy - dy };
+    });
+  }
+
+  return transforms;
 }
 
 function applySelectionMask(

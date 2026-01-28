@@ -1,4 +1,13 @@
 # Plan: Professional AI-Powered Sprite Editor  
+
+## Related docs
+
+- Docs index: [`/docs/README.md`](./README.md)
+- Current status: [`/STATUS_UPDATE.md`](../STATUS_UPDATE.md)
+- Implementation snapshot: [`/IMPLEMENTATION_COMPLETE.md`](../IMPLEMENTATION_COMPLETE.md)
+
+---
+
 ## Complete Best in Class Solution Parity + Innovations (Beginner-Friendly, Fully Documented)
 
 This document is the end-to-end development plan for building a **professional sprite editor** that reaches **feature parity with best in class solution**, and then goes beyond it with **AI assistance, advanced symmetry, better UX**, and **cloud/collaboration**.

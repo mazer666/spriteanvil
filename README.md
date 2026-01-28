@@ -44,6 +44,8 @@ Start here:
 - UI target vision: [`/docs/UI_SPEC.md`](./docs/UI_SPEC.md)
 - Roadmap: [`/docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md)
 - Current integration notes: [`/docs/FEATURE_INTEGRATION_PLAN.md`](./docs/FEATURE_INTEGRATION_PLAN.md)
+- Current status update: [`/STATUS_UPDATE.md`](./STATUS_UPDATE.md)
+- Implementation milestone snapshot: [`/IMPLEMENTATION_COMPLETE.md`](./IMPLEMENTATION_COMPLETE.md)
 
 ---
 

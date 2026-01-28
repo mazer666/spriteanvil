@@ -2,6 +2,58 @@ import { RGBA, setPixel } from "./pixels";
 
 export type SymmetryMode = "none" | "horizontal" | "vertical" | "both" | "radial4" | "radial8";
 
+export function getSymmetryPoints(
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  mode: SymmetryMode,
+  centerX?: number,
+  centerY?: number
+): { x: number; y: number }[] {
+  const cx = centerX ?? Math.floor(width / 2);
+  const cy = centerY ?? Math.floor(height / 2);
+
+  const points = new Map<string, { x: number; y: number }>();
+
+  function addPoint(px: number, py: number) {
+    if (px < 0 || py < 0 || px >= width || py >= height) return;
+    points.set(`${px},${py}`, { x: px, y: py });
+  }
+
+  addPoint(x, y);
+
+  if (mode === "horizontal" || mode === "both") {
+    addPoint(2 * cx - x, y);
+  }
+
+  if (mode === "vertical" || mode === "both") {
+    addPoint(x, 2 * cy - y);
+  }
+
+  if (mode === "both") {
+    addPoint(2 * cx - x, 2 * cy - y);
+  }
+
+  if (mode === "radial4" || mode === "radial8") {
+    const dx = x - cx;
+    const dy = y - cy;
+
+    addPoint(cx - dy, cy + dx);
+    addPoint(cx - dx, cy - dy);
+    addPoint(cx + dy, cy - dx);
+
+    if (mode === "radial8") {
+      addPoint(cx + dy, cy + dx);
+      addPoint(cx - dy, cy - dx);
+      addPoint(cx - dx, cy + dy);
+      addPoint(cx + dx, cy - dy);
+    }
+  }
+
+  return Array.from(points.values());
+}
+
 export function applySymmetry(
   buffer: Uint8ClampedArray,
   width: number,
@@ -14,49 +66,10 @@ export function applySymmetry(
   centerY?: number
 ): boolean {
   let changed = false;
-  const cx = centerX ?? Math.floor(width / 2);
-  const cy = centerY ?? Math.floor(height / 2);
-
-  changed = setPixel(buffer, width, height, x, y, color) || changed;
-
-  if (mode === "horizontal" || mode === "both") {
-    const mirrorX = 2 * cx - x;
-    changed = setPixel(buffer, width, height, mirrorX, y, color) || changed;
-  }
-
-  if (mode === "vertical" || mode === "both") {
-    const mirrorY = 2 * cy - y;
-    changed = setPixel(buffer, width, height, x, mirrorY, color) || changed;
-  }
-
-  if (mode === "both") {
-    const mirrorX = 2 * cx - x;
-    const mirrorY = 2 * cy - y;
-    changed = setPixel(buffer, width, height, mirrorX, mirrorY, color) || changed;
-  }
-
-  if (mode === "radial4") {
-    const dx = x - cx;
-    const dy = y - cy;
-
-    changed = setPixel(buffer, width, height, cx - dy, cy + dx, color) || changed;
-    changed = setPixel(buffer, width, height, cx - dx, cy - dy, color) || changed;
-    changed = setPixel(buffer, width, height, cx + dy, cy - dx, color) || changed;
-  }
-
-  if (mode === "radial8") {
-    const dx = x - cx;
-    const dy = y - cy;
-
-    changed = setPixel(buffer, width, height, cx + dy, cy + dx, color) || changed;
-    changed = setPixel(buffer, width, height, cx - dy, cy + dx, color) || changed;
-    changed = setPixel(buffer, width, height, cx + dy, cy - dx, color) || changed;
-    changed = setPixel(buffer, width, height, cx - dy, cy - dx, color) || changed;
-    changed = setPixel(buffer, width, height, cx - dx, cy + dy, color) || changed;
-    changed = setPixel(buffer, width, height, cx - dx, cy - dy, color) || changed;
-    changed = setPixel(buffer, width, height, cx + dx, cy - dy, color) || changed;
-  }
-
+  const points = getSymmetryPoints(width, height, x, y, mode, centerX, centerY);
+  points.forEach((point) => {
+    changed = setPixel(buffer, width, height, point.x, point.y, color) || changed;
+  });
   return changed;
 }
 

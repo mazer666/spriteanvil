@@ -32,6 +32,14 @@ This folder contains **project plans** and **source-of-truth specifications** fo
 
 ---
 
+## Status & repo docs (root)
+
+- [`/STATUS_UPDATE.md`](../STATUS_UPDATE.md)
+- [`/IMPLEMENTATION_COMPLETE.md`](../IMPLEMENTATION_COMPLETE.md)
+- [`/CRITICAL_FIXES_NEEDED.md`](../CRITICAL_FIXES_NEEDED.md)
+
+---
+
 ## Maintenance rule
 
 If you change architecture/modules/export/selection/timeline behavior, update the matching doc **and** keep this index in sync.

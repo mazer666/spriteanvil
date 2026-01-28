@@ -1,4 +1,12 @@
 # SpriteAnvil Common Tasks
+## Related docs
+
+- Docs index: [`/docs/README.md`](./README.md)
+- Current status: [`/STATUS_UPDATE.md`](../STATUS_UPDATE.md)
+- Implementation snapshot: [`/IMPLEMENTATION_COMPLETE.md`](../IMPLEMENTATION_COMPLETE.md)
+
+---
+
 
 This document contains **step-by-step guides** for the most common changes in SpriteAnvil.
 It is written so that a beginner can follow it safely without breaking the architecture.
