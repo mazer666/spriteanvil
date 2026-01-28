@@ -12,7 +12,7 @@
 1. **Pen Tool** (B) - Freehand pixel-perfect drawing
 2. **Eraser Tool** (E) - Remove pixels
 3. **Eyedropper Tool** (I) - Pick colors from canvas
-4. **Fill Tool** (F) - Flood fill with scanline algorithm (tolerance wiring pending)
+4. **Fill Tool** (F) - Flood fill with scanline algorithm + tolerance control
 5. **Line Tool** (L) - Draw straight lines
 
 ### 📐 Shape Tools (6 tools)
@@ -24,10 +24,12 @@
 11. **Ellipse** (Shift+O) - Outlined ellipse
 12. **Filled Ellipse** (O) - Solid ellipse
 
-### ✂️ Selection Tools (2 tools)
+### ✂️ Selection Tools (4 tools)
 
 13. **Rectangle Selection** (M) - Rectangular marquee
 14. **Ellipse Selection** (Shift+M) - Elliptical marquee
+15. **Lasso Selection** (W) - Free-form polygon selection
+16. **Magic Wand** - Tolerance-based selection
 
 **Selection Operations:**
 - Copy (Cmd+C)
@@ -36,9 +38,10 @@
 - Select All (Cmd+A)
 - Deselect (Cmd+D / Escape)
 - Invert / Grow / Shrink
+- Boolean add/subtract/intersect via Shift/Alt modifiers
 - Marching ants animation
 
-### 🖼️ Layer System (UI Complete, Compositing Pending)
+### 🖼️ Layer System (UI + Compositing)
 
 **Features:**
 - Create, delete, duplicate layers
@@ -60,7 +63,7 @@
   - Exclusion
 - Merge down functionality
 
-**Note**: UI is complete, but drawing still targets a single buffer until layer compositing is implemented.
+**Note**: Drawing targets the active layer, and previews composite all visible layers.
 
 **Access**: Right Panel → Layers tab
 
@@ -141,10 +144,11 @@
    - Vertical strip
    - Configurable padding/spacing
    - Scale multiplier (1x-8x)
-
-**Planned/WIP:**
-- JSON metadata export (module exists, not wired)
-- GIF animation export
+2. **GIF Animation**
+   - Loop toggle
+   - Quality slider
+3. **JSON Metadata**
+   - SpriteAnvil metadata spec
 
 **Access**: Top bar → Export button (Cmd+E)
 
@@ -164,13 +168,14 @@
 - E: Eraser
 - I: Eyedropper
 - F: Fill
-- G: Gradient (UI only)
+- G: Gradient
 - L: Line
 - R: Rectangle / Shift+R: Filled Rectangle
 - C: Circle / Shift+C: Filled Circle
 - O: Filled Ellipse / Shift+O: Ellipse
 - M: Rectangle Selection / Shift+M: Ellipse Selection
-- W: Lasso Selection (UI only)
+- W: Lasso Selection
+- V: Move Selection
 
 **View Controls:**
 - Cmd+=: Zoom in
@@ -178,6 +183,7 @@
 - Cmd+0: Reset zoom to 100%
 - Cmd+': Toggle grid
 - Cmd+;: Toggle onion skin
+- Space + drag: Pan canvas
 
 **Transform:**
 - Cmd+H: Flip horizontal
@@ -245,7 +251,7 @@
 
 ## 🎨 Advanced Features
 
-### Gradient Tool (5 types) — UI Ready, Integration Pending
+### Gradient Tool (5 types)
 
 1. **Linear** - Straight gradient
 2. **Radial** - Circular gradient from center
@@ -253,12 +259,12 @@
 4. **Reflected** - Mirrored linear gradient
 5. **Diamond** - Manhattan distance gradient
 
-**Dithering Support (UI only):**
+**Dithering Support:**
 - None (smooth)
 - Bayer matrix (ordered)
 - Floyd-Steinberg (error diffusion)
 
-### Symmetry Modes (Ready, not yet applied)
+### Symmetry Modes (Applied, Custom Axis Pending)
 
 **Implemented in `src/editor/symmetry.ts`:**
 - Horizontal mirror
@@ -268,17 +274,16 @@
 - Radial 8-way
 - Visual guides
 
-*Note: Options exist in the tool settings UI, but drawing does not apply symmetry yet.*
+*Note: Symmetry applies to pen/eraser, line, shapes, and gradients; custom symmetry axes are still pending.*
 
-### Selection Tools (Algorithms Ready, Integration Pending)
+### Selection Tools (Integrated)
 
-**Lasso Selection (not wired to canvas yet):**
+**Lasso Selection:**
 - Free-form polygon drawing
 - Point-in-polygon algorithm
 - Path smoothing
-- Implemented in `src/editor/tools/lasso.ts`
 
-**Magic Wand (not wired to canvas yet):**
+**Magic Wand:**
 - Color tolerance selection
 - Flood-fill based
 - Adjustable tolerance
@@ -390,12 +395,12 @@ src/
 |-------|----------|--------|-------|
 | **Phase 0** | Documentation | 80% | Core docs in place |
 | **Phase 1** | Foundation | 60% | Database 100% complete |
-| **Phase 2** | Drawing Tools | 50% | Core tools wired, advanced tools pending |
-| **Phase 3** | Animation | 70% | PNG export working |
-| **Phase 4** | Layers & Color | 35% | UI complete, compositing missing |
+| **Phase 2** | Drawing Tools | 70% | Core tools + gradient/lasso/wand wired |
+| **Phase 3** | Animation | 80% | PNG/GIF/JSON export working |
+| **Phase 4** | Layers & Color | 45% | UI + compositing working |
 | **Phase 5** | AI Features | 5% | Database ready |
 | **Phase 6** | Professional UX | 70% | Shortcuts + command palette done |
-| **Phase 7** | Export | 50% | PNG only in UI |
+| **Phase 7** | Export | 80% | PNG/GIF/JSON UI available |
 | **Phase 8** | Collaboration | 10% | Infrastructure only |
 
 **Overall: ~68% Complete**

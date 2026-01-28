@@ -96,18 +96,22 @@ The current layout works but is not fully responsive with breakpoints as specifi
 
 ## Phase 2: Complete Drawing & Selection Toolset
 
-**Status:** ⏳ **50% Complete**
+**Status:** ⏳ **70% Complete**
 
 ### 2.1 Advanced Selection Tools
-**Status:** ⏳ **50% Complete**
+**Status:** ⏳ **70% Complete**
 
 **Implemented:**
 - ✅ Rectangular selection (`src/editor/selection.ts`)
 - ✅ Elliptical selection (`src/editor/selection.ts`)
+- ✅ Lasso selection (`src/editor/tools/lasso.ts`, `src/ui/CanvasStage.tsx`)
+- ✅ Magic wand selection (`src/editor/selection.ts`, `src/ui/CanvasStage.tsx`)
 - ✅ Marching ants animation (`src/ui/CanvasStage.tsx`)
 - ✅ Get selection bounds (`src/editor/selection.ts`)
 - ✅ Copy/cut/paste operations (`src/editor/clipboard.ts`)
 - ✅ Select all / deselect / invert / grow / shrink wiring (`src/App.tsx`, `src/ui/RightPanel.tsx`)
+- ✅ Boolean selection operations via modifier keys (Shift/Alt)
+- ✅ Drawing constrained to selection mask
 
 **Files:**
 - `src/editor/selection.ts` - Selection algorithms
@@ -115,12 +119,8 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - `src/ui/CanvasStage.tsx` - Selection UI integration
 
 **Missing:**
-- ⏳ Free-form lasso tool integration
-- ⏳ Magic wand tool integration
-- ⏳ Boolean operations (union, subtract, intersect) wiring
 - ⏳ Feather operation
 - ⏳ Selection move/transform
-- ⏳ Drawing constrained to selection mask
 - ⏳ Fixed aspect ratio mode
 - ⏳ Snap-to-grid option
 - ⏳ Quick mask mode
@@ -128,16 +128,15 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ⏳ Marching ants customization
 
 ### 2.2 Transform & Distortion Tools
-**Status:** ⏳ **40% Complete**
+**Status:** ⏳ **60% Complete**
 
 **Implemented:**
 - ✅ Flip horizontal/vertical
 - ✅ Rotate 90°/180°
-- ✅ Scale inputs + transform logic (apply action still missing)
+- ✅ Scale inputs + apply action
+- ✅ Move tool (selection translate)
 
 **Missing:**
-- ⏳ Move tool
-- ⏳ Scale apply button wiring
 - ⏳ Perspective skew
 - ⏳ Distort mesh
 - ⏳ Warp tool
@@ -163,11 +162,13 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ⏳ Custom brush builder
 
 ### 2.4 Fill & Gradient Tools
-**Status:** ⏳ **35% Complete**
+**Status:** ⏳ **70% Complete**
 
 **Implemented:**
 - ✅ Flood fill tool (`src/editor/tools/fill.ts`)
 - ✅ Scanline algorithm for efficient filling
+- ✅ Flood fill tolerance wiring
+- ✅ Gradient tool integration + dithering support
 
 **Files:**
 - `src/editor/tools/fill.ts` - Flood fill algorithms
@@ -176,27 +177,26 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ⏳ Flood fill tolerance wiring (`settings.fillTolerance`)
 - ⏳ Intelligent fill with edge detection
 - ⏳ Pattern fill mode
-- ⏳ Gradient tool integration
-- ⏳ Gradient dithering
 - ⏳ Content-aware fill
 - ⏳ Stroke-to-outline tool
 
 ### 2.5 Symmetry & Mirror Modes
-**Status:** ⏳ **25% Complete**
+**Status:** ⏳ **50% Complete**
 
 **Implemented:**
 - ✅ Symmetry helper functions (`src/editor/symmetry.ts`)
+- ✅ Symmetry guides in canvas
+- ✅ Pen/eraser symmetry transforms
+- ✅ Symmetry for shapes/line/gradient tools
 
 **Missing:**
-- ⏳ Canvas drawing integration
-- ⏳ Symmetry axis guides
 - ⏳ Custom symmetry axis
 
 ---
 
 ## Phase 3: Animation & Timeline Mastery
 
-**Status:** ✅ **75% Complete**
+**Status:** ✅ **80% Complete**
 
 ### 3.1 Frame & Animation Timeline
 **Status:** ✅ **80% Complete**
@@ -244,7 +244,7 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ⏳ Keyframe-only mode
 
 ### 3.3 Animation Playback & Export
-**Status:** ⏳ **70% Complete**
+**Status:** ⏳ **80% Complete**
 
 **Implemented:**
 - ✅ Frame-accurate playback engine (`src/App.tsx`)
@@ -255,7 +255,9 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ✅ Grid/horizontal/vertical layouts
 - ✅ Configurable padding and spacing
 - ✅ Multiple scale options (1x-8x)
-- ✅ Export UI panel (`src/ui/ExportPanel.tsx`) (PNG only)
+- ✅ Export UI panel (`src/ui/ExportPanel.tsx`) with PNG/GIF/JSON
+- ✅ JSON metadata export wiring
+- ✅ GIF export wiring
 
 **Files:**
 - `src/lib/export/spritesheet.ts` - Spritesheet generation
@@ -264,7 +266,6 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - `docs/EXPORT_FORMAT.md` - Export format specification
 
 **Missing:**
-- ⏳ JSON metadata export wiring
 - ⏳ GIF export with optimization
 - ⏳ Variable playback speed
 - ⏳ Loop modes (reverse, pingpong)
@@ -278,10 +279,10 @@ The current layout works but is not fully responsive with breakpoints as specifi
 
 ## Phase 4: Layers, Palette & Color Management
 
-**Status:** ⏳ **35% Complete**
+**Status:** ⏳ **45% Complete**
 
 ### 4.1 Complete Layer System
-**Status:** ⏳ **35% Complete**
+**Status:** ⏳ **50% Complete**
 
 **Database:**
 - ✅ `layers` table exists with RLS
@@ -294,8 +295,7 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ✅ Lock/visibility toggles
 
 **Missing:**
-- ⏳ Multi-layer compositing in the canvas
-- ⏳ Merge down/flatten
+- ⏳ Flatten layers
 - ⏳ Clipping masks
 - ⏳ Non-destructive effects
 
@@ -344,8 +344,9 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ✅ Pen
 - ✅ Eraser
 - ✅ Eyedropper
-- ✅ Fill (flood fill; tolerance wiring pending)
+- ✅ Fill (flood fill + tolerance)
 - ✅ Line
+- ✅ Gradient
 
 ### Shape Tools
 - ✅ Rectangle (outlined)
@@ -358,6 +359,8 @@ The current layout works but is not fully responsive with breakpoints as specifi
 ### Selection Tools
 - ✅ Rectangle selection
 - ✅ Ellipse selection
+- ✅ Lasso selection
+- ✅ Magic wand
 
 ### Edit Operations
 - ✅ Undo/Redo
@@ -376,6 +379,8 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ✅ Onion skin toggle
 - ✅ Grid toggle
 - ✅ Background mode selection
+- ✅ Move tool (selection translate)
+- ✅ Canvas pan (Space + drag)
 
 ---
 
@@ -385,9 +390,9 @@ The current layout works but is not fully responsive with breakpoints as specifi
 |-------|--------|----------|
 | Phase 0: Documentation | ✅ | 80% |
 | Phase 1: Foundation | ⏳ | 60% |
-| Phase 2: Drawing Tools | ⏳ | 50% |
-| Phase 3: Animation | ⏳ | 70% |
-| Phase 4: Layers & Color | ⏳ | 35% |
+| Phase 2: Drawing Tools | ⏳ | 70% |
+| Phase 3: Animation | ⏳ | 80% |
+| Phase 4: Layers & Color | ⏳ | 45% |
 
 ---
 
@@ -396,17 +401,16 @@ The current layout works but is not fully responsive with breakpoints as specifi
 To reach full Phase 4 completion:
 
 ### High Priority (Core Functionality)
-1. **Layer Compositing** - Draw to active layer buffers and composite on render
-2. **Gradient Tool Integration** - Wire gradient tool to canvas
-3. **Lasso/Magic Wand Integration** - Hook tools into selection pipeline
-4. **Export Panel Formats** - Wire JSON/GIF formats into UI
-5. **Transform Scale Apply** - Add apply action for scale inputs
+1. **Selection Move/Transform** - Move/scale/rotate active selection
+2. **Layer Flatten/Export** - Provide a flattened export buffer
+3. **Custom Symmetry Axis** - Add configurable symmetry center/axis
+4. **Responsive Layout** - Breakpoints for smaller screens
 
 ### Medium Priority (Polish)
-6. Boolean selection operations
-7. Fill tolerance support
-8. Symmetry mode integration
-9. Responsive layout with breakpoints
+6. Feather selection operation
+7. Stabilizer tuning + preview
+8. Tool grouping UX
+9. Minimap + selection handles
 
 ### Lower Priority (Advanced Features)
 10. Advanced brush dynamics
@@ -455,5 +459,5 @@ To reach full Phase 4 completion:
 - Database schema is complete with excellent RLS security
 - Export system is production-ready and follows specification
 - Animation/timeline system is highly functional
-- UI/UX needs more panels for layers and palettes
-- Transform tools are the biggest missing piece for Phase 2-4 completion
+- UI/UX still needs deeper layer tooling (merge/flatten, masks)
+- Selection transform tooling is the biggest missing piece for Phase 2-4 completion

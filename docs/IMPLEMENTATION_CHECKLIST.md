@@ -24,12 +24,23 @@ Bridge between roadmap and coding.
 
 ## Recommended next implementation sequence
 
-### 1) Tool integrations (gradient, lasso, magic wand)
+### ✅ Completed (recent)
+
+- Gradient tool renders and applies on drag
+- Lasso selection creates a custom mask
+- Magic wand selects by tolerance
+- Boolean selection operations (union/subtract/intersect) via modifiers
+- Selection constraints for drawing
+- Export format selector (PNG/JSON/GIF) + wiring
+- Transform scale apply action
+- Move tool for selection translate
+
+### 1) Selection transform & move tooling
 
 Deliverables:
-- gradient tool renders and applies on drag
-- lasso selection creates a custom mask
-- magic wand selects by tolerance
+- scale/rotate active selection
+- selection bounds + handles
+- canvas pan (space + drag) (done)
 
 Docs (source of truth):
 - `UI_SPEC.md`
@@ -37,38 +48,33 @@ Docs (source of truth):
 
 Likely files:
 - `src/ui/CanvasStage.tsx`
-- `src/editor/tools/gradient.ts`
-- `src/editor/tools/lasso.ts`
+- `src/ui/SelectionPanel.tsx`
 
-### 2) Selection operations & constraints
+### 2) Brush polish
 
 Deliverables:
-- boolean selection operations (union/subtract/intersect)
-- selection constraints for drawing
-- feather operation wiring
+- stabilizer tuning + preview
 
 Docs:
-- `SELECTION_MODEL.md`
+- `UI_SPEC.md`
 
 Likely files:
-- `src/editor/selection.ts`
 - `src/ui/CanvasStage.tsx`
-- `src/App.tsx`
 
-### 3) Export & transform polish
+### 3) Layer operations + advanced export
 
 Deliverables:
-- export format selector (PNG/JSON/GIF)
-- JSON/GIF wiring in `ExportPanel`
-- transform scale apply action
+- flatten layer updates
+- clipping masks + non-destructive effects
+- export polish (PNG sequence / APNG)
 
 Docs:
 - `EXPORT_FORMAT.md`
 
 Likely files:
-- `src/ui/ExportPanel.tsx`
+- `src/editor/layers.ts`
+- `src/ui/LayerPanel.tsx`
 - `src/lib/export/*`
-- `src/ui/TransformPanel.tsx`
 
 ---
 

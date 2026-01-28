@@ -23,78 +23,37 @@
 
 ### 🔴 **CRITICAL** - Breaks Core Functionality
 
-#### 1. Layer Compositing (NOT WORKING)
-**Issue**: Layers exist in UI, but drawing always targets a single buffer.
-
-**Fix Required**:
-- Create a pixel buffer per layer
-- Composite visible layers to the canvas
-- Apply layer opacity + blend modes during compositing
-
-#### 2. Selection System (PARTIAL)
-**Issue**: Basic selection and operations work, but key behaviors are missing.
+#### 1. Selection System (PARTIAL)
+**Issue**: Core selection tools work, but selection transforms are missing.
 - ✅ Deselect works (Escape/Cmd+D)
 - ✅ Invert/grow/shrink operations implemented
-- ❌ Boolean operations (union, subtract, intersect) still stubs
-- ❌ Drawing is not constrained to active selection
+- ✅ Boolean operations via Shift/Alt modifiers
+- ✅ Drawing constrained to active selection
 - ❌ Selection move/transform missing
 
 **Fix Required**:
-- Implement boolean selection operations
-- Restrict drawing to selection mask when active
 - Add selection transform (move, scale, rotate)
 
 ---
 
 ### 🟡 **HIGH PRIORITY** - Missing Features
 
-#### 5. Gradient Tool (NOT WORKING)
-**Issue**: Tool exists but doesn't render gradients
+#### 5. Layer Operations (PARTIAL)
+**Issue**: Core layer UI and compositing work, but advanced operations are missing.
 
 **Fix Required**:
-- Integrate `src/editor/tools/gradient.ts` in `CanvasStage.tsx`
-- Add gradient preview during drag
-- Apply gradient on mouse up
-
-#### 6. Lasso & Magic Wand (NOT WORKING)
-**Issue**: Tools exist but do nothing
-
-**Fix Required**:
-- Integrate `src/editor/tools/lasso.ts` in `CanvasStage.tsx`
-- Implement magic wand flood-fill selection
-
-#### 7. Transform Panel Scale (NOT WORKING)
-**Issue**: Scale inputs don't apply
-
-**Fix Required** in `TransformPanel.tsx`:
-- Add "Apply" button that calls `onScale(scaleX, scaleY)`
-- Currently missing the apply action
-
-#### 8. Export Panel (LIMITED)
-**Issue**: Only shows PNG, missing GIF and JSON
-
-**Fix Required** in `ExportPanel.tsx`:
-- Add format selector (PNG / GIF / JSON)
-- Show format-specific options
-- Wire up `src/lib/export/gif.ts` and `src/lib/export/metadata.ts`
+- Add flatten/export of merged layers
+- Add missing layer operations (clipping masks, non-destructive effects)
 
 ---
 
 ### 🟢 **MEDIUM PRIORITY** - UX Improvements
 
-#### 10. Fill Tool Tolerance (NOT ACCESSIBLE)
-**Issue**: Setting exists but `floodFill` function doesn't use it
+#### 11. Symmetry Mode (PARTIAL)
+**Issue**: Symmetry works across drawing tools, but custom axes are not supported yet.
 
 **Fix Required**:
-- Modify `src/editor/tools/fill.ts` to accept tolerance parameter
-- Pass `settings.fillTolerance` from CanvasStage
-
-#### 11. Symmetry Mode (NOT VISIBLE)
-**Issue**: Setting exists in ToolOptionsPanel but not applied in drawing
-
-**Fix Required**:
-- Modify `CanvasStage.tsx` drawing logic to apply symmetry transforms
-- Use `src/editor/symmetry.ts` functions
+- Add custom symmetry axis configuration
 
 #### 12. Brush Stabilizer (COSMETIC ONLY)
 **Issue**: Smooths cursor but doesn't visually help much
@@ -111,12 +70,8 @@
 - Show active tool variant
 - Photoshop-style nested menus
 
-#### 14. Move Tool (MISSING)
-**Issue**: No way to pan canvas or move selections
-
-**Fix Required**:
-- Add move tool that pans viewport OR moves selection
-- Space bar + drag for temp pan
+#### 14. Canvas Pan (IMPLEMENTED)
+**Issue**: Canvas panning is available via space + drag.
 
 ---
 
@@ -132,20 +87,20 @@
 ## Recommended Fix Order
 
 **Phase 1: Make it work** (3-4 hours)
-1. ⬜ Fix gradient tool integration (45 min)
-2. ⬜ Fix lasso/wand integration (45 min)
-3. ⬜ Fix transform scale apply button (10 min)
-4. ⬜ Fix export panel formats (30 min)
+1. ⬜ Add selection transform (move/scale/rotate) (2 hours)
+2. ⬜ Add custom symmetry axis (45 min)
+3. ⬜ Add layer flatten/export buffer (30 min)
+4. ✅ Add canvas pan (Space + drag)
 
 **Phase 2: Make it better** (2-3 hours)
-5. ⬜ Fix boolean selection ops (1 hour)
-6. ⬜ Add fill tolerance support (30 min)
-7. ⬜ Apply symmetry mode (45 min)
+5. ⬜ Improve stabilizer + preview (30 min)
+6. ⬜ Tool grouping UI (1 hour)
+7. ⬜ Minimap + selection handles (1 hour)
 
 **Phase 3: Make it great** (3-4 hours)
-8. ⬜ Multi-layer compositing (2 hours)
-9. ⬜ Selection move/transform (1 hour)
-10. ⬜ Tool grouping UI (1 hour)
+8. ⬜ Layer effects/clipping masks (2 hours)
+9. ⬜ Advanced brush dynamics (1 hour)
+10. ⬜ Export polish (APNG/PNG sequence) (1 hour)
 
 ---
 
@@ -156,14 +111,14 @@ After fixes, verify:
 - [ ] Can invert selection (Cmd+Shift+I)
 - [ ] Can deselect (Escape / Cmd+D)
 - [ ] Drawing respects selection mask
-- [ ] Gradient tool renders all 5 types
-- [ ] Lasso creates custom selection
-- [ ] Magic wand selects similar colors
-- [ ] Transform scale applies correctly
-- [ ] Export shows PNG, GIF, JSON options
-- [ ] Fill respects tolerance setting
-- [ ] Symmetry mode mirrors drawing
-- [ ] Layers composite correctly
+- [x] Gradient tool renders all 5 types
+- [x] Lasso creates custom selection
+- [x] Magic wand selects similar colors
+- [x] Transform scale applies correctly
+- [x] Export shows PNG, GIF, JSON options
+- [x] Fill respects tolerance setting
+- [x] Symmetry mode mirrors drawing for all tools
+- [x] Layers composite correctly
 
 ---
 
