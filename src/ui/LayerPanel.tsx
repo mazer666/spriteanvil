@@ -1,15 +1,5 @@
 import React, { useState } from "react";
-
-export type BlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'add' | 'subtract' | 'darken' | 'lighten' | 'difference' | 'exclusion';
-
-export type LayerData = {
-  id: string;
-  name: string;
-  opacity: number;
-  blend_mode: BlendMode;
-  is_visible: boolean;
-  is_locked: boolean;
-};
+import { BlendMode, LayerData } from "../types";
 
 type Props = {
   layers: LayerData[];

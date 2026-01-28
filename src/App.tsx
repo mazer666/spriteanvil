@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import DockLayout from "./ui/DockLayout";
 import ExportPanel from "./ui/ExportPanel";
 import CommandPalette, { Command } from "./ui/CommandPalette";
-import { CanvasSpec, ToolId, UiSettings, Frame } from "./types";
+import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode } from "./types";
 import { HistoryStack } from "./editor/history";
 import { cloneBuffer, createBuffer } from "./editor/pixels";
 import { copySelection, cutSelection, pasteClipboard, ClipboardData } from "./editor/clipboard";
-import { LayerData, BlendMode } from "./ui/LayerPanel";
+import { compositeLayers, mergeLayerIntoBelow } from "./editor/layers";
 import { PaletteData } from "./ui/PalettePanel";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import {
@@ -25,21 +25,32 @@ import {
   desaturate,
   posterize,
 } from "./editor/tools/coloradjust";
+import {
+  invertSelection,
+  selectionIntersection,
+  selectionSubtract,
+  selectionUnion,
+} from "./editor/selection";
 
 export default function App() {
   const [canvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
   const [tool, setTool] = useState<ToolId>("pen");
 
+  const initialFrameId = useMemo(() => crypto.randomUUID(), []);
+  const createEmptyPixels = () =>
+    createBuffer(canvasSpec.width, canvasSpec.height, { r: 0, g: 0, b: 0, a: 0 });
+
   const [frames, setFrames] = useState<Frame[]>(() => [
     {
-      id: crypto.randomUUID(),
-      pixels: createBuffer(canvasSpec.width, canvasSpec.height, { r: 0, g: 0, b: 0, a: 0 }),
+      id: initialFrameId,
+      pixels: createEmptyPixels(),
       durationMs: 100
     }
   ]);
 
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [selection, setSelection] = useState<Uint8Array | null>(null);
+  const previousSelectionRef = useRef<Uint8Array | null>(null);
   const clipboardRef = useRef<ClipboardData | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -53,19 +64,36 @@ export default function App() {
   const [canRedo, setCanRedo] = useState(false);
 
   const currentFrame = frames[currentFrameIndex];
-  const buffer = currentFrame.pixels;
 
-  const [layers, setLayers] = useState<LayerData[]>([
-    {
-      id: "layer-1",
-      name: "Layer 1",
+  function createLayer(name: string, pixels?: Uint8ClampedArray): LayerData {
+    return {
+      id: crypto.randomUUID(),
+      name,
       opacity: 1,
       blend_mode: "normal",
       is_visible: true,
       is_locked: false,
-    }
-  ]);
-  const [activeLayerId, setActiveLayerId] = useState<string>("layer-1");
+      pixels: pixels ?? createEmptyPixels(),
+    };
+  }
+
+  const [frameLayers, setFrameLayers] = useState<Record<string, LayerData[]>>(() => {
+    const baseLayer = createLayer("Layer 1");
+    return {
+      [initialFrameId]: [baseLayer],
+    };
+  });
+  const [frameActiveLayerIds, setFrameActiveLayerIds] = useState<Record<string, string>>(() => {
+    const baseLayer = frameLayers[initialFrameId]?.[0];
+    return baseLayer ? { [initialFrameId]: baseLayer.id } : {};
+  });
+
+  const layers = frameLayers[currentFrame.id] || [];
+  const activeLayerId = frameActiveLayerIds[currentFrame.id] || layers[0]?.id || null;
+  const activeLayer = layers.find((layer) => layer.id === activeLayerId) || layers[0] || null;
+  const buffer = activeLayer?.pixels || createEmptyPixels();
+  const compositeBuffer = currentFrame.pixels;
+  const isActiveLayerLocked = activeLayer?.is_locked ?? false;
 
   const [palettes, setPalettes] = useState<PaletteData[]>([
     {
@@ -132,18 +160,40 @@ export default function App() {
     };
   }, [isPlaying, currentFrame.durationMs, frames.length]);
 
+  useEffect(() => {
+    setFrameLayers((prev) => {
+      if (prev[currentFrame.id]) return prev;
+      const baseLayer = createLayer("Layer 1");
+      setFrameActiveLayerIds((activePrev) => ({
+        ...activePrev,
+        [currentFrame.id]: baseLayer.id,
+      }));
+      setFrames((framePrev) =>
+        framePrev.map((frame) =>
+          frame.id === currentFrame.id
+            ? {
+                ...frame,
+                pixels: compositeLayers([baseLayer], canvasSpec.width, canvasSpec.height),
+              }
+            : frame
+        )
+      );
+      return { ...prev, [currentFrame.id]: [baseLayer] };
+    });
+  }, [canvasSpec.height, canvasSpec.width, currentFrame.id]);
+
   function handleUndo() {
     const next = historyRef.current.undo(buffer);
-    if (next !== buffer) {
-      updateCurrentFrame(next);
+    if (next !== buffer && activeLayerId) {
+      updateActiveLayerPixels(next);
       syncHistoryFlags();
     }
   }
 
   function handleRedo() {
     const next = historyRef.current.redo(buffer);
-    if (next !== buffer) {
-      updateCurrentFrame(next);
+    if (next !== buffer && activeLayerId) {
+      updateActiveLayerPixels(next);
       syncHistoryFlags();
     }
   }
@@ -156,35 +206,37 @@ export default function App() {
 
   function handleCut() {
     if (!selection) return;
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const { clipboardData, modifiedBuffer } = cutSelection(buffer, selection, canvasSpec.width, canvasSpec.height);
 
     if (clipboardData) clipboardRef.current = clipboardData;
 
     historyRef.current.commit(before);
-    updateCurrentFrame(modifiedBuffer);
+    updateActiveLayerPixels(modifiedBuffer);
     syncHistoryFlags();
   }
 
   function handlePaste() {
     if (!clipboardRef.current) return;
+    if (isActiveLayerLocked) return;
 
     const before = cloneBuffer(buffer);
     const after = pasteClipboard(buffer, clipboardRef.current, canvasSpec.width, canvasSpec.height);
 
     historyRef.current.commit(before);
-    updateCurrentFrame(after);
+    updateActiveLayerPixels(after);
     syncHistoryFlags();
   }
 
   function handleDeselect() {
-    setSelection(null);
+    handleChangeSelection(null);
   }
 
   function handleSelectAll() {
     const sel = new Uint8Array(canvasSpec.width * canvasSpec.height);
     sel.fill(1);
-    setSelection(sel);
+    handleChangeSelection(sel);
   }
 
   function handleInvertSelection() {
@@ -192,11 +244,9 @@ export default function App() {
       handleSelectAll();
       return;
     }
-    const inverted = new Uint8Array(canvasSpec.width * canvasSpec.height);
-    for (let i = 0; i < inverted.length; i++) {
-      inverted[i] = selection[i] ? 0 : 1;
-    }
-    setSelection(inverted);
+    const inverted = new Uint8Array(selection);
+    invertSelection(inverted);
+    handleChangeSelection(inverted);
   }
 
   function handleGrowSelection() {
@@ -214,7 +264,7 @@ export default function App() {
         }
       }
     }
-    setSelection(grown);
+    handleChangeSelection(grown);
   }
 
   function handleShrinkSelection() {
@@ -235,37 +285,66 @@ export default function App() {
         }
       }
     }
-    setSelection(shrunk);
+    handleChangeSelection(shrunk);
   }
 
   function handleFeatherSelection(_radius: number) {
   }
 
   function handleBooleanUnion() {
+    if (!selection || !previousSelectionRef.current) return;
+    const merged = new Uint8Array(previousSelectionRef.current);
+    selectionUnion(merged, selection);
+    previousSelectionRef.current = null;
+    handleChangeSelection(merged);
   }
 
   function handleBooleanSubtract() {
+    if (!selection || !previousSelectionRef.current) return;
+    const merged = new Uint8Array(previousSelectionRef.current);
+    selectionSubtract(merged, selection);
+    previousSelectionRef.current = null;
+    handleChangeSelection(merged);
   }
 
   function handleBooleanIntersect() {
+    if (!selection || !previousSelectionRef.current) return;
+    const merged = new Uint8Array(previousSelectionRef.current);
+    selectionIntersection(merged, selection);
+    previousSelectionRef.current = null;
+    handleChangeSelection(merged);
   }
 
-  function updateCurrentFrame(newPixels: Uint8ClampedArray) {
+  function updateCurrentFrameComposite(frameId: string, nextLayers: LayerData[]) {
+    const composite = compositeLayers(nextLayers, canvasSpec.width, canvasSpec.height);
     setFrames((prev) =>
-      prev.map((f, i) => (i === currentFrameIndex ? { ...f, pixels: newPixels } : f))
+      prev.map((frame) => (frame.id === frameId ? { ...frame, pixels: composite } : frame))
     );
+  }
+
+  function updateActiveLayerPixels(newPixels: Uint8ClampedArray) {
+    if (!activeLayerId) return;
+    const frameId = currentFrame.id;
+    setFrameLayers((prev) => {
+      const currentLayers = prev[frameId] || [];
+      const nextLayers = currentLayers.map((layer) =>
+        layer.id === activeLayerId ? { ...layer, pixels: newPixels } : layer
+      );
+      updateCurrentFrameComposite(frameId, nextLayers);
+      return { ...prev, [frameId]: nextLayers };
+    });
   }
 
   function onStrokeEnd(before: Uint8ClampedArray, after: Uint8ClampedArray) {
     historyRef.current.commit(before);
-    updateCurrentFrame(after);
+    updateActiveLayerPixels(after);
     syncHistoryFlags();
   }
 
   function handleInsertFrame() {
     const newFrame: Frame = {
       id: crypto.randomUUID(),
-      pixels: createBuffer(canvasSpec.width, canvasSpec.height, { r: 0, g: 0, b: 0, a: 0 }),
+      pixels: createEmptyPixels(),
       durationMs: 100
     };
 
@@ -274,6 +353,9 @@ export default function App() {
       updated.splice(currentFrameIndex + 1, 0, newFrame);
       return updated;
     });
+    const newLayer = createLayer("Layer 1");
+    setFrameLayers((prev) => ({ ...prev, [newFrame.id]: [newLayer] }));
+    setFrameActiveLayerIds((prev) => ({ ...prev, [newFrame.id]: newLayer.id }));
 
     setCurrentFrameIndex(currentFrameIndex + 1);
   }
@@ -290,6 +372,20 @@ export default function App() {
       updated.splice(currentFrameIndex + 1, 0, duplicate);
       return updated;
     });
+    const currentLayers = frameLayers[currentFrame.id] || [];
+    const duplicatedLayers = currentLayers.map((layer) => ({
+      ...layer,
+      id: crypto.randomUUID(),
+      name: `${layer.name} copy`,
+      pixels: layer.pixels ? cloneBuffer(layer.pixels) : createEmptyPixels(),
+    }));
+    setFrameLayers((prev) => ({ ...prev, [duplicate.id]: duplicatedLayers }));
+    const activeIndex = currentLayers.findIndex((layer) => layer.id === activeLayerId);
+    const nextActive = duplicatedLayers[Math.max(0, activeIndex)]?.id || duplicatedLayers[0]?.id || "";
+    setFrameActiveLayerIds((prev) => ({
+      ...prev,
+      [duplicate.id]: nextActive,
+    }));
 
     setCurrentFrameIndex(currentFrameIndex + 1);
   }
@@ -298,6 +394,15 @@ export default function App() {
     if (frames.length <= 1) return;
 
     setFrames((prev) => prev.filter((_, i) => i !== currentFrameIndex));
+    const frameId = currentFrame.id;
+    setFrameLayers((prev) => {
+      const { [frameId]: _, ...rest } = prev;
+      return rest;
+    });
+    setFrameActiveLayerIds((prev) => {
+      const { [frameId]: _, ...rest } = prev;
+      return rest;
+    });
 
     if (currentFrameIndex >= frames.length - 1) {
       setCurrentFrameIndex(Math.max(0, frames.length - 2));
@@ -328,24 +433,25 @@ export default function App() {
   }
 
   function handleCreateLayer() {
-    const newLayer: LayerData = {
-      id: `layer-${Date.now()}`,
-      name: `Layer ${layers.length + 1}`,
-      opacity: 1,
-      blend_mode: "normal",
-      is_visible: true,
-      is_locked: false,
-    };
-    setLayers((prev) => [newLayer, ...prev]);
-    setActiveLayerId(newLayer.id);
+    if (!currentFrame) return;
+    const newLayer = createLayer(`Layer ${layers.length + 1}`);
+    const frameId = currentFrame.id;
+    const nextLayers = [newLayer, ...layers];
+    setFrameLayers((prev) => ({ ...prev, [frameId]: nextLayers }));
+    setFrameActiveLayerIds((prev) => ({ ...prev, [frameId]: newLayer.id }));
+    updateCurrentFrameComposite(frameId, nextLayers);
   }
 
   function handleDeleteLayer(id: string) {
     if (layers.length === 1) return;
-    setLayers((prev) => prev.filter((l) => l.id !== id));
+    const frameId = currentFrame.id;
+    const nextLayers = layers.filter((layer) => layer.id !== id);
+    setFrameLayers((prev) => ({ ...prev, [frameId]: nextLayers }));
     if (activeLayerId === id) {
-      setActiveLayerId(layers.find((l) => l.id !== id)?.id || layers[0].id);
+      const nextActive = nextLayers[0]?.id || null;
+      setFrameActiveLayerIds((prev) => ({ ...prev, [frameId]: nextActive || "" }));
     }
+    updateCurrentFrameComposite(frameId, nextLayers);
   }
 
   function handleDuplicateLayer(id: string) {
@@ -353,59 +459,80 @@ export default function App() {
     if (!layer) return;
     const newLayer: LayerData = {
       ...layer,
-      id: `layer-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: `${layer.name} copy`,
+      pixels: layer.pixels ? cloneBuffer(layer.pixels) : createEmptyPixels(),
     };
     const index = layers.findIndex((l) => l.id === id);
-    setLayers((prev) => {
-      const updated = [...prev];
-      updated.splice(index, 0, newLayer);
-      return updated;
-    });
+    const nextLayers = [...layers];
+    nextLayers.splice(index, 0, newLayer);
+    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: nextLayers }));
+    updateCurrentFrameComposite(currentFrame.id, nextLayers);
   }
 
   function handleToggleLayerVisibility(id: string) {
-    setLayers((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, is_visible: !l.is_visible } : l))
+    const nextLayers = layers.map((layer) =>
+      layer.id === id ? { ...layer, is_visible: !layer.is_visible } : layer
     );
+    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: nextLayers }));
+    updateCurrentFrameComposite(currentFrame.id, nextLayers);
   }
 
   function handleToggleLayerLock(id: string) {
-    setLayers((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, is_locked: !l.is_locked } : l))
+    const nextLayers = layers.map((layer) =>
+      layer.id === id ? { ...layer, is_locked: !layer.is_locked } : layer
     );
+    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: nextLayers }));
   }
 
   function handleUpdateLayerOpacity(id: string, opacity: number) {
-    setLayers((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, opacity } : l))
+    const nextLayers = layers.map((layer) =>
+      layer.id === id ? { ...layer, opacity } : layer
     );
+    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: nextLayers }));
+    updateCurrentFrameComposite(currentFrame.id, nextLayers);
   }
 
   function handleUpdateLayerBlendMode(id: string, blend_mode: BlendMode) {
-    setLayers((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, blend_mode } : l))
+    const nextLayers = layers.map((layer) =>
+      layer.id === id ? { ...layer, blend_mode } : layer
     );
+    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: nextLayers }));
+    updateCurrentFrameComposite(currentFrame.id, nextLayers);
   }
 
   function handleRenameLayer(id: string, name: string) {
-    setLayers((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, name } : l))
+    const nextLayers = layers.map((layer) =>
+      layer.id === id ? { ...layer, name } : layer
     );
+    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: nextLayers }));
   }
 
   function handleReorderLayers(fromIndex: number, toIndex: number) {
-    setLayers((prev) => {
-      const updated = [...prev];
-      const [moved] = updated.splice(fromIndex, 1);
-      updated.splice(toIndex, 0, moved);
-      return updated;
-    });
+    const updated = [...layers];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: updated }));
+    updateCurrentFrameComposite(currentFrame.id, updated);
   }
 
   function handleMergeDown(id: string) {
     const index = layers.findIndex((l) => l.id === id);
     if (index === layers.length - 1) return;
+    const above = layers[index];
+    const below = layers[index + 1];
+    if (!above || !below) return;
+    const mergedPixels = mergeLayerIntoBelow(
+      below,
+      above,
+      canvasSpec.width,
+      canvasSpec.height
+    );
+    const updated = [...layers];
+    updated.splice(index, 1);
+    updated[index] = { ...below, pixels: mergedPixels };
+    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: updated }));
+    updateCurrentFrameComposite(currentFrame.id, updated);
   }
 
   function handleCreatePalette(name: string, colors: string[]) {
@@ -445,6 +572,7 @@ export default function App() {
   }
 
   function handleSwapColors(fromColor: string, toColor: string) {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     // Implementation would replace all pixels of fromColor with toColor
     historyRef.current.commit(before);
@@ -452,98 +580,110 @@ export default function App() {
   }
 
   function handleFlipHorizontal() {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const after = flipHorizontal(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
-    updateCurrentFrame(after);
+    updateActiveLayerPixels(after);
     syncHistoryFlags();
   }
 
   function handleFlipVertical() {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const after = flipVertical(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
-    updateCurrentFrame(after);
+    updateActiveLayerPixels(after);
     syncHistoryFlags();
   }
 
   function handleRotate90CW() {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const result = rotate90CW(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
-    updateCurrentFrame(result.buffer);
+    updateActiveLayerPixels(result.buffer);
     syncHistoryFlags();
   }
 
   function handleRotate90CCW() {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const result = rotate90CCW(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
-    updateCurrentFrame(result.buffer);
+    updateActiveLayerPixels(result.buffer);
     syncHistoryFlags();
   }
 
   function handleRotate180() {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const after = rotate180(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
-    updateCurrentFrame(after);
+    updateActiveLayerPixels(after);
     syncHistoryFlags();
   }
 
   function handleScale(scaleX: number, scaleY: number) {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const result = scaleNearest(buffer, canvasSpec.width, canvasSpec.height, scaleX, scaleY);
     historyRef.current.commit(before);
-    updateCurrentFrame(result.buffer);
+    updateActiveLayerPixels(result.buffer);
     syncHistoryFlags();
   }
 
   function handleAdjustHue(hueShift: number) {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const after = adjustHue(buffer, canvasSpec.width, canvasSpec.height, hueShift);
     historyRef.current.commit(before);
-    updateCurrentFrame(after);
+    updateActiveLayerPixels(after);
     syncHistoryFlags();
   }
 
   function handleAdjustSaturation(saturationDelta: number) {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const after = adjustSaturation(buffer, canvasSpec.width, canvasSpec.height, saturationDelta);
     historyRef.current.commit(before);
-    updateCurrentFrame(after);
+    updateActiveLayerPixels(after);
     syncHistoryFlags();
   }
 
   function handleAdjustBrightness(brightnessDelta: number) {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const after = adjustBrightness(buffer, canvasSpec.width, canvasSpec.height, brightnessDelta);
     historyRef.current.commit(before);
-    updateCurrentFrame(after);
+    updateActiveLayerPixels(after);
     syncHistoryFlags();
   }
 
   function handleInvert() {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const after = invertColors(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
-    updateCurrentFrame(after);
+    updateActiveLayerPixels(after);
     syncHistoryFlags();
   }
 
   function handleDesaturate() {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const after = desaturate(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
-    updateCurrentFrame(after);
+    updateActiveLayerPixels(after);
     syncHistoryFlags();
   }
 
   function handlePosterize(levels: number) {
+    if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
     const after = posterize(buffer, canvasSpec.width, canvasSpec.height, levels);
     historyRef.current.commit(before);
-    updateCurrentFrame(after);
+    updateActiveLayerPixels(after);
     syncHistoryFlags();
   }
 
@@ -603,6 +743,11 @@ export default function App() {
     onPlayPause: handleTogglePlayback,
   }, !showCommandPalette);
 
+  function handleChangeSelection(next: Uint8Array | null) {
+    previousSelectionRef.current = selection ? new Uint8Array(selection) : null;
+    setSelection(next);
+  }
+
   return (
     <>
       <DockLayout
@@ -612,9 +757,10 @@ export default function App() {
         onChangeTool={setTool}
         canvasSpec={canvasSpec}
         buffer={buffer}
+        compositeBuffer={compositeBuffer}
         onStrokeEnd={onStrokeEnd}
         selection={selection}
-        onChangeSelection={setSelection}
+        onChangeSelection={handleChangeSelection}
         onColorPick={handleSelectColor}
         onUndo={handleUndo}
         onRedo={handleRedo}
@@ -632,7 +778,8 @@ export default function App() {
         layers={layers}
         activeLayerId={activeLayerId}
         onLayerOperations={{
-          onSelectLayer: setActiveLayerId,
+          onSelectLayer: (id) =>
+            setFrameActiveLayerIds((prev) => ({ ...prev, [currentFrame.id]: id })),
           onCreateLayer: handleCreateLayer,
           onDeleteLayer: handleDeleteLayer,
           onDuplicateLayer: handleDuplicateLayer,

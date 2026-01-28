@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { UiSettings, CanvasSpec, Frame } from "../types";
-import LayerPanel, { LayerData, BlendMode } from "./LayerPanel";
+import LayerPanel from "./LayerPanel";
+import { LayerData, BlendMode } from "../types";
 import PalettePanel, { PaletteData } from "./PalettePanel";
 import TransformPanel from "./TransformPanel";
 import ColorAdjustPanel from "./ColorAdjustPanel";

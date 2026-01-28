@@ -3,8 +3,7 @@ import ToolRail from "./ToolRail";
 import RightPanel from "./RightPanel";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
-import { CanvasSpec, ToolId, UiSettings, Frame } from "../types";
-import { LayerData, BlendMode } from "./LayerPanel";
+import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode } from "../types";
 import { PaletteData } from "./PalettePanel";
 
 type Props = {
@@ -16,6 +15,7 @@ type Props = {
 
   canvasSpec: CanvasSpec;
   buffer: Uint8ClampedArray;
+  compositeBuffer: Uint8ClampedArray;
   onStrokeEnd: (before: Uint8ClampedArray, after: Uint8ClampedArray) => void;
 
   selection: Uint8Array | null;
@@ -117,6 +117,7 @@ export default function DockLayout({
   onChangeTool,
   canvasSpec,
   buffer,
+  compositeBuffer,
   onStrokeEnd,
   selection,
   onChangeSelection,
@@ -220,6 +221,9 @@ export default function DockLayout({
             tool={tool}
             canvasSpec={canvasSpec}
             buffer={buffer}
+            compositeBuffer={compositeBuffer}
+            layers={layers}
+            activeLayerId={activeLayerId}
             onStrokeEnd={onStrokeEnd}
             selection={selection}
             onChangeSelection={onChangeSelection}

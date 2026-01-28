@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { CanvasSpec, ToolId, UiSettings } from "../types";
-import { cloneBuffer, drawLine, hexToRgb, getPixel } from "../editor/pixels";
+import { CanvasSpec, ToolId, UiSettings, LayerData } from "../types";
+import { cloneBuffer, drawLine, hexToRgb, getPixel, setPixel } from "../editor/pixels";
+import { compositeLayers } from "../editor/layers";
 import { floodFill, floodFillWithTolerance } from "../editor/tools/fill";
 import { applyFloydSteinbergDither, drawGradient } from "../editor/tools/gradient";
 import {
@@ -21,6 +22,9 @@ export default function CanvasStage(props: {
   tool: ToolId;
   canvasSpec: CanvasSpec;
   buffer: Uint8ClampedArray;
+  compositeBuffer: Uint8ClampedArray;
+  layers?: LayerData[];
+  activeLayerId?: string | null;
   onStrokeEnd: (before: Uint8ClampedArray, after: Uint8ClampedArray) => void;
   selection: Uint8Array | null;
   onChangeSelection: (selection: Uint8Array | null) => void;
@@ -28,7 +32,21 @@ export default function CanvasStage(props: {
   frames?: Frame[];
   currentFrameIndex?: number;
 }) {
-  const { settings, tool, canvasSpec, buffer, onStrokeEnd, selection, onChangeSelection, onColorPick, frames, currentFrameIndex } = props;
+  const {
+    settings,
+    tool,
+    canvasSpec,
+    buffer,
+    compositeBuffer,
+    layers,
+    activeLayerId,
+    onStrokeEnd,
+    selection,
+    onChangeSelection,
+    onColorPick,
+    frames,
+    currentFrameIndex
+  } = props;
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -61,7 +79,7 @@ export default function CanvasStage(props: {
     bufRef.current = buffer;
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB, shapePreview, lassoPreview, selection, animFrame]);
+  }, [buffer, compositeBuffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB, shapePreview, lassoPreview, selection, animFrame]);
 
   const strokeRef = useRef<{
     active: boolean;
@@ -167,6 +185,36 @@ export default function CanvasStage(props: {
     return { x: px, y: py };
   }
 
+  function isDrawingTool(activeTool: ToolId) {
+    return [
+      "pen",
+      "eraser",
+      "fill",
+      "gradient",
+      "line",
+      "rectangle",
+      "rectangleFilled",
+      "circle",
+      "circleFilled",
+      "ellipse",
+      "ellipseFilled"
+    ].includes(activeTool);
+  }
+
+  function isActiveLayerLocked() {
+    if (!layers || !activeLayerId) return false;
+    const layer = layers.find((l) => l.id === activeLayerId);
+    return layer?.is_locked ?? false;
+  }
+
+  function getCompositePreview(): Uint8ClampedArray {
+    if (!layers || layers.length === 0) return compositeBuffer;
+    const previewLayers = layers.map((layer) =>
+      layer.id === activeLayerId ? { ...layer, pixels: bufRef.current } : layer
+    );
+    return compositeLayers(previewLayers, canvasSpec.width, canvasSpec.height);
+  }
+
   function beginStroke(e: React.PointerEvent) {
     const p = pointerToPixel(e);
     if (!p) return;
@@ -186,11 +234,17 @@ export default function CanvasStage(props: {
     const c = getDrawColor();
 
     if (tool === "eyedropper") {
-      const rgba = getPixel(bufRef.current, canvasSpec.width, canvasSpec.height, p.x, p.y);
+      const sampleBuffer = getCompositePreview();
+      const rgba = getPixel(sampleBuffer, canvasSpec.width, canvasSpec.height, p.x, p.y);
       if (rgba && onColorPick) {
         const hex = `#${rgba.r.toString(16).padStart(2, "0")}${rgba.g.toString(16).padStart(2, "0")}${rgba.b.toString(16).padStart(2, "0")}`;
         onColorPick(hex);
       }
+      endStroke();
+      return;
+    }
+
+    if (isDrawingTool(tool) && isActiveLayerLocked()) {
       endStroke();
       return;
     }
@@ -214,6 +268,9 @@ export default function CanvasStage(props: {
           p.y,
           c
         );
+      if (selection && st.beforeSnapshot) {
+        applySelectionMask(bufRef.current, st.beforeSnapshot, selection, canvasSpec.width, canvasSpec.height);
+      }
       if (pixelsChanged > 0) st.changed = true;
       draw();
       endStroke();
@@ -221,8 +278,9 @@ export default function CanvasStage(props: {
     }
 
     if (tool === "selectWand") {
+      const sampleBuffer = getCompositePreview();
       const newSelection = selectMagicWand(
-        bufRef.current,
+        sampleBuffer,
         canvasSpec.width,
         canvasSpec.height,
         p.x,
@@ -235,7 +293,19 @@ export default function CanvasStage(props: {
     }
 
     if (tool === "pen" || tool === "eraser") {
-      const did = drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, p.x, p.y, p.x, p.y, c);
+      const did = selection
+        ? drawLineWithSelection(
+            bufRef.current,
+            canvasSpec.width,
+            canvasSpec.height,
+            p.x,
+            p.y,
+            p.x,
+            p.y,
+            c,
+            selection
+          )
+        : drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, p.x, p.y, p.x, p.y, c);
       if (did) st.changed = true;
       draw();
     }
@@ -266,7 +336,19 @@ export default function CanvasStage(props: {
       if (x === st.lastX && y === st.lastY) return;
 
       const c = getDrawColor();
-      const did = drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, st.lastX, st.lastY, x, y, c);
+      const did = selection
+        ? drawLineWithSelection(
+            bufRef.current,
+            canvasSpec.width,
+            canvasSpec.height,
+            st.lastX,
+            st.lastY,
+            x,
+            y,
+            c,
+            selection
+          )
+        : drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, st.lastX, st.lastY, x, y, c);
       if (did) st.changed = true;
 
       st.lastX = x;
@@ -448,6 +530,10 @@ export default function CanvasStage(props: {
         if (did) st.changed = true;
       }
 
+      if (selection && st.beforeSnapshot && isDrawingTool(tool)) {
+        applySelectionMask(bufRef.current, st.beforeSnapshot, selection, canvasSpec.width, canvasSpec.height);
+      }
+
       setShapePreview(null);
     }
 
@@ -477,8 +563,9 @@ export default function CanvasStage(props: {
 
     ctx.clearRect(0, 0, w, h);
 
+    const previewBuffer = getCompositePreview();
     const img = new ImageData(
-      new Uint8ClampedArray(bufRef.current),
+      new Uint8ClampedArray(previewBuffer),
       canvasSpec.width,
       canvasSpec.height
     );
@@ -778,4 +865,64 @@ function drawOnionFrame(
   ctx.globalCompositeOperation = "source-over";
   ctx.drawImage(off, 0, 0, canvasSpec.width, canvasSpec.height, originX, originY, imgW, imgH);
   ctx.restore();
+}
+
+function drawLineWithSelection(
+  buf: Uint8ClampedArray,
+  width: number,
+  height: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  rgba: { r: number; g: number; b: number; a: number },
+  selection: Uint8Array
+): boolean {
+  let changedAny = false;
+
+  let dx = Math.abs(x1 - x0);
+  let dy = Math.abs(y1 - y0);
+
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+
+  let err = dx - dy;
+
+  while (true) {
+    const idx = y0 * width + x0;
+    if (selection[idx]) {
+      if (setPixel(buf, width, height, x0, y0, rgba)) changedAny = true;
+    }
+    if (x0 === x1 && y0 === y1) break;
+
+    const e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x0 += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y0 += sy;
+    }
+  }
+
+  return changedAny;
+}
+
+function applySelectionMask(
+  after: Uint8ClampedArray,
+  before: Uint8ClampedArray,
+  selection: Uint8Array,
+  width: number,
+  height: number
+) {
+  for (let i = 0; i < width * height; i++) {
+    if (!selection[i]) {
+      const idx = i * 4;
+      after[idx + 0] = before[idx + 0];
+      after[idx + 1] = before[idx + 1];
+      after[idx + 2] = before[idx + 2];
+      after[idx + 3] = before[idx + 3];
+    }
+  }
 }
