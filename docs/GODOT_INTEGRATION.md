@@ -1,4 +1,12 @@
 # SpriteAnvil Godot Integration Guide
+## Related docs
+
+- Docs index: [`/docs/README.md`](./README.md)
+- Current status: [`/STATUS_UPDATE.md`](../STATUS_UPDATE.md)
+- Implementation snapshot: [`/IMPLEMENTATION_COMPLETE.md`](../IMPLEMENTATION_COMPLETE.md)
+
+---
+
 
 This document explains how to use SpriteAnvil exports in **Godot (4.x)**.
 It is focused on practical, beginner-safe steps and stable mapping rules.

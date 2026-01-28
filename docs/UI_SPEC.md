@@ -1,4 +1,12 @@
 # UI_SPEC.md – SpriteAnvil UI Target Vision
+## Related docs
+
+- Docs index: [`/docs/README.md`](./README.md)
+- Current status: [`/STATUS_UPDATE.md`](../STATUS_UPDATE.md)
+- Implementation snapshot: [`/IMPLEMENTATION_COMPLETE.md`](../IMPLEMENTATION_COMPLETE.md)
+
+---
+
 
 This document defines the **binding UI target vision** for SpriteAnvil — based on the reference design (dark, premium panel UI with clear tool icons, a centered canvas, and a timeline at the bottom).
 
