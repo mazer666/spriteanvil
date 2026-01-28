@@ -12,7 +12,14 @@ import {
   drawEllipse,
   fillEllipse
 } from "../editor/tools/shapes";
-import { selectRectangle, selectEllipse, selectMagicWand } from "../editor/selection";
+import {
+  selectRectangle,
+  selectEllipse,
+  selectMagicWand,
+  selectionIntersection,
+  selectionSubtract,
+  selectionUnion,
+} from "../editor/selection";
 import { createLassoSelection, smoothLassoPoints } from "../editor/tools/lasso";
 
 import { Frame } from "../types";
@@ -92,6 +99,7 @@ export default function CanvasStage(props: {
     smoothX: number;
     smoothY: number;
     hasSmooth: boolean;
+    selectionMode: SelectionMode;
   }>({
     active: false,
     changed: false,
@@ -102,7 +110,8 @@ export default function CanvasStage(props: {
     startY: -1,
     smoothX: 0,
     smoothY: 0,
-    hasSmooth: false
+    hasSmooth: false,
+    selectionMode: "replace",
   });
 
   const bgClass = useMemo(() => {
@@ -230,6 +239,7 @@ export default function CanvasStage(props: {
     st.startX = p.x;
     st.startY = p.y;
     st.hasSmooth = false;
+    st.selectionMode = selectionModeFromEvent(e);
 
     const c = getDrawColor();
 
@@ -287,7 +297,8 @@ export default function CanvasStage(props: {
         p.y,
         settings.wandTolerance
       );
-      onChangeSelection(newSelection);
+      const mergedSelection = mergeSelection(selection, newSelection, st.selectionMode);
+      onChangeSelection(mergedSelection);
       endStroke();
       return;
     }
@@ -387,7 +398,8 @@ export default function CanvasStage(props: {
         canvasSpec.height,
         smoothedPoints
       );
-      onChangeSelection(newSelection);
+      const mergedSelection = mergeSelection(selection, newSelection, st.selectionMode);
+      onChangeSelection(mergedSelection);
       setLassoPreview(null);
     }
 
@@ -474,7 +486,8 @@ export default function CanvasStage(props: {
           }
         );
 
-        onChangeSelection(newSelection);
+        const mergedSelection = mergeSelection(selection, newSelection, st.selectionMode);
+        onChangeSelection(mergedSelection);
       }
 
       if (tool === "selectEllipse") {
@@ -492,7 +505,8 @@ export default function CanvasStage(props: {
           ry
         );
 
-        onChangeSelection(newSelection);
+        const mergedSelection = mergeSelection(selection, newSelection, st.selectionMode);
+        onChangeSelection(mergedSelection);
       }
 
       if (tool === "gradient") {
@@ -925,4 +939,36 @@ function applySelectionMask(
       after[idx + 3] = before[idx + 3];
     }
   }
+}
+
+type SelectionMode = "replace" | "union" | "subtract" | "intersect";
+
+function selectionModeFromEvent(e: React.PointerEvent): SelectionMode {
+  if (e.shiftKey && e.altKey) return "intersect";
+  if (e.shiftKey) return "union";
+  if (e.altKey) return "subtract";
+  return "replace";
+}
+
+function mergeSelection(
+  current: Uint8Array | null,
+  incoming: Uint8Array,
+  mode: SelectionMode
+): Uint8Array {
+  if (!current || mode === "replace") return incoming;
+  const merged = new Uint8Array(current);
+  switch (mode) {
+    case "union":
+      selectionUnion(merged, incoming);
+      break;
+    case "subtract":
+      selectionSubtract(merged, incoming);
+      break;
+    case "intersect":
+      selectionIntersection(merged, incoming);
+      break;
+    default:
+      break;
+  }
+  return merged;
 }
