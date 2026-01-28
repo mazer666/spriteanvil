@@ -4,6 +4,7 @@ import { cloneBuffer, drawLine, hexToRgb, getPixel, setPixel } from "../editor/p
 import { compositeLayers } from "../editor/layers";
 import { floodFill, floodFillWithTolerance } from "../editor/tools/fill";
 import { applyFloydSteinbergDither, drawGradient } from "../editor/tools/gradient";
+import { drawSymmetryGuides, getSymmetryPoints } from "../editor/symmetry";
 import {
   drawRectangle,
   fillRectangle,
@@ -304,19 +305,18 @@ export default function CanvasStage(props: {
     }
 
     if (tool === "pen" || tool === "eraser") {
-      const did = selection
-        ? drawLineWithSelection(
-            bufRef.current,
-            canvasSpec.width,
-            canvasSpec.height,
-            p.x,
-            p.y,
-            p.x,
-            p.y,
-            c,
-            selection
-          )
-        : drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, p.x, p.y, p.x, p.y, c);
+      const did = drawLineWithSymmetry(
+        bufRef.current,
+        canvasSpec.width,
+        canvasSpec.height,
+        p.x,
+        p.y,
+        p.x,
+        p.y,
+        c,
+        settings.symmetryMode,
+        selection ?? undefined
+      );
       if (did) st.changed = true;
       draw();
     }
@@ -347,19 +347,18 @@ export default function CanvasStage(props: {
       if (x === st.lastX && y === st.lastY) return;
 
       const c = getDrawColor();
-      const did = selection
-        ? drawLineWithSelection(
-            bufRef.current,
-            canvasSpec.width,
-            canvasSpec.height,
-            st.lastX,
-            st.lastY,
-            x,
-            y,
-            c,
-            selection
-          )
-        : drawLine(bufRef.current, canvasSpec.width, canvasSpec.height, st.lastX, st.lastY, x, y, c);
+      const did = drawLineWithSymmetry(
+        bufRef.current,
+        canvasSpec.width,
+        canvasSpec.height,
+        st.lastX,
+        st.lastY,
+        x,
+        y,
+        c,
+        settings.symmetryMode,
+        selection ?? undefined
+      );
       if (did) st.changed = true;
 
       st.lastX = x;
@@ -624,6 +623,13 @@ export default function CanvasStage(props: {
 
     if (settings.showGrid && zoom >= 6) {
       drawGrid(ctx, originX, originY, canvasSpec.width, canvasSpec.height, zoom, settings.gridSize);
+    }
+
+    if (settings.symmetryMode !== "none") {
+      ctx.save();
+      ctx.translate(originX, originY);
+      drawSymmetryGuides(ctx, canvasSpec.width, canvasSpec.height, settings.symmetryMode, zoom);
+      ctx.restore();
     }
 
     if (shapePreview) {
@@ -907,6 +913,60 @@ function drawLineWithSelection(
     if (selection[idx]) {
       if (setPixel(buf, width, height, x0, y0, rgba)) changedAny = true;
     }
+    if (x0 === x1 && y0 === y1) break;
+
+    const e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x0 += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y0 += sy;
+    }
+  }
+
+  return changedAny;
+}
+
+function drawLineWithSymmetry(
+  buf: Uint8ClampedArray,
+  width: number,
+  height: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  rgba: { r: number; g: number; b: number; a: number },
+  symmetryMode: UiSettings["symmetryMode"],
+  selection?: Uint8Array
+): boolean {
+  if (symmetryMode === "none") {
+    return selection
+      ? drawLineWithSelection(buf, width, height, x0, y0, x1, y1, rgba, selection)
+      : drawLine(buf, width, height, x0, y0, x1, y1, rgba);
+  }
+
+  let changedAny = false;
+
+  let dx = Math.abs(x1 - x0);
+  let dy = Math.abs(y1 - y0);
+
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+
+  let err = dx - dy;
+
+  while (true) {
+    const points = getSymmetryPoints(width, height, x0, y0, symmetryMode);
+    points.forEach((point) => {
+      if (selection) {
+        const idx = point.y * width + point.x;
+        if (!selection[idx]) return;
+      }
+      if (setPixel(buf, width, height, point.x, point.y, rgba)) changedAny = true;
+    });
+
     if (x0 === x1 && y0 === y1) break;
 
     const e2 = 2 * err;

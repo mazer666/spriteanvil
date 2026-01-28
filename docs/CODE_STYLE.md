@@ -1,4 +1,12 @@
 # SpriteAnvil Code Style Guide
+## Related docs
+
+- Docs index: [`/docs/README.md`](./README.md)
+- Current status: [`/STATUS_UPDATE.md`](../STATUS_UPDATE.md)
+- Implementation snapshot: [`/IMPLEMENTATION_COMPLETE.md`](../IMPLEMENTATION_COMPLETE.md)
+
+---
+
 
 This document defines the **coding standards** for SpriteAnvil.  
 It exists for two reasons:
