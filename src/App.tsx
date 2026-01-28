@@ -284,12 +284,6 @@ export default function App() {
   function handleFeatherSelection(_radius: number) {
   }
 
-  function handleBooleanUnion() {}
-
-  function handleBooleanSubtract() {}
-
-  function handleBooleanIntersect() {}
-
   function updateCurrentFrameComposite(frameId: string, nextLayers: LayerData[]) {
     const composite = compositeLayers(nextLayers, canvasSpec.width, canvasSpec.height);
     setFrames((prev) =>

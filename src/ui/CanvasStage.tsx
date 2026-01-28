@@ -954,8 +954,12 @@ function mergeSelection(
   current: Uint8Array | null,
   incoming: Uint8Array,
   mode: SelectionMode
-): Uint8Array {
-  if (!current || mode === "replace") return incoming;
+): Uint8Array | null {
+  if (!current) {
+    if (mode === "subtract" || mode === "intersect") return null;
+    return incoming;
+  }
+  if (mode === "replace") return incoming;
   const merged = new Uint8Array(current);
   switch (mode) {
     case "union":
@@ -966,8 +970,6 @@ function mergeSelection(
       break;
     case "intersect":
       selectionIntersection(merged, incoming);
-      break;
-    default:
       break;
   }
   return merged;
