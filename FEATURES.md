@@ -9,8 +9,8 @@
 
 ### 🎨 Drawing Tools (5 tools)
 
-1. **Pen Tool** (B) - Freehand pixel-perfect drawing
-2. **Eraser Tool** (E) - Remove pixels
+1. **Pen Tool** (B) - Freehand pixel-perfect drawing with adjustable brush size
+2. **Eraser Tool** (E) - Remove pixels with adjustable brush size
 3. **Eyedropper Tool** (I) - Pick colors from canvas
 4. **Fill Tool** (F) - Flood fill with scanline algorithm + tolerance control
 5. **Line Tool** (L) - Draw straight lines

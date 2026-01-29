@@ -150,6 +150,7 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ✅ Eyedropper tool (`src/ui/CanvasStage.tsx`)
 - ✅ Line tool (`src/ui/CanvasStage.tsx`)
 - ✅ Stroke stabilization (`src/ui/CanvasStage.tsx`)
+- ✅ Brush size stamping (`src/ui/CanvasStage.tsx`)
 - ✅ Bresenham line drawing (`src/editor/pixels.ts`)
 
 **Missing:**

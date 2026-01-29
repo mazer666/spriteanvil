@@ -499,7 +499,7 @@ export default function CanvasStage(props: {
     }
 
     if (tool === "pen" || tool === "eraser") {
-      const did = drawLineWithSymmetry(
+      const did = drawBrushLineWithSymmetry(
         bufRef.current,
         canvasSpec.width,
         canvasSpec.height,
@@ -509,6 +509,7 @@ export default function CanvasStage(props: {
         p.y,
         c,
         settings.symmetryMode,
+        settings.brushSize,
         selection ?? undefined
       );
       if (did) st.changed = true;
@@ -548,7 +549,7 @@ export default function CanvasStage(props: {
       if (x === st.lastX && y === st.lastY) return;
 
       const c = getDrawColor();
-      const did = drawLineWithSymmetry(
+      const did = drawBrushLineWithSymmetry(
         bufRef.current,
         canvasSpec.width,
         canvasSpec.height,
@@ -558,6 +559,7 @@ export default function CanvasStage(props: {
         y,
         c,
         settings.symmetryMode,
+        settings.brushSize,
         selection ?? undefined
       );
       if (did) st.changed = true;
@@ -620,6 +622,11 @@ export default function CanvasStage(props: {
       return;
     }
 
+    if (st.isPanning) {
+      st.isPanning = false;
+      return;
+    }
+
     const c = getDrawColor();
 
     if (lassoPreview && tool === "selectLasso") {
@@ -635,6 +642,11 @@ export default function CanvasStage(props: {
       const mergedSelection = mergeSelection(selection, newSelection, st.selectionMode);
       onChangeSelection(mergedSelection);
       setLassoPreview(null);
+    }
+
+    if (tool === "move" && st.moveSelection && st.moveSelectionNext) {
+      onChangeSelection(st.moveSelectionNext);
+      setMoveSelectionPreview(null);
     }
 
     if (tool === "move" && st.moveSelection && st.moveSelectionNext) {
@@ -1024,6 +1036,34 @@ export default function CanvasStage(props: {
       }
     }
 
+    if (renderSelection) {
+      const bounds = getSelectionBounds(renderSelection, canvasSpec.width, canvasSpec.height);
+      if (bounds) {
+        const handleSize = Math.max(4, Math.floor(zoom));
+        const half = Math.floor(handleSize / 2);
+        const x0 = originX + bounds.x * zoom;
+        const y0 = originY + bounds.y * zoom;
+        const x1 = originX + (bounds.x + bounds.width) * zoom;
+        const y1 = originY + (bounds.y + bounds.height) * zoom;
+
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 1;
+
+        const drawHandle = (x: number, y: number) => {
+          ctx.fillRect(x - half, y - half, handleSize, handleSize);
+          ctx.strokeRect(x - half, y - half, handleSize, handleSize);
+        };
+
+        drawHandle(x0, y0);
+        drawHandle(x1, y0);
+        drawHandle(x0, y1);
+        drawHandle(x1, y1);
+        ctx.restore();
+      }
+    }
+
     ctx.strokeStyle = "rgba(255,255,255,0.28)";
     ctx.lineWidth = 1;
     ctx.strokeRect(originX + 0.5, originY + 0.5, imgW - 1, imgH - 1);
@@ -1150,7 +1190,35 @@ function drawOnionFrame(
   ctx.restore();
 }
 
-function drawLineWithSelection(
+function drawBrushStamp(
+  buf: Uint8ClampedArray,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  rgba: { r: number; g: number; b: number; a: number },
+  brushSize: number,
+  selection?: Uint8Array
+): boolean {
+  const radius = Math.max(0, Math.floor(brushSize / 2));
+  const r2 = radius * radius;
+  let changedAny = false;
+
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      if (dx * dx + dy * dy > r2) continue;
+      const px = x + dx;
+      const py = y + dy;
+      if (px < 0 || py < 0 || px >= width || py >= height) continue;
+      if (selection && !selection[py * width + px]) continue;
+      if (setPixel(buf, width, height, px, py, rgba)) changedAny = true;
+    }
+  }
+
+  return changedAny;
+}
+
+function drawBrushLine(
   buf: Uint8ClampedArray,
   width: number,
   height: number,
@@ -1159,7 +1227,8 @@ function drawLineWithSelection(
   x1: number,
   y1: number,
   rgba: { r: number; g: number; b: number; a: number },
-  selection: Uint8Array
+  brushSize: number,
+  selection?: Uint8Array
 ): boolean {
   let changedAny = false;
 
@@ -1172,10 +1241,7 @@ function drawLineWithSelection(
   let err = dx - dy;
 
   while (true) {
-    const idx = y0 * width + x0;
-    if (selection[idx]) {
-      if (setPixel(buf, width, height, x0, y0, rgba)) changedAny = true;
-    }
+    if (drawBrushStamp(buf, width, height, x0, y0, rgba, brushSize, selection)) changedAny = true;
     if (x0 === x1 && y0 === y1) break;
 
     const e2 = 2 * err;
@@ -1206,7 +1272,7 @@ function drawLineWithSymmetry(
 ): boolean {
   if (symmetryMode === "none") {
     return selection
-      ? drawLineWithSelection(buf, width, height, x0, y0, x1, y1, rgba, selection)
+      ? drawBrushLine(buf, width, height, x0, y0, x1, y1, rgba, 1, selection)
       : drawLine(buf, width, height, x0, y0, x1, y1, rgba);
   }
 
@@ -1222,8 +1288,43 @@ function drawLineWithSymmetry(
     seenLines.add(key);
 
     const did = selection
-      ? drawLineWithSelection(buf, width, height, start.x, start.y, end.x, end.y, rgba, selection)
+      ? drawBrushLine(buf, width, height, start.x, start.y, end.x, end.y, rgba, 1, selection)
       : drawLine(buf, width, height, start.x, start.y, end.x, end.y, rgba);
+    if (did) changedAny = true;
+  });
+
+  return changedAny;
+}
+
+function drawBrushLineWithSymmetry(
+  buf: Uint8ClampedArray,
+  width: number,
+  height: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  rgba: { r: number; g: number; b: number; a: number },
+  symmetryMode: UiSettings["symmetryMode"],
+  brushSize: number,
+  selection?: Uint8Array
+): boolean {
+  if (symmetryMode === "none") {
+    return drawBrushLine(buf, width, height, x0, y0, x1, y1, rgba, brushSize, selection);
+  }
+
+  let changedAny = false;
+  const transforms = getSymmetryTransforms(width, height, symmetryMode);
+  const seenLines = new Set<string>();
+
+  transforms.forEach((transform) => {
+    const start = transform(x0, y0);
+    const end = transform(x1, y1);
+    const key = `${start.x},${start.y},${end.x},${end.y}`;
+    if (seenLines.has(key)) return;
+    seenLines.add(key);
+
+    const did = drawBrushLine(buf, width, height, start.x, start.y, end.x, end.y, rgba, brushSize, selection);
     if (did) changedAny = true;
   });
 
