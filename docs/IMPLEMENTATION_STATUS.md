@@ -120,7 +120,6 @@ The current layout works but is not fully responsive with breakpoints as specifi
 
 **Missing:**
 - ⏳ Feather operation
-- ⏳ Selection move/transform
 - ⏳ Fixed aspect ratio mode
 - ⏳ Snap-to-grid option
 - ⏳ Quick mask mode
@@ -135,6 +134,7 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - ✅ Rotate 90°/180°
 - ✅ Scale inputs + apply action
 - ✅ Move tool (selection translate)
+- ✅ Transforms respect active selection
 
 **Missing:**
 - ⏳ Perspective skew
@@ -401,7 +401,7 @@ The current layout works but is not fully responsive with breakpoints as specifi
 To reach full Phase 4 completion:
 
 ### High Priority (Core Functionality)
-1. **Selection Move/Transform** - Move/scale/rotate active selection
+1. **Selection Bounds/Handles** - Add visual handles for transforms
 2. **Layer Flatten/Export** - Provide a flattened export buffer
 3. **Custom Symmetry Axis** - Add configurable symmetry center/axis
 4. **Responsive Layout** - Breakpoints for smaller screens

@@ -36,6 +36,7 @@ export function useKeyboardShortcuts(handlers: ShortcutHandler, enabled: boolean
     if (!enabled) return;
 
     function handleKeyDown(e: KeyboardEvent) {
+      const isPanning = (window as { __spriteanvilIsPanning?: boolean }).__spriteanvilIsPanning;
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const mod = isMac ? e.metaKey : e.ctrlKey;
 
@@ -110,7 +111,7 @@ export function useKeyboardShortcuts(handlers: ShortcutHandler, enabled: boolean
       } else if (e.key === 'ArrowLeft' && e.altKey && handlers.onPrevFrame) {
         e.preventDefault();
         handlers.onPrevFrame();
-      } else if (e.key === ' ' && handlers.onPlayPause && !isInputFocused()) {
+      } else if (e.key === ' ' && handlers.onPlayPause && !isInputFocused() && !isPanning) {
         e.preventDefault();
         handlers.onPlayPause();
       }

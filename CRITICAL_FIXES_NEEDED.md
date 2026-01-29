@@ -29,10 +29,11 @@
 - ✅ Invert/grow/shrink operations implemented
 - ✅ Boolean operations via Shift/Alt modifiers
 - ✅ Drawing constrained to active selection
-- ❌ Selection move/transform missing
+- ✅ Selection move/transform via Move tool + Transform panel
+- ❌ Selection bounds handles missing
 
 **Fix Required**:
-- Add selection transform (move, scale, rotate)
+- Add selection bounds/handles for transform affordances
 
 ---
 
@@ -79,7 +80,7 @@
 
 #### 15. Minimap
 #### 16. Multiple Undo/Redo History Display
-#### 17. Selection Bounds Handles
+#### 17. Selection Bounds Handles ✅
 #### 18. Brush Preview Circle
 
 ---

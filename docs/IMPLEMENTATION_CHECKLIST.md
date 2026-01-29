@@ -38,8 +38,8 @@ Bridge between roadmap and coding.
 ### 1) Selection transform & move tooling
 
 Deliverables:
-- scale/rotate active selection
-- selection bounds + handles
+- selection bounds + handles (done)
+- selection scale/rotate via transform panel (done)
 - canvas pan (space + drag) (done)
 
 Docs (source of truth):

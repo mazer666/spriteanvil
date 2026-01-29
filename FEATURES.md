@@ -95,6 +95,7 @@
 - Scale with nearest-neighbor (pixel-perfect)
   - Lock aspect ratio option
   - 0.1x - 8x range
+**Note:** When a selection is active, transforms apply to the selection only.
 
 **Access**: Right Panel → Transform tab
 

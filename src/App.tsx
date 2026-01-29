@@ -25,7 +25,7 @@ import {
   desaturate,
   posterize,
 } from "./editor/tools/coloradjust";
-import { invertSelection } from "./editor/selection";
+import { getSelectionBounds, invertSelection } from "./editor/selection";
 
 export default function App() {
   const [canvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
@@ -553,8 +553,99 @@ export default function App() {
     syncHistoryFlags();
   }
 
+  function buildSelectionMaskFromBuffer(
+    pixels: Uint8ClampedArray,
+    width: number,
+    height: number
+  ): Uint8Array {
+    const mask = new Uint8Array(width * height);
+    for (let i = 0; i < width * height; i++) {
+      const alpha = pixels[i * 4 + 3];
+      if (alpha > 0) {
+        mask[i] = 1;
+      }
+    }
+    return mask;
+  }
+
+  function clearSelectionPixels(
+    target: Uint8ClampedArray,
+    selectionMask: Uint8Array
+  ) {
+    for (let i = 0; i < selectionMask.length; i++) {
+      if (selectionMask[i]) {
+        const idx = i * 4;
+        target[idx] = 0;
+        target[idx + 1] = 0;
+        target[idx + 2] = 0;
+        target[idx + 3] = 0;
+      }
+    }
+  }
+
+  function applySelectionTransform(
+    transform: (pixels: Uint8ClampedArray, width: number, height: number) => { buffer: Uint8ClampedArray; width: number; height: number }
+  ): boolean {
+    if (!selection) return false;
+    const bounds = getSelectionBounds(selection, canvasSpec.width, canvasSpec.height);
+    if (!bounds) return false;
+    const clip = copySelection(buffer, selection, canvasSpec.width, canvasSpec.height);
+    if (!clip) return false;
+
+    const before = cloneBuffer(buffer);
+    const transformed = transform(clip.pixels, clip.width, clip.height);
+    const cleared = cloneBuffer(buffer);
+    clearSelectionPixels(cleared, selection);
+    const pasted = pasteClipboard(
+      cleared,
+      { pixels: transformed.buffer, width: transformed.width, height: transformed.height },
+      canvasSpec.width,
+      canvasSpec.height,
+      bounds.x,
+      bounds.y
+    );
+
+    const newSelection = new Uint8Array(selection.length);
+    const transformedMask = buildSelectionMaskFromBuffer(
+      transformed.buffer,
+      transformed.width,
+      transformed.height
+    );
+    for (let y = 0; y < transformed.height; y++) {
+      for (let x = 0; x < transformed.width; x++) {
+        const maskIdx = y * transformed.width + x;
+        if (!transformedMask[maskIdx]) continue;
+        const canvasX = bounds.x + x;
+        const canvasY = bounds.y + y;
+        if (
+          canvasX < 0 ||
+          canvasY < 0 ||
+          canvasX >= canvasSpec.width ||
+          canvasY >= canvasSpec.height
+        ) {
+          continue;
+        }
+        newSelection[canvasY * canvasSpec.width + canvasX] = 1;
+      }
+    }
+
+    const hasSelection = newSelection.some((value) => value !== 0);
+    historyRef.current.commit(before);
+    updateActiveLayerPixels(pasted);
+    setSelection(hasSelection ? newSelection : null);
+    syncHistoryFlags();
+    return true;
+  }
+
   function handleFlipHorizontal() {
     if (isActiveLayerLocked) return;
+    if (applySelectionTransform((pixels, width, height) => ({
+      buffer: flipHorizontal(pixels, width, height),
+      width,
+      height,
+    }))) {
+      return;
+    }
     const before = cloneBuffer(buffer);
     const after = flipHorizontal(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -564,6 +655,13 @@ export default function App() {
 
   function handleFlipVertical() {
     if (isActiveLayerLocked) return;
+    if (applySelectionTransform((pixels, width, height) => ({
+      buffer: flipVertical(pixels, width, height),
+      width,
+      height,
+    }))) {
+      return;
+    }
     const before = cloneBuffer(buffer);
     const after = flipVertical(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -573,6 +671,9 @@ export default function App() {
 
   function handleRotate90CW() {
     if (isActiveLayerLocked) return;
+    if (applySelectionTransform(rotate90CW)) {
+      return;
+    }
     const before = cloneBuffer(buffer);
     const result = rotate90CW(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -582,6 +683,9 @@ export default function App() {
 
   function handleRotate90CCW() {
     if (isActiveLayerLocked) return;
+    if (applySelectionTransform(rotate90CCW)) {
+      return;
+    }
     const before = cloneBuffer(buffer);
     const result = rotate90CCW(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -591,6 +695,13 @@ export default function App() {
 
   function handleRotate180() {
     if (isActiveLayerLocked) return;
+    if (applySelectionTransform((pixels, width, height) => ({
+      buffer: rotate180(pixels, width, height),
+      width,
+      height,
+    }))) {
+      return;
+    }
     const before = cloneBuffer(buffer);
     const after = rotate180(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -600,6 +711,9 @@ export default function App() {
 
   function handleScale(scaleX: number, scaleY: number) {
     if (isActiveLayerLocked) return;
+    if (applySelectionTransform((pixels, width, height) => scaleNearest(pixels, width, height, scaleX, scaleY))) {
+      return;
+    }
     const before = cloneBuffer(buffer);
     const result = scaleNearest(buffer, canvasSpec.width, canvasSpec.height, scaleX, scaleY);
     historyRef.current.commit(before);

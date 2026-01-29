@@ -103,12 +103,15 @@ export default function CanvasStage(props: {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === " " && !isInputFocused()) {
         isPanningRef.current = true;
+        (window as { __spriteanvilIsPanning?: boolean }).__spriteanvilIsPanning = true;
+        e.preventDefault();
       }
     }
 
     function handleKeyUp(e: KeyboardEvent) {
       if (e.key === " ") {
         isPanningRef.current = false;
+        (window as { __spriteanvilIsPanning?: boolean }).__spriteanvilIsPanning = false;
       }
     }
 
@@ -862,13 +865,6 @@ export default function CanvasStage(props: {
       ctx.restore();
     }
 
-    if (settings.symmetryMode !== "none") {
-      ctx.save();
-      ctx.translate(originX, originY);
-      drawSymmetryGuides(ctx, canvasSpec.width, canvasSpec.height, settings.symmetryMode, zoom);
-      ctx.restore();
-    }
-
     if (shapePreview) {
       const { startX, startY, endX, endY } = shapePreview;
 
@@ -998,6 +994,34 @@ export default function CanvasStage(props: {
       }
 
       ctx.restore();
+    }
+
+    if (renderSelection) {
+      const bounds = getSelectionBounds(renderSelection, canvasSpec.width, canvasSpec.height);
+      if (bounds) {
+        const handleSize = Math.max(4, Math.floor(zoom));
+        const half = Math.floor(handleSize / 2);
+        const x0 = originX + bounds.x * zoom;
+        const y0 = originY + bounds.y * zoom;
+        const x1 = originX + (bounds.x + bounds.width) * zoom;
+        const y1 = originY + (bounds.y + bounds.height) * zoom;
+
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 1;
+
+        const drawHandle = (x: number, y: number) => {
+          ctx.fillRect(x - half, y - half, handleSize, handleSize);
+          ctx.strokeRect(x - half, y - half, handleSize, handleSize);
+        };
+
+        drawHandle(x0, y0);
+        drawHandle(x1, y0);
+        drawHandle(x0, y1);
+        drawHandle(x1, y1);
+        ctx.restore();
+      }
     }
 
     ctx.strokeStyle = "rgba(255,255,255,0.28)";
