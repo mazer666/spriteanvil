@@ -14,6 +14,7 @@ import {
   fillEllipse
 } from "../editor/tools/shapes";
 import {
+  getSelectionBounds,
   selectRectangle,
   selectEllipse,
   selectMagicWand,
@@ -22,6 +23,7 @@ import {
   selectionUnion,
 } from "../editor/selection";
 import { createLassoSelection, smoothLassoPoints } from "../editor/tools/lasso";
+import { copySelection, pasteClipboard, ClipboardData } from "../editor/clipboard";
 
 import { Frame } from "../types";
 
@@ -68,9 +70,12 @@ export default function CanvasStage(props: {
     endY: number;
   } | null>(null);
   const [lassoPreview, setLassoPreview] = useState<{ x: number; y: number }[] | null>(null);
+  const [moveSelectionPreview, setMoveSelectionPreview] = useState<Uint8Array | null>(null);
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Animation frame counter for marching ants
   const [animFrame, setAnimFrame] = useState(0);
+  const isPanningRef = useRef(false);
 
   // Animate marching ants when there's an active selection
   useEffect(() => {
@@ -87,7 +92,36 @@ export default function CanvasStage(props: {
     bufRef.current = buffer;
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buffer, compositeBuffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB, shapePreview, lassoPreview, selection, animFrame]);
+  }, [buffer, compositeBuffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB, shapePreview, lassoPreview, selection, moveSelectionPreview, panOffset, animFrame]);
+
+  useEffect(() => {
+    function isInputFocused(): boolean {
+      const active = document.activeElement;
+      return active?.tagName === "INPUT" || active?.tagName === "TEXTAREA" || (active?.hasAttribute("contenteditable") ?? false);
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === " " && !isInputFocused()) {
+        isPanningRef.current = true;
+        (window as { __spriteanvilIsPanning?: boolean }).__spriteanvilIsPanning = true;
+        e.preventDefault();
+      }
+    }
+
+    function handleKeyUp(e: KeyboardEvent) {
+      if (e.key === " ") {
+        isPanningRef.current = false;
+        (window as { __spriteanvilIsPanning?: boolean }).__spriteanvilIsPanning = false;
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
 
   const strokeRef = useRef<{
     active: boolean;
@@ -101,6 +135,15 @@ export default function CanvasStage(props: {
     smoothY: number;
     hasSmooth: boolean;
     selectionMode: SelectionMode;
+    moveSelection: Uint8Array | null;
+    moveClipboard: ClipboardData | null;
+    moveBounds: { x: number; y: number; width: number; height: number } | null;
+    moveSelectionNext: Uint8Array | null;
+    isPanning: boolean;
+    panStartX: number;
+    panStartY: number;
+    panOriginX: number;
+    panOriginY: number;
   }>({
     active: false,
     changed: false,
@@ -113,6 +156,15 @@ export default function CanvasStage(props: {
     smoothY: 0,
     hasSmooth: false,
     selectionMode: "replace",
+    moveSelection: null,
+    moveClipboard: null,
+    moveBounds: null,
+    moveSelectionNext: null,
+    isPanning: false,
+    panStartX: 0,
+    panStartY: 0,
+    panOriginX: 0,
+    panOriginY: 0,
   });
 
   const bgClass = useMemo(() => {
@@ -172,6 +224,99 @@ export default function CanvasStage(props: {
     return { x: st.smoothX, y: st.smoothY };
   }
 
+  function applyGradientToBuffer(
+    targetBuffer: Uint8ClampedArray,
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number
+  ): boolean {
+    const { r: startR, g: startG, b: startB } = hexToRgb(settings.primaryColor);
+    const endHex = settings.secondaryColor || "#000000";
+    const { r: endR, g: endG, b: endB } = hexToRgb(endHex);
+    const startColor = { r: startR, g: startG, b: startB, a: 255 };
+    const endColor = { r: endR, g: endG, b: endB, a: 255 };
+    const ditherType = settings.ditheringType === "bayer" ? "bayer" : "none";
+
+    const did = drawGradient(
+      targetBuffer,
+      canvasSpec.width,
+      canvasSpec.height,
+      startX,
+      startY,
+      endX,
+      endY,
+      startColor,
+      endColor,
+      settings.gradientType,
+      ditherType
+    );
+
+    if (did && settings.ditheringType === "floyd") {
+      const dithered = applyFloydSteinbergDither(
+        targetBuffer,
+        canvasSpec.width,
+        canvasSpec.height,
+        [startColor, endColor]
+      );
+      targetBuffer.set(dithered);
+    }
+
+    return did;
+  }
+
+  function applyGradientWithSymmetry(
+    targetBuffer: Uint8ClampedArray,
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number
+  ): boolean {
+    if (settings.symmetryMode === "none") {
+      return applyGradientToBuffer(targetBuffer, startX, startY, endX, endY);
+    }
+
+    let changedAny = false;
+    const transforms = getSymmetryTransforms(canvasSpec.width, canvasSpec.height, settings.symmetryMode);
+    const seen = new Set<string>();
+    transforms.forEach((transform) => {
+      const start = transform(startX, startY);
+      const end = transform(endX, endY);
+      const key = `${start.x},${start.y},${end.x},${end.y}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const did = applyGradientToBuffer(targetBuffer, start.x, start.y, end.x, end.y);
+      if (did) changedAny = true;
+    });
+    return changedAny;
+  }
+
+  function applyShapeWithSymmetry(
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    drawShape: (sx: number, sy: number, ex: number, ey: number) => boolean
+  ): boolean {
+    if (settings.symmetryMode === "none") {
+      return drawShape(startX, startY, endX, endY);
+    }
+
+    let changedAny = false;
+    const transforms = getSymmetryTransforms(canvasSpec.width, canvasSpec.height, settings.symmetryMode);
+    const seen = new Set<string>();
+    transforms.forEach((transform) => {
+      const start = transform(startX, startY);
+      const end = transform(endX, endY);
+      const key = `${start.x},${start.y},${end.x},${end.y}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const did = drawShape(start.x, start.y, end.x, end.y);
+      if (did) changedAny = true;
+    });
+    return changedAny;
+  }
+
   function pointerToPixel(e: React.PointerEvent): { x: number; y: number } | null {
     const stage = stageRef.current;
     if (!stage) return null;
@@ -182,8 +327,8 @@ export default function CanvasStage(props: {
     const imgW = canvasSpec.width * zoom;
     const imgH = canvasSpec.height * zoom;
 
-    const originX = (rect.width - imgW) / 2;
-    const originY = (rect.height - imgH) / 2;
+    const originX = (rect.width - imgW) / 2 + panOffset.x;
+    const originY = (rect.height - imgH) / 2 + panOffset.y;
 
     const localX = e.clientX - rect.left - originX;
     const localY = e.clientY - rect.top - originY;
@@ -226,21 +371,43 @@ export default function CanvasStage(props: {
   }
 
   function beginStroke(e: React.PointerEvent) {
-    const p = pointerToPixel(e);
-    if (!p) return;
-
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 
     const st = strokeRef.current;
     st.active = true;
     st.changed = false;
     st.beforeSnapshot = cloneBuffer(bufRef.current);
+    st.lastX = -1;
+    st.lastY = -1;
+    st.startX = -1;
+    st.startY = -1;
+    st.hasSmooth = false;
+    st.selectionMode = selectionModeFromEvent(e);
+    st.moveSelection = null;
+    st.moveClipboard = null;
+    st.moveBounds = null;
+    st.moveSelectionNext = null;
+    st.isPanning = false;
+
+    if (isPanningRef.current) {
+      st.isPanning = true;
+      st.panStartX = e.clientX;
+      st.panStartY = e.clientY;
+      st.panOriginX = panOffset.x;
+      st.panOriginY = panOffset.y;
+      return;
+    }
+
+    const p = pointerToPixel(e);
+    if (!p) {
+      endStroke();
+      return;
+    }
+
     st.lastX = p.x;
     st.lastY = p.y;
     st.startX = p.x;
     st.startY = p.y;
-    st.hasSmooth = false;
-    st.selectionMode = selectionModeFromEvent(e);
 
     const c = getDrawColor();
 
@@ -288,6 +455,33 @@ export default function CanvasStage(props: {
       return;
     }
 
+    if (tool === "move") {
+      if (isActiveLayerLocked()) {
+        endStroke();
+        return;
+      }
+      if (!selection || !st.beforeSnapshot) {
+        endStroke();
+        return;
+      }
+      const bounds = getSelectionBounds(selection, canvasSpec.width, canvasSpec.height);
+      if (!bounds) {
+        endStroke();
+        return;
+      }
+      const clipboard = copySelection(bufRef.current, selection, canvasSpec.width, canvasSpec.height);
+      if (!clipboard) {
+        endStroke();
+        return;
+      }
+      st.moveSelection = new Uint8Array(selection);
+      st.moveClipboard = clipboard;
+      st.moveBounds = bounds;
+      st.moveSelectionNext = new Uint8Array(selection);
+      setMoveSelectionPreview(new Uint8Array(selection));
+      return;
+    }
+
     if (tool === "selectWand") {
       const sampleBuffer = getCompositePreview();
       const newSelection = selectMagicWand(
@@ -305,7 +499,7 @@ export default function CanvasStage(props: {
     }
 
     if (tool === "pen" || tool === "eraser") {
-      const did = drawLineWithSymmetry(
+      const did = drawBrushLineWithSymmetry(
         bufRef.current,
         canvasSpec.width,
         canvasSpec.height,
@@ -315,6 +509,7 @@ export default function CanvasStage(props: {
         p.y,
         c,
         settings.symmetryMode,
+        settings.brushSize,
         selection ?? undefined
       );
       if (did) st.changed = true;
@@ -335,6 +530,13 @@ export default function CanvasStage(props: {
     const st = strokeRef.current;
     if (!st.active) return;
 
+    if (st.isPanning) {
+      const dx = e.clientX - st.panStartX;
+      const dy = e.clientY - st.panStartY;
+      setPanOffset({ x: st.panOriginX + dx, y: st.panOriginY + dy });
+      return;
+    }
+
     const p0 = pointerToPixel(e);
     if (!p0) return;
 
@@ -347,7 +549,7 @@ export default function CanvasStage(props: {
       if (x === st.lastX && y === st.lastY) return;
 
       const c = getDrawColor();
-      const did = drawLineWithSymmetry(
+      const did = drawBrushLineWithSymmetry(
         bufRef.current,
         canvasSpec.width,
         canvasSpec.height,
@@ -357,6 +559,7 @@ export default function CanvasStage(props: {
         y,
         c,
         settings.symmetryMode,
+        settings.brushSize,
         selection ?? undefined
       );
       if (did) st.changed = true;
@@ -365,6 +568,35 @@ export default function CanvasStage(props: {
       st.lastY = y;
 
       draw();
+    }
+
+    if (tool === "move") {
+      if (!st.beforeSnapshot || !st.moveSelection || !st.moveClipboard || !st.moveBounds) return;
+      const dx = p0.x - st.startX;
+      const dy = p0.y - st.startY;
+      const movedSelection = moveSelectionMask(
+        st.moveSelection,
+        canvasSpec.width,
+        canvasSpec.height,
+        dx,
+        dy
+      );
+      const nextBuffer = cloneBuffer(st.beforeSnapshot);
+      clearSelectionFromBuffer(nextBuffer, st.moveSelection);
+      const movedBuffer = pasteClipboard(
+        nextBuffer,
+        st.moveClipboard,
+        canvasSpec.width,
+        canvasSpec.height,
+        st.moveBounds.x + dx,
+        st.moveBounds.y + dy
+      );
+      bufRef.current.set(movedBuffer);
+      st.changed = dx !== 0 || dy !== 0;
+      st.moveSelectionNext = movedSelection;
+      setMoveSelectionPreview(movedSelection);
+      draw();
+      return;
     }
 
     if (tool === "selectLasso") {
@@ -385,6 +617,11 @@ export default function CanvasStage(props: {
 
     st.active = false;
 
+    if (st.isPanning) {
+      st.isPanning = false;
+      return;
+    }
+
     const c = getDrawColor();
 
     if (lassoPreview && tool === "selectLasso") {
@@ -402,11 +639,16 @@ export default function CanvasStage(props: {
       setLassoPreview(null);
     }
 
+    if (tool === "move" && st.moveSelection && st.moveSelectionNext) {
+      onChangeSelection(st.moveSelectionNext);
+      setMoveSelectionPreview(null);
+    }
+
     if (shapePreview) {
       const { startX, startY, endX, endY } = shapePreview;
 
       if (tool === "line") {
-        const did = drawLine(
+        const did = drawLineWithSymmetry(
           bufRef.current,
           canvasSpec.width,
           canvasSpec.height,
@@ -414,58 +656,62 @@ export default function CanvasStage(props: {
           startY,
           endX,
           endY,
-          c
+          c,
+          settings.symmetryMode,
+          selection ?? undefined
         );
         if (did) st.changed = true;
       }
 
       if (tool === "rectangle") {
-        const w = Math.abs(endX - startX) + 1;
-        const h = Math.abs(endY - startY) + 1;
-        const x = Math.min(startX, endX);
-        const y = Math.min(startY, endY);
-        const did = drawRectangle(bufRef.current, canvasSpec.width, canvasSpec.height, x, y, w, h, c);
+        const did = applyShapeWithSymmetry(startX, startY, endX, endY, (sx, sy, ex, ey) => {
+          const w = Math.abs(ex - sx) + 1;
+          const h = Math.abs(ey - sy) + 1;
+          const x = Math.min(sx, ex);
+          const y = Math.min(sy, ey);
+          return drawRectangle(bufRef.current, canvasSpec.width, canvasSpec.height, x, y, w, h, c);
+        });
         if (did) st.changed = true;
       }
 
       if (tool === "rectangleFilled") {
-        const w = Math.abs(endX - startX) + 1;
-        const h = Math.abs(endY - startY) + 1;
-        const x = Math.min(startX, endX);
-        const y = Math.min(startY, endY);
-        const did = fillRectangle(bufRef.current, canvasSpec.width, canvasSpec.height, x, y, w, h, c);
+        const did = applyShapeWithSymmetry(startX, startY, endX, endY, (sx, sy, ex, ey) => {
+          const w = Math.abs(ex - sx) + 1;
+          const h = Math.abs(ey - sy) + 1;
+          const x = Math.min(sx, ex);
+          const y = Math.min(sy, ey);
+          return fillRectangle(bufRef.current, canvasSpec.width, canvasSpec.height, x, y, w, h, c);
+        });
         if (did) st.changed = true;
       }
 
       if (tool === "circle" || tool === "circleFilled") {
-        const cx = Math.round((startX + endX) / 2);
-        const cy = Math.round((startY + endY) / 2);
-        const dx = Math.abs(endX - startX);
-        const dy = Math.abs(endY - startY);
-        const radius = Math.round(Math.max(dx, dy) / 2);
-
-        if (tool === "circle") {
-          const did = drawCircle(bufRef.current, canvasSpec.width, canvasSpec.height, cx, cy, radius, c);
-          if (did) st.changed = true;
-        } else {
-          const did = fillCircle(bufRef.current, canvasSpec.width, canvasSpec.height, cx, cy, radius, c);
-          if (did) st.changed = true;
-        }
+        const did = applyShapeWithSymmetry(startX, startY, endX, endY, (sx, sy, ex, ey) => {
+          const cx = Math.round((sx + ex) / 2);
+          const cy = Math.round((sy + ey) / 2);
+          const dx = Math.abs(ex - sx);
+          const dy = Math.abs(ey - sy);
+          const radius = Math.round(Math.max(dx, dy) / 2);
+          if (tool === "circle") {
+            return drawCircle(bufRef.current, canvasSpec.width, canvasSpec.height, cx, cy, radius, c);
+          }
+          return fillCircle(bufRef.current, canvasSpec.width, canvasSpec.height, cx, cy, radius, c);
+        });
+        if (did) st.changed = true;
       }
 
       if (tool === "ellipse" || tool === "ellipseFilled") {
-        const cx = Math.round((startX + endX) / 2);
-        const cy = Math.round((startY + endY) / 2);
-        const rx = Math.round(Math.abs(endX - startX) / 2);
-        const ry = Math.round(Math.abs(endY - startY) / 2);
-
-        if (tool === "ellipse") {
-          const did = drawEllipse(bufRef.current, canvasSpec.width, canvasSpec.height, cx, cy, rx, ry, c);
-          if (did) st.changed = true;
-        } else {
-          const did = fillEllipse(bufRef.current, canvasSpec.width, canvasSpec.height, cx, cy, rx, ry, c);
-          if (did) st.changed = true;
-        }
+        const did = applyShapeWithSymmetry(startX, startY, endX, endY, (sx, sy, ex, ey) => {
+          const cx = Math.round((sx + ex) / 2);
+          const cy = Math.round((sy + ey) / 2);
+          const rx = Math.round(Math.abs(ex - sx) / 2);
+          const ry = Math.round(Math.abs(ey - sy) / 2);
+          if (tool === "ellipse") {
+            return drawEllipse(bufRef.current, canvasSpec.width, canvasSpec.height, cx, cy, rx, ry, c);
+          }
+          return fillEllipse(bufRef.current, canvasSpec.width, canvasSpec.height, cx, cy, rx, ry, c);
+        });
+        if (did) st.changed = true;
       }
 
       if (tool === "selectRect") {
@@ -509,38 +755,10 @@ export default function CanvasStage(props: {
       }
 
       if (tool === "gradient") {
-        const { r: startR, g: startG, b: startB } = hexToRgb(settings.primaryColor);
-        const endHex = settings.secondaryColor || "#000000";
-        const { r: endR, g: endG, b: endB } = hexToRgb(endHex);
-        const startColor = { r: startR, g: startG, b: startB, a: 255 };
-        const endColor = { r: endR, g: endG, b: endB, a: 255 };
-        const ditherType = settings.ditheringType === "bayer" ? "bayer" : "none";
-
-        const did = drawGradient(
-          bufRef.current,
-          canvasSpec.width,
-          canvasSpec.height,
-          startX,
-          startY,
-          endX,
-          endY,
-          startColor,
-          endColor,
-          settings.gradientType,
-          ditherType
-        );
-
-        if (did && settings.ditheringType === "floyd") {
-          const dithered = applyFloydSteinbergDither(
-            bufRef.current,
-            canvasSpec.width,
-            canvasSpec.height,
-            [startColor, endColor]
-          );
-          bufRef.current.set(dithered);
+        const did = applyGradientWithSymmetry(bufRef.current, startX, startY, endX, endY);
+        if (did) {
+          st.changed = true;
         }
-
-        if (did) st.changed = true;
       }
 
       if (selection && st.beforeSnapshot && isDrawingTool(tool)) {
@@ -576,7 +794,24 @@ export default function CanvasStage(props: {
 
     ctx.clearRect(0, 0, w, h);
 
-    const previewBuffer = getCompositePreview();
+    let previewBuffer = getCompositePreview();
+    if (shapePreview && tool === "gradient") {
+      const { startX, startY, endX, endY } = shapePreview;
+      const baseLayer = new Uint8ClampedArray(bufRef.current);
+      const previewLayer = new Uint8ClampedArray(bufRef.current);
+      applyGradientWithSymmetry(previewLayer, startX, startY, endX, endY);
+      if (selection) {
+        applySelectionMask(previewLayer, baseLayer, selection, canvasSpec.width, canvasSpec.height);
+      }
+      if (layers && layers.length > 0) {
+        const previewLayers = layers.map((layer) =>
+          layer.id === activeLayerId ? { ...layer, pixels: previewLayer } : layer
+        );
+        previewBuffer = compositeLayers(previewLayers, canvasSpec.width, canvasSpec.height);
+      } else {
+        previewBuffer = previewLayer;
+      }
+    }
     const img = new ImageData(
       new Uint8ClampedArray(previewBuffer),
       canvasSpec.width,
@@ -589,8 +824,8 @@ export default function CanvasStage(props: {
     const imgW = canvasSpec.width * zoom;
     const imgH = canvasSpec.height * zoom;
 
-    const originX = Math.floor((w - imgW) / 2);
-    const originY = Math.floor((h - imgH) / 2);
+    const originX = Math.floor((w - imgW) / 2 + panOffset.x);
+    const originY = Math.floor((h - imgH) / 2 + panOffset.y);
 
     const off = getOffscreen(canvasSpec.width, canvasSpec.height);
     const offCtx = off.getContext("2d")!;
@@ -623,13 +858,6 @@ export default function CanvasStage(props: {
 
     if (settings.showGrid && zoom >= 6) {
       drawGrid(ctx, originX, originY, canvasSpec.width, canvasSpec.height, zoom, settings.gridSize);
-    }
-
-    if (settings.symmetryMode !== "none") {
-      ctx.save();
-      ctx.translate(originX, originY);
-      drawSymmetryGuides(ctx, canvasSpec.width, canvasSpec.height, settings.symmetryMode, zoom);
-      ctx.restore();
     }
 
     if (settings.symmetryMode !== "none") {
@@ -722,8 +950,10 @@ export default function CanvasStage(props: {
       ctx.restore();
     }
 
+    const renderSelection = moveSelectionPreview ?? selection;
+
     // Render selection with marching ants
-    if (selection) {
+    if (renderSelection) {
       ctx.save();
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 1;
@@ -734,11 +964,11 @@ export default function CanvasStage(props: {
       for (let y = 0; y < canvasSpec.height; y++) {
         for (let x = 0; x < canvasSpec.width; x++) {
           const idx = y * canvasSpec.width + x;
-          if (selection[idx]) {
-            const left = x === 0 || !selection[idx - 1];
-            const right = x === canvasSpec.width - 1 || !selection[idx + 1];
-            const top = y === 0 || !selection[idx - canvasSpec.width];
-            const bottom = y === canvasSpec.height - 1 || !selection[idx + canvasSpec.width];
+          if (renderSelection[idx]) {
+            const left = x === 0 || !renderSelection[idx - 1];
+            const right = x === canvasSpec.width - 1 || !renderSelection[idx + 1];
+            const top = y === 0 || !renderSelection[idx - canvasSpec.width];
+            const bottom = y === canvasSpec.height - 1 || !renderSelection[idx + canvasSpec.width];
 
             const px = originX + x * zoom;
             const py = originY + y * zoom;
@@ -766,6 +996,34 @@ export default function CanvasStage(props: {
       }
 
       ctx.restore();
+    }
+
+    if (renderSelection) {
+      const bounds = getSelectionBounds(renderSelection, canvasSpec.width, canvasSpec.height);
+      if (bounds) {
+        const handleSize = Math.max(4, Math.floor(zoom));
+        const half = Math.floor(handleSize / 2);
+        const x0 = originX + bounds.x * zoom;
+        const y0 = originY + bounds.y * zoom;
+        const x1 = originX + (bounds.x + bounds.width) * zoom;
+        const y1 = originY + (bounds.y + bounds.height) * zoom;
+
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 1;
+
+        const drawHandle = (x: number, y: number) => {
+          ctx.fillRect(x - half, y - half, handleSize, handleSize);
+          ctx.strokeRect(x - half, y - half, handleSize, handleSize);
+        };
+
+        drawHandle(x0, y0);
+        drawHandle(x1, y0);
+        drawHandle(x0, y1);
+        drawHandle(x1, y1);
+        ctx.restore();
+      }
     }
 
     ctx.strokeStyle = "rgba(255,255,255,0.28)";
@@ -894,7 +1152,35 @@ function drawOnionFrame(
   ctx.restore();
 }
 
-function drawLineWithSelection(
+function drawBrushStamp(
+  buf: Uint8ClampedArray,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  rgba: { r: number; g: number; b: number; a: number },
+  brushSize: number,
+  selection?: Uint8Array
+): boolean {
+  const radius = Math.max(0, Math.floor(brushSize / 2));
+  const r2 = radius * radius;
+  let changedAny = false;
+
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      if (dx * dx + dy * dy > r2) continue;
+      const px = x + dx;
+      const py = y + dy;
+      if (px < 0 || py < 0 || px >= width || py >= height) continue;
+      if (selection && !selection[py * width + px]) continue;
+      if (setPixel(buf, width, height, px, py, rgba)) changedAny = true;
+    }
+  }
+
+  return changedAny;
+}
+
+function drawBrushLine(
   buf: Uint8ClampedArray,
   width: number,
   height: number,
@@ -903,7 +1189,8 @@ function drawLineWithSelection(
   x1: number,
   y1: number,
   rgba: { r: number; g: number; b: number; a: number },
-  selection: Uint8Array
+  brushSize: number,
+  selection?: Uint8Array
 ): boolean {
   let changedAny = false;
 
@@ -916,10 +1203,7 @@ function drawLineWithSelection(
   let err = dx - dy;
 
   while (true) {
-    const idx = y0 * width + x0;
-    if (selection[idx]) {
-      if (setPixel(buf, width, height, x0, y0, rgba)) changedAny = true;
-    }
+    if (drawBrushStamp(buf, width, height, x0, y0, rgba, brushSize, selection)) changedAny = true;
     if (x0 === x1 && y0 === y1) break;
 
     const e2 = 2 * err;
@@ -950,7 +1234,7 @@ function drawLineWithSymmetry(
 ): boolean {
   if (symmetryMode === "none") {
     return selection
-      ? drawLineWithSelection(buf, width, height, x0, y0, x1, y1, rgba, selection)
+      ? drawBrushLine(buf, width, height, x0, y0, x1, y1, rgba, 1, selection)
       : drawLine(buf, width, height, x0, y0, x1, y1, rgba);
   }
 
@@ -966,8 +1250,43 @@ function drawLineWithSymmetry(
     seenLines.add(key);
 
     const did = selection
-      ? drawLineWithSelection(buf, width, height, start.x, start.y, end.x, end.y, rgba, selection)
+      ? drawBrushLine(buf, width, height, start.x, start.y, end.x, end.y, rgba, 1, selection)
       : drawLine(buf, width, height, start.x, start.y, end.x, end.y, rgba);
+    if (did) changedAny = true;
+  });
+
+  return changedAny;
+}
+
+function drawBrushLineWithSymmetry(
+  buf: Uint8ClampedArray,
+  width: number,
+  height: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  rgba: { r: number; g: number; b: number; a: number },
+  symmetryMode: UiSettings["symmetryMode"],
+  brushSize: number,
+  selection?: Uint8Array
+): boolean {
+  if (symmetryMode === "none") {
+    return drawBrushLine(buf, width, height, x0, y0, x1, y1, rgba, brushSize, selection);
+  }
+
+  let changedAny = false;
+  const transforms = getSymmetryTransforms(width, height, symmetryMode);
+  const seenLines = new Set<string>();
+
+  transforms.forEach((transform) => {
+    const start = transform(x0, y0);
+    const end = transform(x1, y1);
+    const key = `${start.x},${start.y},${end.x},${end.y}`;
+    if (seenLines.has(key)) return;
+    seenLines.add(key);
+
+    const did = drawBrushLine(buf, width, height, start.x, start.y, end.x, end.y, rgba, brushSize, selection);
     if (did) changedAny = true;
   });
 
@@ -1053,23 +1372,62 @@ function getSymmetryTransforms(
   return transforms;
 }
 
-function applySelectionMask(
-  after: Uint8ClampedArray,
-  before: Uint8ClampedArray,
-  selection: Uint8Array,
-  width: number,
-  height: number
-) {
-  for (let i = 0; i < width * height; i++) {
-    if (!selection[i]) {
-      const idx = i * 4;
-      after[idx + 0] = before[idx + 0];
-      after[idx + 1] = before[idx + 1];
-      after[idx + 2] = before[idx + 2];
-      after[idx + 3] = before[idx + 3];
+  function applySelectionMask(
+    after: Uint8ClampedArray,
+    before: Uint8ClampedArray,
+    selection: Uint8Array,
+    width: number,
+    height: number
+  ) {
+    for (let i = 0; i < width * height; i++) {
+      if (!selection[i]) {
+        const idx = i * 4;
+        after[idx + 0] = before[idx + 0];
+        after[idx + 1] = before[idx + 1];
+        after[idx + 2] = before[idx + 2];
+        after[idx + 3] = before[idx + 3];
+      }
     }
   }
-}
+
+  function clearSelectionFromBuffer(
+    bufferToClear: Uint8ClampedArray,
+    selectionMask: Uint8Array
+  ) {
+    for (let i = 0; i < selectionMask.length; i++) {
+      if (selectionMask[i]) {
+        const idx = i * 4;
+        bufferToClear[idx + 0] = 0;
+        bufferToClear[idx + 1] = 0;
+        bufferToClear[idx + 2] = 0;
+        bufferToClear[idx + 3] = 0;
+      }
+    }
+  }
+
+  function moveSelectionMask(
+    selectionMask: Uint8Array,
+    width: number,
+    height: number,
+    dx: number,
+    dy: number
+  ): Uint8Array {
+    const moved = new Uint8Array(width * height);
+    if (dx === 0 && dy === 0) return new Uint8Array(selectionMask);
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        if (!selectionMask[idx]) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        moved[ny * width + nx] = 1;
+      }
+    }
+
+    return moved;
+  }
 
 type SelectionMode = "replace" | "union" | "subtract" | "intersect";
 
