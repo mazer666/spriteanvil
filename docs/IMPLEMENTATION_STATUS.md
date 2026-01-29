@@ -175,6 +175,7 @@ The current layout works but is not fully responsive with breakpoints as specifi
 - `src/editor/tools/fill.ts` - Flood fill algorithms
 
 **Missing:**
+- ⏳ Flood fill tolerance wiring (`settings.fillTolerance`)
 - ⏳ Intelligent fill with edge detection
 - ⏳ Pattern fill mode
 - ⏳ Content-aware fill
@@ -261,7 +262,7 @@ The current layout works but is not fully responsive with breakpoints as specifi
 
 **Files:**
 - `src/lib/export/spritesheet.ts` - Spritesheet generation
-- `src/lib/export/metadata.ts` - JSON metadata per spec
+- `src/lib/export/metadata.ts` - JSON metadata per spec (not wired)
 - `src/ui/ExportPanel.tsx` - Export configuration UI
 - `docs/EXPORT_FORMAT.md` - Export format specification
 

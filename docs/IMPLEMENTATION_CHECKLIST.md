@@ -43,10 +43,10 @@ Deliverables:
 - canvas pan (space + drag) (done)
 
 Docs (source of truth):
+- `UI_SPEC.md`
 - `SELECTION_MODEL.md`
 
 Likely files:
-- `src/editor/selection.ts`
 - `src/ui/CanvasStage.tsx`
 - `src/ui/SelectionPanel.tsx`
 
