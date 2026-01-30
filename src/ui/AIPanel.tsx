@@ -1,10 +1,44 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
+import { PIXEL_ART_PROMPTS } from "../lib/ai/prompts";
+import { AIProviderId, PROVIDERS } from "../lib/ai/providers";
+import { decryptKey, loadEncryptedKeys } from "../lib/ai/keys";
 
 type Props = {
   enabled?: boolean;
 };
 
 export default function AIPanel({ enabled = false }: Props) {
+  const [userId, setUserId] = useState("");
+  const [passphrase, setPassphrase] = useState("");
+  const [selectedProvider, setSelectedProvider] = useState<AIProviderId>("openai-dalle3");
+  const [selectedPrompt, setSelectedPrompt] = useState(PIXEL_ART_PROMPTS[0]?.prompt ?? "");
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+  const [keys, setKeys] = useState<Record<AIProviderId, string>>({});
+
+  const providerOptions = useMemo(() => PROVIDERS, []);
+
+  async function handleUnlockKeys() {
+    if (!userId || !passphrase) {
+      setStatus("Enter user ID and passphrase.");
+      return;
+    }
+    setStatus("Loading encrypted keys...");
+    try {
+      const encrypted = await loadEncryptedKeys(userId);
+      const nextKeys: Record<AIProviderId, string> = {};
+      for (const record of encrypted) {
+        nextKeys[record.provider] = await decryptKey(record, passphrase);
+      }
+      setKeys(nextKeys);
+      setStatus("Keys unlocked.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Failed to unlock keys.");
+    }
+  }
+
+  const resolvedPrompt = customPrompt.trim() ? customPrompt : selectedPrompt;
+
   return (
     <div className="panel">
       <div className="panel__header">
@@ -13,6 +47,72 @@ export default function AIPanel({ enabled = false }: Props) {
       </div>
 
       <div className="panel__body">
+        <div className="option-group">
+          <div className="option-label">Provider Setup</div>
+          <input
+            className="uiInput"
+            type="text"
+            placeholder="User ID"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+          />
+          <input
+            className="uiInput"
+            type="password"
+            placeholder="Passphrase"
+            value={passphrase}
+            onChange={(e) => setPassphrase(e.target.value)}
+          />
+          <button className="uiBtn uiBtn--full" onClick={handleUnlockKeys} disabled={!enabled}>
+            Unlock API Keys
+          </button>
+          {status && <div className="muted" style={{ fontSize: "11px" }}>{status}</div>}
+        </div>
+
+        <div className="option-group">
+          <div className="option-label">Prompt Templates</div>
+          <select
+            className="uiInput"
+            value={selectedPrompt}
+            onChange={(e) => setSelectedPrompt(e.target.value)}
+          >
+            {PIXEL_ART_PROMPTS.map((template) => (
+              <option key={template.label} value={template.prompt}>
+                {template.label}
+              </option>
+            ))}
+          </select>
+          <textarea
+            className="uiInput"
+            rows={4}
+            placeholder="Custom prompt"
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+          />
+          <div className="muted" style={{ fontSize: "11px" }}>
+            Selected prompt: {resolvedPrompt.slice(0, 120)}
+            {resolvedPrompt.length > 120 ? "…" : ""}
+          </div>
+        </div>
+
+        <div className="option-group">
+          <div className="option-label">Provider</div>
+          <select
+            className="uiInput"
+            value={selectedProvider}
+            onChange={(e) => setSelectedProvider(e.target.value as AIProviderId)}
+          >
+            {providerOptions.map((provider) => (
+              <option key={provider.id} value={provider.id}>
+                {provider.label}
+              </option>
+            ))}
+          </select>
+          <div className="muted" style={{ fontSize: "11px" }}>
+            API key {keys[selectedProvider] ? "loaded" : "not loaded"}.
+          </div>
+        </div>
+
         <div className="option-group">
           <div className="option-label">AI Generation</div>
           <button className="uiBtn uiBtn--full" disabled={!enabled}>

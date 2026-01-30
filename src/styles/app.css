@@ -67,6 +67,16 @@ body{
   transform: none;
 }
 
+.uiInput{
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.18);
+  color: var(--ink);
+  font-size: 12px;
+}
+
 /* Dock layout - CSS Grid Architecture */
 .dock{
   position: fixed;
@@ -91,6 +101,7 @@ body{
   border-bottom: 1px solid var(--border);
   box-shadow: 0 10px 30px var(--shadow);
   z-index: 100;
+  position: relative;
 }
 
 .dock__body{
@@ -156,6 +167,15 @@ body{
   min-width: 0;
   display: flex;
   flex-direction: column;
+}
+
+.dock__mobileControls{
+  position: absolute;
+  right: 12px;
+  top: 8px;
+  display: flex;
+  gap: 8px;
+  z-index: 120;
 }
 
 .splitter--h{
@@ -235,6 +255,65 @@ body{
   white-space: nowrap;
 }
 
+@media (max-width: 1199px){
+  :root{
+    --rightPanelWidth: 240px;
+    --timelineHeight: 160px;
+  }
+
+  .dock__body{
+    grid-template-columns: 52px 1fr 4px var(--rightPanelWidth);
+  }
+}
+
+@media (max-width: 767px){
+  :root{
+    --rightPanelWidth: 100vw;
+    --timelineHeight: 140px;
+  }
+
+  .dock__body{
+    grid-template-areas: "center";
+    grid-template-columns: 1fr;
+  }
+
+  .dock__left,
+  .dock__right{
+    position: absolute;
+    top: 52px;
+    bottom: var(--timelineHeight);
+    width: 260px;
+    max-width: 90vw;
+    transform: translateX(-110%);
+    transition: transform 0.2s ease;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+    z-index: 200;
+  }
+
+  .dock__right{
+    right: 0;
+    left: auto;
+    transform: translateX(110%);
+    width: min(360px, 90vw);
+  }
+
+  .dock--left-open .dock__left{
+    transform: translateX(0);
+  }
+
+  .dock--right-open .dock__right{
+    transform: translateX(0);
+  }
+
+  .splitter--v{
+    display: none;
+  }
+
+  .dock__bottom{
+    border-top: 1px solid var(--border);
+  }
+}
+
 /* Tool rail */
 .toolrail{
   height: 100%;
@@ -242,6 +321,30 @@ body{
   flex-direction: column;
   padding: 8px 8px;
   gap: 4px;
+}
+.toolgroup{
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  background: rgba(0,0,0,0.1);
+}
+.toolgroup summary{
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--muted);
+  list-style: none;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.toolgroup summary::-webkit-details-marker{
+  display: none;
+}
+.toolgroup__body{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
 }
 .toolrail__sectionTitle{
   font-size: 10px;
@@ -613,6 +716,24 @@ body{
   height: 100%;
   cursor: crosshair;
   touch-action: none;
+}
+
+.minimap{
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 140px;
+  height: 140px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.35);
+  border-radius: 8px;
+  padding: 6px;
+  z-index: 50;
+}
+.minimap canvas{
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 input[type="number"],

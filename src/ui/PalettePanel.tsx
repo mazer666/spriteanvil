@@ -20,6 +20,7 @@ type Props = {
   onRemoveColorFromPalette: (paletteId: string, colorIndex: number) => void;
   onSelectColor: (color: string) => void;
   onSwapColors: (fromColor: string, toColor: string) => void;
+  onExtractPalette: () => void;
 };
 
 export default function PalettePanel({
@@ -35,6 +36,7 @@ export default function PalettePanel({
   onRemoveColorFromPalette,
   onSelectColor,
   onSwapColors,
+  onExtractPalette,
 }: Props) {
   const [showNewPalette, setShowNewPalette] = useState(false);
   const [newPaletteName, setNewPaletteName] = useState("");
@@ -234,6 +236,13 @@ export default function PalettePanel({
       </div>
 
       <div style={{ padding: '8px', borderTop: '1px solid #333', background: '#252525' }}>
+        <button
+          onClick={onExtractPalette}
+          style={{ width: '100%', padding: '6px', fontSize: '12px', marginBottom: '6px' }}
+          title="Extract colors from the current sprite"
+        >
+          Extract Palette from Image
+        </button>
         <button
           onClick={() => setSwapFromColor(swapFromColor ? null : primaryColor)}
           style={{
