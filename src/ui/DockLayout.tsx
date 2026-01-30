@@ -211,11 +211,24 @@ export default function DockLayout({
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(() =>
     loadBoolean("dock:rightCollapsed", false)
   );
+  const [showLeftPanel, setShowLeftPanel] = useState(() =>
+    loadBoolean("dock:leftVisible", true)
+  );
+  const [showRightPanel, setShowRightPanel] = useState(() =>
+    loadBoolean("dock:rightVisible", true)
+  );
+  const [showTimeline, setShowTimeline] = useState(() =>
+    loadBoolean("dock:timelineVisible", true)
+  );
+  const [isZenMode, setIsZenMode] = useState(false);
 
   useEffect(() => saveNumber("dock:rightWidth", rightWidth), [rightWidth]);
   useEffect(() => saveNumber("dock:timelineHeight", timelineHeight), [timelineHeight]);
   useEffect(() => saveBoolean("dock:leftCollapsed", isToolRailCollapsed), [isToolRailCollapsed]);
   useEffect(() => saveBoolean("dock:rightCollapsed", isRightPanelCollapsed), [isRightPanelCollapsed]);
+  useEffect(() => saveBoolean("dock:leftVisible", showLeftPanel), [showLeftPanel]);
+  useEffect(() => saveBoolean("dock:rightVisible", showRightPanel), [showRightPanel]);
+  useEffect(() => saveBoolean("dock:timelineVisible", showTimeline), [showTimeline]);
 
   const sizes = useMemo(() => ({ rightWidth, timelineHeight }), [rightWidth, timelineHeight]);
 
@@ -234,6 +247,27 @@ export default function DockLayout({
     update();
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    function isInputFocused(): boolean {
+      const active = document.activeElement;
+      return (
+        active?.tagName === "INPUT" ||
+        active?.tagName === "TEXTAREA" ||
+        (active?.hasAttribute("contenteditable") ?? false)
+      );
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Tab" && !isInputFocused()) {
+        e.preventDefault();
+        setIsZenMode((prev) => !prev);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const dragStateRef = useRef<
@@ -284,24 +318,64 @@ export default function DockLayout({
         (isToolRailOpen ? " dock--left-open" : "") +
         (isRightPanelOpen ? " dock--right-open" : "") +
         (isToolRailCollapsed ? " dock--left-collapsed" : "") +
-        (isRightPanelCollapsed ? " dock--right-collapsed" : "")
+        (isRightPanelCollapsed ? " dock--right-collapsed" : "") +
+        (!showLeftPanel ? " dock--left-hidden" : "") +
+        (!showRightPanel ? " dock--right-hidden" : "") +
+        (!showTimeline ? " dock--timeline-collapsed" : "") +
+        (isZenMode ? " dock--zen" : "")
       }
       onPointerMove={onDragMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       style={{
-        "--leftPanelWidth": `${isToolRailCollapsed ? 48 : 72}px`,
-        "--rightPanelWidth": `${isRightPanelCollapsed ? 52 : sizes.rightWidth}px`,
-        "--timelineHeight": `${sizes.timelineHeight}px`,
+        "--leftPanelWidth": `${!showLeftPanel || isZenMode ? 0 : isToolRailCollapsed ? 48 : 72}px`,
+        "--rightPanelWidth": `${!showRightPanel || isZenMode ? 0 : isRightPanelCollapsed ? 52 : sizes.rightWidth}px`,
+        "--timelineHeight": `${!showTimeline || isZenMode ? 0 : sizes.timelineHeight}px`,
+        ...(isZenMode ? { "--topbarHeight": "0px", "--statusBarHeight": "0px" } : {}),
       } as React.CSSProperties}
     >
       <div className="dock__top">
         {topBar}
+        {!isMobile && (
+          <div className="dock__panelControls">
+            <button
+              className="uiBtn uiBtn--ghost"
+              onClick={() => setShowLeftPanel((prev) => !prev)}
+              title={showLeftPanel ? "Hide left panel" : "Show left panel"}
+            >
+              {showLeftPanel ? "⟨" : "⟩"} Left
+            </button>
+            <button
+              className="uiBtn uiBtn--ghost"
+              onClick={() => setShowTimeline((prev) => !prev)}
+              title={showTimeline ? "Hide timeline" : "Show timeline"}
+            >
+              {showTimeline ? "⌄" : "⌃"} Timeline
+            </button>
+            <button
+              className="uiBtn uiBtn--ghost"
+              onClick={() => setShowRightPanel((prev) => !prev)}
+              title={showRightPanel ? "Hide right panel" : "Show right panel"}
+            >
+              {showRightPanel ? "⟩" : "⟨"} Right
+            </button>
+            <button
+              className="uiBtn uiBtn--ghost"
+              onClick={() => setIsZenMode((prev) => !prev)}
+              title="Toggle Zen Mode (Tab)"
+            >
+              {isZenMode ? "◼" : "◻"} Zen
+            </button>
+          </div>
+        )}
         {isMobile && (
           <div className="dock__mobileControls">
             <button
               className="uiBtn"
-              onClick={() => setIsToolRailOpen((prev) => !prev)}
+              onClick={() => {
+                setShowLeftPanel(true);
+                setIsToolRailOpen((prev) => !prev);
+              }}
               title="Toggle tools"
             >
               ☰ Tools
@@ -315,7 +389,17 @@ export default function DockLayout({
             </button>
             <button
               className="uiBtn"
-              onClick={() => setIsRightPanelOpen((prev) => !prev)}
+              onClick={() => setShowTimeline((prev) => !prev)}
+              title={showTimeline ? "Hide timeline" : "Show timeline"}
+            >
+              ↕ Timeline
+            </button>
+            <button
+              className="uiBtn"
+              onClick={() => {
+                setShowRightPanel(true);
+                setIsRightPanelOpen((prev) => !prev);
+              }}
               title="Toggle panel"
             >
               ☰ Panel
@@ -438,11 +522,11 @@ export default function DockLayout({
         />
       </div>
 
-      {isMobile && (
-        <div className="dock__toolbar">
-          <ToolBar tool={tool} onChangeTool={onChangeTool} />
-        </div>
-      )}
+        {isMobile && (
+          <div className="dock__toolbar">
+            <ToolBar tool={tool} onChangeTool={onChangeTool} />
+          </div>
+        )}
 
       <div className="dock__status">
         {statusBar}

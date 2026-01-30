@@ -33,6 +33,33 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
               <span className="mono">{settings.brushSize}px</span>
             </label>
 
+            <label className="option-row">
+              <span>Pressure</span>
+              <select
+                value={settings.pressureMode}
+                onChange={(e) => updateSetting("pressureMode", e.target.value as UiSettings["pressureMode"])}
+              >
+                <option value="off">Off</option>
+                <option value="size">Brush Size</option>
+                <option value="opacity">Opacity</option>
+              </select>
+            </label>
+
+            {settings.pressureMode !== "off" && (
+              <label className="option-row">
+                <span>Pressure Smoothing</span>
+                <input
+                  type="range"
+                  min={0.05}
+                  max={0.6}
+                  step={0.05}
+                  value={settings.pressureEasing}
+                  onChange={(e) => updateSetting("pressureEasing", Number(e.target.value))}
+                />
+                <span className="mono">{settings.pressureEasing.toFixed(2)}</span>
+              </label>
+            )}
+
             {tool !== "smudge" && (
               <label className="option-row">
                 <input

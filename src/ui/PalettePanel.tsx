@@ -43,9 +43,13 @@ export default function PalettePanel({
   const [colorPickerValue, setColorPickerValue] = useState(primaryColor);
   const [swapFromColor, setSwapFromColor] = useState<string | null>(null);
   const [rampSteps, setRampSteps] = useState(6);
+  const [showSaved, setShowSaved] = useState(true);
+  const [showDefault, setShowDefault] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activePalette = palettes.find(p => p.id === activePaletteId);
+  const defaultPalettes = palettes.filter((palette) => palette.is_default);
+  const savedPalettes = palettes.filter((palette) => !palette.is_default);
 
   function createPalette() {
     if (newPaletteName.trim()) {
@@ -123,7 +127,13 @@ export default function PalettePanel({
 
       <div className="palette-panel__list">
         <div className="palette-panel__list-header">
-          <span className="palette-panel__label">Saved Palettes</span>
+          <button
+            className="palette-panel__collapse-btn"
+            onClick={() => setShowSaved((prev) => !prev)}
+            aria-expanded={showSaved}
+          >
+            {showSaved ? "▾" : "▸"} Saved Palettes
+          </button>
           <button
             onClick={() => setShowNewPalette(!showNewPalette)}
             className="palette-panel__small-btn"
@@ -154,70 +164,129 @@ export default function PalettePanel({
           </div>
         )}
 
-        {palettes.length === 0 ? (
-          <div className="palette-panel__empty">
-            No palettes yet. Click + New to create one.
-          </div>
-        ) : (
-          palettes.map((palette) => (
-            <div
-              key={palette.id}
-              className="palette-panel__palette-card"
-              style={{
-                background: palette.id === activePaletteId ? '#3a3a3a' : '#2a2a2a',
-                border: '1px solid ' + (palette.id === activePaletteId ? '#555' : '#333'),
-              }}
-              onClick={() => onSelectPalette(palette.id)}
-            >
-              <div className="palette-panel__row palette-panel__row--space">
-                <span className="palette-panel__palette-title">
-                  {palette.name} {palette.is_default && <span style={{ color: '#888', fontSize: '10px' }}>(default)</span>}
-                </span>
-                {!palette.is_default && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onDeletePalette(palette.id); }}
-                    className="palette-panel__small-btn"
-                    title="Delete palette"
-                  >
-                    🗑
-                  </button>
-                )}
+        {showSaved && (
+          <div className="palette-panel__section">
+            {savedPalettes.length === 0 ? (
+              <div className="palette-panel__empty">
+                No saved palettes yet. Click + New to create one.
               </div>
-
-              <div className="palette-panel__swatches">
-                {palette.colors.map((color, idx) => (
+            ) : (
+              <div className="palette-panel__scroll">
+                {savedPalettes.map((palette) => (
                   <div
-                    key={idx}
-                    onClick={(e) => { e.stopPropagation(); handleColorClick(color); }}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (!palette.is_default) {
-                        onRemoveColorFromPalette(palette.id, idx);
-                      }
-                    }}
+                    key={palette.id}
+                    className="palette-panel__palette-card"
                     style={{
-                      background: color,
-                      border: color === primaryColor ? '2px solid #fff' : '1px solid #444',
-                      cursor: 'pointer',
-                      borderRadius: '2px',
+                      background: palette.id === activePaletteId ? '#3a3a3a' : '#2a2a2a',
+                      border: '1px solid ' + (palette.id === activePaletteId ? '#555' : '#333'),
                     }}
-                    title={`${color}\nRight-click to remove`}
-                    className="palette-panel__swatch"
-                  />
-                ))}
-                {!palette.is_default && palette.id === activePaletteId && (
-                  <div
-                    onClick={(e) => { e.stopPropagation(); onAddColorToPalette(palette.id, primaryColor); }}
-                    className="palette-panel__swatch palette-panel__swatch--add"
-                    title="Add current color to palette"
+                    onClick={() => onSelectPalette(palette.id)}
                   >
-                    +
+                    <div className="palette-panel__row palette-panel__row--space">
+                      <span className="palette-panel__palette-title">
+                        {palette.name}
+                      </span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDeletePalette(palette.id); }}
+                        className="palette-panel__small-btn"
+                        title="Delete palette"
+                      >
+                        🗑
+                      </button>
+                    </div>
+
+                    <div className="palette-panel__swatches">
+                      {palette.colors.map((color, idx) => (
+                        <div
+                          key={idx}
+                          onClick={(e) => { e.stopPropagation(); handleColorClick(color); }}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onRemoveColorFromPalette(palette.id, idx);
+                          }}
+                          style={{
+                            background: color,
+                            border: color === primaryColor ? '2px solid #fff' : '1px solid #444',
+                            cursor: 'pointer',
+                            borderRadius: '2px',
+                          }}
+                          title={`${color}\nRight-click to remove`}
+                          className="palette-panel__swatch"
+                        />
+                      ))}
+                      {palette.id === activePaletteId && (
+                        <div
+                          onClick={(e) => { e.stopPropagation(); onAddColorToPalette(palette.id, primaryColor); }}
+                          className="palette-panel__swatch palette-panel__swatch--add"
+                          title="Add current color to palette"
+                        >
+                          +
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
-            </div>
-          ))
+            )}
+          </div>
+        )}
+
+        <div className="palette-panel__list-header palette-panel__list-header--secondary">
+          <button
+            className="palette-panel__collapse-btn"
+            onClick={() => setShowDefault((prev) => !prev)}
+            aria-expanded={showDefault}
+          >
+            {showDefault ? "▾" : "▸"} Default Palettes
+          </button>
+        </div>
+
+        {showDefault && (
+          <div className="palette-panel__section">
+            {defaultPalettes.length === 0 ? (
+              <div className="palette-panel__empty">
+                No default palettes available.
+              </div>
+            ) : (
+              <div className="palette-panel__scroll">
+                {defaultPalettes.map((palette) => (
+                  <div
+                    key={palette.id}
+                    className="palette-panel__palette-card"
+                    style={{
+                      background: palette.id === activePaletteId ? '#343434' : '#262626',
+                      border: '1px solid ' + (palette.id === activePaletteId ? '#555' : '#333'),
+                    }}
+                    onClick={() => onSelectPalette(palette.id)}
+                  >
+                    <div className="palette-panel__row palette-panel__row--space">
+                      <span className="palette-panel__palette-title">
+                        {palette.name} <span style={{ color: '#888', fontSize: '10px' }}>(default)</span>
+                      </span>
+                    </div>
+
+                    <div className="palette-panel__swatches">
+                      {palette.colors.map((color, idx) => (
+                        <div
+                          key={idx}
+                          onClick={(e) => { e.stopPropagation(); handleColorClick(color); }}
+                          style={{
+                            background: color,
+                            border: color === primaryColor ? '2px solid #fff' : '1px solid #444',
+                            cursor: 'pointer',
+                            borderRadius: '2px',
+                          }}
+                          title={color}
+                          className="palette-panel__swatch"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
