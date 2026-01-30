@@ -3,7 +3,16 @@ import { Frame, CanvasSpec } from "../types";
 import { AnimationTag } from "../lib/supabase/animation_tags";
 import { exportToGIF, downloadGIF } from "../lib/export/gif";
 import { generateMetadata, downloadJSON } from "../lib/export/metadata";
-import { generateSpritesheetAsync, downloadCanvasAsPNG, SpritesheetLayout } from "../lib/export/spritesheet";
+import {
+  generateSpritesheetAsync,
+  downloadCanvasAsPNG,
+  SpritesheetLayout,
+  EngineTarget,
+  EngineJsonFormat,
+  generateGodotAtlasTextures,
+  generateUnitySpritesheetJSON,
+  generatePhaserAtlasJSON,
+} from "../lib/export/spritesheet";
 
 type Props = {
   frames: Frame[];
@@ -16,6 +25,8 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
   const [projectName, setProjectName] = useState("sprite");
   const [exportFormat, setExportFormat] = useState<"png" | "gif" | "json">("png");
   const [includeMetadata, setIncludeMetadata] = useState(true);
+  const [targetEngine, setTargetEngine] = useState<EngineTarget>("spriteanvil");
+  const [engineJsonFormat, setEngineJsonFormat] = useState<EngineJsonFormat>("hash");
   const [layout, setLayout] = useState<SpritesheetLayout>("grid");
   const [padding, setPadding] = useState(0);
   const [spacing, setSpacing] = useState(0);
@@ -27,6 +38,16 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
   const [exporting, setExporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  function downloadTextFile(contents: string, filename: string, type = "text/plain") {
+    const blob = new Blob([contents], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleExport() {
     setExporting(true);
     setErrorMessage(null);
@@ -34,6 +55,7 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
     try {
       const imageName = `${projectName}.png`;
       const metadataName = `${projectName}.spriteanvil.json`;
+      const engineMetadataName = `${projectName}.${targetEngine}.${engineJsonFormat}.json`;
 
       if (exportFormat === "gif") {
         const gifBlob = await exportToGIF({
@@ -92,12 +114,76 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
         if (exportFormat === "png") {
           downloadCanvasAsPNG(result.canvas, imageName);
           if (includeMetadata) {
-            downloadJSON(metadata, metadataName);
+            if (targetEngine === "spriteanvil") {
+              downloadJSON(metadata, metadataName);
+            }
+            if (targetEngine === "unity") {
+              const unityJson = generateUnitySpritesheetJSON(
+                frames,
+                result.frameRects,
+                canvasSpec.width,
+                canvasSpec.height,
+                result.sheetWidth,
+                result.sheetHeight,
+                imageName,
+                engineJsonFormat
+              );
+              downloadTextFile(unityJson, engineMetadataName, "application/json");
+            }
+            if (targetEngine === "phaser") {
+              const phaserJson = generatePhaserAtlasJSON(
+                frames,
+                result.frameRects,
+                canvasSpec.width,
+                canvasSpec.height,
+                result.sheetWidth,
+                result.sheetHeight,
+                imageName,
+                engineJsonFormat
+              );
+              downloadTextFile(phaserJson, engineMetadataName, "application/json");
+            }
+            if (targetEngine === "godot") {
+              const tresFiles = generateGodotAtlasTextures(projectName, imageName, result.frameRects);
+              tresFiles.forEach((file) => downloadTextFile(file.content, file.filename));
+            }
           }
         }
 
         if (exportFormat === "json") {
-          downloadJSON(metadata, metadataName);
+          if (targetEngine === "spriteanvil") {
+            downloadJSON(metadata, metadataName);
+          }
+          if (targetEngine === "unity") {
+            const unityJson = generateUnitySpritesheetJSON(
+              frames,
+              result.frameRects,
+              canvasSpec.width,
+              canvasSpec.height,
+              result.sheetWidth,
+              result.sheetHeight,
+              imageName,
+              engineJsonFormat
+            );
+            downloadTextFile(unityJson, engineMetadataName, "application/json");
+          }
+          if (targetEngine === "phaser") {
+            const phaserJson = generatePhaserAtlasJSON(
+              frames,
+              result.frameRects,
+              canvasSpec.width,
+              canvasSpec.height,
+              result.sheetWidth,
+              result.sheetHeight,
+              imageName,
+              engineJsonFormat
+            );
+            downloadTextFile(phaserJson, engineMetadataName, "application/json");
+          }
+          if (targetEngine === "godot") {
+            const tresFiles = generateGodotAtlasTextures(projectName, imageName, result.frameRects);
+            tresFiles.forEach((file) => downloadTextFile(file.content, file.filename));
+          }
         }
       }
 
@@ -146,6 +232,32 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
 
           {(exportFormat === "png" || exportFormat === "json") && (
             <>
+              <div className="form-group">
+                <label>Target Engine</label>
+                <select
+                  value={targetEngine}
+                  onChange={(e) => setTargetEngine(e.target.value as EngineTarget)}
+                >
+                  <option value="spriteanvil">SpriteAnvil</option>
+                  <option value="godot">Godot (AtlasTexture .tres)</option>
+                  <option value="unity">Unity Spritesheet JSON</option>
+                  <option value="phaser">Phaser Atlas JSON</option>
+                </select>
+              </div>
+
+              {(targetEngine === "unity" || targetEngine === "phaser") && (
+                <div className="form-group">
+                  <label>JSON Format</label>
+                  <select
+                    value={engineJsonFormat}
+                    onChange={(e) => setEngineJsonFormat(e.target.value as EngineJsonFormat)}
+                  >
+                    <option value="hash">Hash (frame name keys)</option>
+                    <option value="array">Array (frame list)</option>
+                  </select>
+                </div>
+              )}
+
               <div className="form-group">
                 <label>Layout</label>
                 <select value={layout} onChange={(e) => setLayout(e.target.value as SpritesheetLayout)}>

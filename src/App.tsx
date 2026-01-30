@@ -5,6 +5,8 @@ import CommandPalette, { Command } from "./ui/CommandPalette";
 import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode, FloatingSelection } from "./types";
 import { HistoryStack } from "./editor/history";
 import { cloneBuffer, createBuffer } from "./editor/pixels";
+import { applySmartOutline, OutlineMode } from "./editor/outline";
+import { generateTweenFrames, interpolatePixelBuffers, EasingCurve } from "./editor/animation";
 import { copySelection, cutSelection, pasteClipboard, ClipboardData } from "./editor/clipboard";
 import { compositeLayers, mergeDown, flattenImage } from "./editor/layers";
 import { PaletteData, ProjectSnapshot } from "./lib/projects/snapshot";
@@ -29,7 +31,7 @@ import {
   desaturate,
   posterize,
 } from "./editor/tools/coloradjust";
-import { invertSelection } from "./editor/selection";
+import { invertSelection, selectConnectedOpaque } from "./editor/selection";
 import { extractPaletteFromPixels } from "./editor/palette";
 import {
   createProject,
@@ -39,14 +41,18 @@ import {
   Project,
   ProjectSnapshotPayload,
 } from "./lib/supabase/projects";
+import { hasSupabaseConfig } from "./lib/supabase/client";
+import { supabase } from "./lib/supabase/client";
 import { buildPaletteRamp, exportPaletteFile, importPaletteFile } from "./lib/supabase/palettes";
 import { cacheProjectSnapshot, getCachedProjectSnapshot } from "./lib/storage/frameCache";
 import ProjectDashboard, { NewProjectRequest } from "./ui/ProjectDashboard";
 import ShortcutOverlay, { ShortcutGroup } from "./ui/ShortcutOverlay";
 import StatusBar from "./ui/StatusBar";
 import { hexToRgb } from "./utils/colors";
+import { buildInpaintPayload } from "./lib/ai/inpaint";
 
 export default function App() {
+  const LOCAL_PROJECTS_KEY = "spriteanvil:localProjects";
   const [canvasSpec, setCanvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
   const [tool, setTool] = useState<ToolId>("pen");
   const [projectView, setProjectView] = useState<"dashboard" | "editor">("dashboard");
@@ -89,6 +95,8 @@ export default function App() {
   const [animationTags, setAnimationTags] = useState<AnimationTag[]>([]);
   const [activeAnimationTagId, setActiveAnimationTagId] = useState<string | null>(null);
   const [loopTagOnly, setLoopTagOnly] = useState(false);
+  const [remoteCursors, setRemoteCursors] = useState<Record<string, { x: number; y: number; color: string }>>({});
+  const [activeCollaborators, setActiveCollaborators] = useState<Array<{ id: string; color: string }>>([]);
 
   const historyRef = useRef<HistoryStack>(new HistoryStack());
   const [canUndo, setCanUndo] = useState(false);
@@ -96,6 +104,71 @@ export default function App() {
   const transformBeforeRef = useRef<Uint8ClampedArray | null>(null);
 
   const currentFrame = frames[currentFrameIndex];
+  const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lastCursorBroadcastRef = useRef(0);
+  const localUserId = useMemo(() => {
+    const key = "spriteanvil:collabUserId";
+    const existing = localStorage.getItem(key);
+    if (existing) return existing;
+    const next = crypto.randomUUID();
+    localStorage.setItem(key, next);
+    return next;
+  }, []);
+  const localUserColor = useMemo(() => {
+    const key = "spriteanvil:collabUserColor";
+    const existing = localStorage.getItem(key);
+    if (existing) return existing;
+    const hue = Math.floor(Math.random() * 360);
+    const next = `hsl(${hue}, 70%, 60%)`;
+    localStorage.setItem(key, next);
+    return next;
+  }, []);
+
+  function loadLocalProjects(): Project[] {
+    try {
+      const raw = localStorage.getItem(LOCAL_PROJECTS_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as Project[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.warn("Failed to parse local projects:", error);
+      return [];
+    }
+  }
+
+  function saveLocalProjects(next: Project[]) {
+    localStorage.setItem(LOCAL_PROJECTS_KEY, JSON.stringify(next));
+  }
+
+  function buildPixelPatch(before: Uint8ClampedArray, after: Uint8ClampedArray) {
+    const changes: number[] = [];
+    for (let i = 0; i < after.length; i += 4) {
+      if (
+        before[i] !== after[i] ||
+        before[i + 1] !== after[i + 1] ||
+        before[i + 2] !== after[i + 2] ||
+        before[i + 3] !== after[i + 3]
+      ) {
+        changes.push(i, after[i], after[i + 1], after[i + 2], after[i + 3]);
+      }
+    }
+    return changes;
+  }
+
+  function applyPixelPatch(
+    layerPixels: Uint8ClampedArray,
+    patch: number[]
+  ): Uint8ClampedArray {
+    const next = cloneBuffer(layerPixels);
+    for (let i = 0; i < patch.length; i += 5) {
+      const idx = patch[i];
+      next[idx] = patch[i + 1];
+      next[idx + 1] = patch[i + 2];
+      next[idx + 2] = patch[i + 3];
+      next[idx + 3] = patch[i + 4];
+    }
+    return next;
+  }
 
   function createLayer(
     name: string,
@@ -236,6 +309,13 @@ export default function App() {
     gradientType: "linear",
     ditheringType: "none",
     symmetryMode: "none",
+    symmetryAngle: 0,
+    symmetrySegments: 8,
+    edgeSnapEnabled: false,
+    edgeSnapRadius: 3,
+    showArcGuides: false,
+    showGravityGuides: false,
+    showMotionTrails: true,
     brushSize: 1,
     wandTolerance: 32,
   }));
@@ -324,6 +404,10 @@ export default function App() {
     setProjectLoading(true);
     setProjectError(null);
     try {
+      if (!hasSupabaseConfig) {
+        setProjects(loadLocalProjects());
+        return;
+      }
       const list = await getProjects();
       setProjects(list);
     } catch (error) {
@@ -336,6 +420,75 @@ export default function App() {
   useEffect(() => {
     refreshProjects();
   }, []);
+
+  useEffect(() => {
+    if (!hasSupabaseConfig || !activeProject) {
+      realtimeChannelRef.current?.unsubscribe();
+      realtimeChannelRef.current = null;
+      setRemoteCursors({});
+      setActiveCollaborators([]);
+      return;
+    }
+
+    const channel = supabase.channel(`project:${activeProject.id}`, {
+      config: {
+        presence: { key: localUserId },
+      },
+    });
+
+    channel.on("broadcast", { event: "cursor" }, ({ payload }) => {
+      if (!payload || payload.userId === localUserId) return;
+      setRemoteCursors((prev) => ({
+        ...prev,
+        [payload.userId]: { x: payload.x, y: payload.y, color: payload.color || "#4bb8bf" },
+      }));
+    });
+
+    channel.on("broadcast", { event: "pixel-update" }, ({ payload }) => {
+      if (!payload || payload.userId === localUserId) return;
+      const { frameId, layerId, patch } = payload as {
+        userId: string;
+        frameId: string;
+        layerId: string;
+        patch: number[];
+      };
+      if (!frameId || !layerId || !Array.isArray(patch)) return;
+      setFrameLayers((prev) => {
+        const layersForFrame = prev[frameId];
+        if (!layersForFrame) return prev;
+        const nextLayers = layersForFrame.map((layer) => {
+          if (layer.id !== layerId || !layer.pixels) return layer;
+          const nextPixels = applyPixelPatch(layer.pixels, patch);
+          return { ...layer, pixels: nextPixels };
+        });
+        updateCurrentFrameComposite(frameId, nextLayers);
+        return { ...prev, [frameId]: nextLayers };
+      });
+    });
+
+    channel.on("presence", { event: "sync" }, () => {
+      const state = channel.presenceState() as Record<string, Array<{ color?: string }>>;
+      const collaborators = Object.keys(state).map((id) => ({
+        id,
+        color: state[id]?.[0]?.color ?? "#4bb8bf",
+      }));
+      setActiveCollaborators(collaborators);
+    });
+
+    channel.subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await channel.track({ color: localUserColor });
+      }
+    });
+
+    realtimeChannelRef.current?.unsubscribe();
+    realtimeChannelRef.current = channel;
+
+    return () => {
+      channel.unsubscribe();
+      realtimeChannelRef.current = null;
+    };
+  }, [activeProject, localUserColor, localUserId]);
 
   useEffect(() => {
     if (projects.length === 0) return;
@@ -543,6 +696,64 @@ export default function App() {
   function handleFeatherSelection(_radius: number) {
   }
 
+  function handleDetectObjectSelection() {
+    if (!cursorPosition) {
+      setProjectError("Move the cursor over a sprite pixel to detect an object.");
+      return;
+    }
+    const mask = selectConnectedOpaque(
+      compositeBuffer,
+      canvasSpec.width,
+      canvasSpec.height,
+      cursorPosition.x,
+      cursorPosition.y
+    );
+    setSelection(mask);
+  }
+
+  async function handleInpaintRequest(payload: {
+    prompt: string;
+    denoiseStrength: number;
+    promptInfluence: number;
+  }) {
+    if (!selection) {
+      return "No selection available for inpainting.";
+    }
+    if (!activeLayer?.pixels) {
+      return "No active layer pixels to inpaint.";
+    }
+    const request = buildInpaintPayload(
+      payload.prompt,
+      canvasSpec,
+      activeLayer.pixels,
+      selection,
+      payload.denoiseStrength,
+      payload.promptInfluence
+    );
+    console.info("Inpaint payload prepared", request);
+    return "Inpaint payload prepared (see console).";
+  }
+
+  async function handleImageToImageRequest(payload: {
+    prompt: string;
+    denoiseStrength: number;
+    promptInfluence: number;
+  }) {
+    if (!activeLayer?.pixels) {
+      return "No active layer pixels available for image-to-image.";
+    }
+    const request = buildInpaintPayload(
+      payload.prompt,
+      canvasSpec,
+      activeLayer.pixels,
+      selection ?? new Uint8Array(canvasSpec.width * canvasSpec.height).fill(1),
+      payload.denoiseStrength,
+      payload.promptInfluence
+    );
+    console.info("Image-to-image payload prepared", request);
+    return "Image-to-image payload prepared (see console).";
+  }
+
   function updateCurrentFrameComposite(frameId: string, nextLayers: LayerData[]) {
     const composite = compositeLayers(nextLayers, canvasSpec.width, canvasSpec.height);
     setFrames((prev) =>
@@ -648,7 +859,7 @@ export default function App() {
       const cached = await getCachedProjectSnapshot(project.id);
       if (cached) {
         applySnapshot(cached);
-      } else {
+      } else if (hasSupabaseConfig) {
         const cloudSnapshot = await loadProjectSnapshot(project.id);
         if (cloudSnapshot) {
           const snapshot = deserializeSnapshot(cloudSnapshot);
@@ -679,6 +890,30 @@ export default function App() {
           fallbackSnapshot.activeLayerIds[frameId] = fallbackSnapshot.frames[0].layers[0].id;
           applySnapshot(fallbackSnapshot);
         }
+      } else {
+        const fallbackSnapshot: ProjectSnapshot = {
+          version: 1,
+          canvas: { width: 64, height: 64 },
+          frames: [
+            {
+              id: crypto.randomUUID(),
+              durationMs: 100,
+              pivot: { x: 32, y: 63 },
+              layers: [
+                createLayer("Layer 1", createBuffer(64, 64, { r: 0, g: 0, b: 0, a: 0 })),
+              ],
+            },
+          ],
+          currentFrameIndex: 0,
+          activeLayerIds: {},
+          palettes,
+          activePaletteId,
+          recentColors,
+          settings,
+        };
+        const frameId = fallbackSnapshot.frames[0].id;
+        fallbackSnapshot.activeLayerIds[frameId] = fallbackSnapshot.frames[0].layers[0].id;
+        applySnapshot(fallbackSnapshot);
       }
       setActiveProject(project);
       setProjectView("editor");
@@ -719,6 +954,30 @@ export default function App() {
       };
       const activeLayerId = newSnapshot.frames[0].layers[0].id;
       newSnapshot.activeLayerIds[newSnapshot.frames[0].id] = activeLayerId;
+
+      if (!hasSupabaseConfig) {
+        const now = new Date().toISOString();
+        const localProject: Project = {
+          id: crypto.randomUUID(),
+          user_id: "local",
+          name: request.name,
+          description: null,
+          thumbnail_url: null,
+          metadata: null,
+          created_at: now,
+          updated_at: now,
+          is_archived: false,
+        };
+        const nextProjects = [localProject, ...loadLocalProjects()];
+        saveLocalProjects(nextProjects);
+        setProjects(nextProjects);
+        applySnapshot(newSnapshot);
+        await cacheProjectSnapshot(localProject.id, newSnapshot);
+        setActiveProject(localProject);
+        setProjectView("editor");
+        localStorage.setItem("spriteanvil:lastProjectId", localProject.id);
+        return;
+      }
 
       const cloudPayload = serializeSnapshot(newSnapshot);
       const created = await createProject({
@@ -777,6 +1036,26 @@ export default function App() {
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
+    if (
+      hasSupabaseConfig &&
+      realtimeChannelRef.current &&
+      activeProject &&
+      activeLayerId
+    ) {
+      const patch = buildPixelPatch(before, after);
+      if (patch.length > 0) {
+        realtimeChannelRef.current.send({
+          type: "broadcast",
+          event: "pixel-update",
+          payload: {
+            userId: localUserId,
+            frameId: currentFrame.id,
+            layerId: activeLayerId,
+            patch,
+          },
+        });
+      }
+    }
   }
 
   function handleInsertFrame() {
@@ -871,6 +1150,24 @@ export default function App() {
     setRecentColors((prev) => {
       const filtered = prev.filter((c) => c !== color);
       return [color, ...filtered].slice(0, 20);
+    });
+  }
+
+  function handleCursorMove(next: { x: number; y: number } | null) {
+    setCursorPosition(next);
+    if (!next || !hasSupabaseConfig || !realtimeChannelRef.current) return;
+    const now = performance.now();
+    if (now - lastCursorBroadcastRef.current < 50) return;
+    lastCursorBroadcastRef.current = now;
+    realtimeChannelRef.current.send({
+      type: "broadcast",
+      event: "cursor",
+      payload: {
+        userId: localUserId,
+        x: next.x,
+        y: next.y,
+        color: localUserColor,
+      },
     });
   }
 
@@ -1421,6 +1718,95 @@ export default function App() {
     syncHistoryFlags();
   }
 
+  function handleSmartOutline(mode: OutlineMode) {
+    if (isActiveLayerLocked) return;
+    const rgb = hexToRgb(settings.primaryColor);
+    const outlineColor = { r: rgb.r, g: rgb.g, b: rgb.b, a: 255 };
+    const before = cloneBuffer(buffer);
+    const after = applySmartOutline(buffer, canvasSpec.width, canvasSpec.height, outlineColor, mode);
+    historyRef.current.commit(before);
+    updateActiveLayerPixels(after);
+    syncHistoryFlags();
+  }
+
+  function handleGenerateTweens(
+    startIndex: number,
+    endIndex: number,
+    count: number,
+    easing: EasingCurve
+  ) {
+    if (frames.length < 2 || count <= 0) return;
+    const start = Math.min(startIndex, endIndex);
+    const end = Math.max(startIndex, endIndex);
+    if (start === end) return;
+
+    const startFrame = frames[start];
+    const endFrame = frames[end];
+    const tweenData = generateTweenFrames(
+      startFrame,
+      endFrame,
+      canvasSpec.width,
+      canvasSpec.height,
+      count,
+      easing,
+      defaultPivot
+    );
+
+    const newFrames: Frame[] = tweenData.map((data) => ({
+      id: crypto.randomUUID(),
+      pixels: data.pixels,
+      durationMs: data.durationMs,
+      pivot: data.pivot ?? defaultPivot,
+    }));
+
+    const startLayers = frameLayers[startFrame.id] || [];
+    const endLayers = frameLayers[endFrame.id] || [];
+    const nextFrameLayers: Record<string, LayerData[]> = {};
+    const nextActiveLayerIds: Record<string, string> = {};
+
+    if (startLayers.length > 0 && startLayers.length === endLayers.length) {
+      const layerBuffers = startLayers.map((layer, index) => {
+        const startPixels = layer.pixels ?? createEmptyPixels();
+        const endPixels = endLayers[index]?.pixels ?? createEmptyPixels();
+        return interpolatePixelBuffers(
+          startPixels,
+          endPixels,
+          canvasSpec.width,
+          canvasSpec.height,
+          count,
+          easing
+        );
+      });
+
+      newFrames.forEach((frame, tweenIndex) => {
+        const layersForFrame = startLayers.map((layer, layerIndex) => ({
+          ...layer,
+          id: crypto.randomUUID(),
+          name: layer.name,
+          pixels: layerBuffers[layerIndex]?.[tweenIndex] ?? createEmptyPixels(),
+        }));
+        frame.pixels = compositeLayers(layersForFrame, canvasSpec.width, canvasSpec.height);
+        nextFrameLayers[frame.id] = layersForFrame;
+        nextActiveLayerIds[frame.id] = layersForFrame[0]?.id || "";
+      });
+    } else {
+      newFrames.forEach((frame) => {
+        const layer = createLayer("Tween Frame", frame.pixels);
+        nextFrameLayers[frame.id] = [layer];
+        nextActiveLayerIds[frame.id] = layer.id;
+      });
+    }
+
+    setFrames((prev) => {
+      const updated = [...prev];
+      updated.splice(start + 1, 0, ...newFrames);
+      return updated;
+    });
+    setFrameLayers((prev) => ({ ...prev, ...nextFrameLayers }));
+    setFrameActiveLayerIds((prev) => ({ ...prev, ...nextActiveLayerIds }));
+    setCurrentFrameIndex(start + 1);
+  }
+
   const commands: Command[] = useMemo(() => [
     { id: "undo", name: "Undo", shortcut: "Cmd+Z", category: "Edit", action: handleUndo, keywords: ["history"] },
     { id: "redo", name: "Redo", shortcut: "Cmd+Y", category: "Edit", action: handleRedo, keywords: ["history"] },
@@ -1572,6 +1958,10 @@ export default function App() {
           onBeginTransform={beginSelectionTransform}
           onUpdateTransform={updateFloating}
           onColorPick={handleSelectColor}
+          selectionMask={selection}
+          layerPixels={activeLayer?.pixels ?? null}
+          onInpaint={handleInpaintRequest}
+          onImageToImage={handleImageToImageRequest}
           onUndo={handleUndo}
           onRedo={handleRedo}
           canUndo={canUndo}
@@ -1585,6 +1975,7 @@ export default function App() {
           onDeleteFrame={handleDeleteFrame}
           onUpdateFrameDuration={handleUpdateFrameDuration}
           onTogglePlayback={handleTogglePlayback}
+          onGenerateTweens={handleGenerateTweens}
           animationTags={animationTags}
           activeTagId={activeAnimationTagId}
           loopTagOnly={loopTagOnly}
@@ -1593,6 +1984,7 @@ export default function App() {
           onCreateTag={handleCreateAnimationTag}
           onUpdateTag={handleUpdateAnimationTag}
           onDeleteTag={handleDeleteAnimationTag}
+          remoteCursors={remoteCursors}
           layers={layers}
           activeLayerId={activeLayerId}
           onLayerOperations={{
@@ -1634,6 +2026,7 @@ export default function App() {
             onRotate180: handleRotate180,
             onScale: handleScale,
             onRotate: handleRotateDegrees,
+            onSmartOutline: handleSmartOutline,
           }}
           onColorAdjustOperations={{
             onAdjustHue: handleAdjustHue,
@@ -1650,8 +2043,9 @@ export default function App() {
             onGrow: handleGrowSelection,
             onShrink: handleShrinkSelection,
             onFeather: handleFeatherSelection,
+            onDetectObject: handleDetectObjectSelection,
           }}
-          onCursorMove={setCursorPosition}
+          onCursorMove={handleCursorMove}
           topBar={
             <div className="topbar">
               <div className="brand">
@@ -1693,6 +2087,37 @@ export default function App() {
               </div>
 
               <div className="topbar__group">
+                {activeCollaborators.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "11px", color: "#aaa" }}>Active:</span>
+                    <div style={{ display: "flex", gap: "4px" }}>
+                      {activeCollaborators.slice(0, 5).map((user) => (
+                        <span
+                          key={user.id}
+                          title={`User ${user.id}`}
+                          style={{
+                            width: "18px",
+                            height: "18px",
+                            borderRadius: "999px",
+                            background: user.color,
+                            color: "#111",
+                            fontSize: "9px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          {user.id.slice(0, 2)}
+                        </span>
+                      ))}
+                    </div>
+                    {activeCollaborators.length > 5 && (
+                      <span style={{ fontSize: "11px", color: "#aaa" }}>
+                        +{activeCollaborators.length - 5}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <label className="ui-row">
                   <span>Color</span>
                   <input

@@ -5,15 +5,25 @@ import { decryptKey, loadEncryptedKeys } from "../lib/ai/keys";
 
 type Props = {
   enabled?: boolean;
+  canvasSpec?: { width: number; height: number };
+  selectionMask?: Uint8Array | null;
+  layerPixels?: Uint8ClampedArray | null;
+  onInpaint?: (payload: { prompt: string; denoiseStrength: number; promptInfluence: number }) => Promise<string>;
+  onImageToImage?: (payload: { prompt: string; denoiseStrength: number; promptInfluence: number }) => Promise<string>;
 };
 
 const EMPTY_KEYS: Record<AIProviderId, string> = {
   "openai-dalle3": "",
   "stability-ai": "",
   "hugging-face": "",
+  "openrouter": "",
 };
 
-export default function AIPanel({ enabled = false }: Props) {
+export default function AIPanel({
+  enabled = false,
+  onInpaint,
+  onImageToImage,
+}: Props) {
   const [userId, setUserId] = useState("");
   const [passphrase, setPassphrase] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<AIProviderId>("openai-dalle3");
@@ -21,6 +31,8 @@ export default function AIPanel({ enabled = false }: Props) {
   const [customPrompt, setCustomPrompt] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [keys, setKeys] = useState<Record<AIProviderId, string>>(() => ({ ...EMPTY_KEYS }));
+  const [denoiseStrength, setDenoiseStrength] = useState(0.6);
+  const [promptInfluence, setPromptInfluence] = useState(0.8);
 
   const providerOptions = useMemo(() => PROVIDERS, []);
 
@@ -44,6 +56,36 @@ export default function AIPanel({ enabled = false }: Props) {
   }
 
   const resolvedPrompt = customPrompt.trim() ? customPrompt : selectedPrompt;
+
+  async function handleInpaint() {
+    if (!onInpaint) return;
+    setStatus("Preparing inpainting request...");
+    try {
+      const message = await onInpaint({
+        prompt: resolvedPrompt,
+        denoiseStrength,
+        promptInfluence,
+      });
+      setStatus(message);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Inpainting failed.");
+    }
+  }
+
+  async function handleImageToImage() {
+    if (!onImageToImage) return;
+    setStatus("Preparing image-to-image request...");
+    try {
+      const message = await onImageToImage({
+        prompt: resolvedPrompt,
+        denoiseStrength,
+        promptInfluence,
+      });
+      setStatus(message);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Image-to-image failed.");
+    }
+  }
 
   return (
     <div className="panel">
@@ -134,10 +176,36 @@ export default function AIPanel({ enabled = false }: Props) {
 
         <div className="option-group">
           <div className="option-label">AI Editing</div>
-          <button className="uiBtn uiBtn--full" disabled={!enabled}>
+          <label className="option-row">
+            <span>Denoising Strength</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={denoiseStrength}
+              onChange={(e) => setDenoiseStrength(Number(e.target.value))}
+              disabled={!enabled}
+            />
+            <span className="mono">{denoiseStrength.toFixed(2)}</span>
+          </label>
+          <label className="option-row">
+            <span>Prompt Influence</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={promptInfluence}
+              onChange={(e) => setPromptInfluence(Number(e.target.value))}
+              disabled={!enabled}
+            />
+            <span className="mono">{promptInfluence.toFixed(2)}</span>
+          </label>
+          <button className="uiBtn uiBtn--full" disabled={!enabled} onClick={handleInpaint}>
             Inpaint Selection
           </button>
-          <button className="uiBtn uiBtn--full" disabled={!enabled}>
+          <button className="uiBtn uiBtn--full" disabled={!enabled} onClick={handleImageToImage}>
             Remove Background
           </button>
           <button className="uiBtn uiBtn--full" disabled={!enabled}>

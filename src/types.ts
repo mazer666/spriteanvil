@@ -51,7 +51,7 @@ export type LayerData = {
 
 export type GradientType = "linear" | "radial" | "angle" | "reflected" | "diamond";
 export type DitheringType = "none" | "bayer" | "floyd";
-export type SymmetryMode = "none" | "horizontal" | "vertical" | "both" | "radial4" | "radial8";
+export type SymmetryMode = "none" | "horizontal" | "vertical" | "both" | "radial";
 
 /**
  * UI/Editor Settings.
@@ -84,6 +84,13 @@ export type UiSettings = {
   gradientType: GradientType;
   ditheringType: DitheringType;
   symmetryMode: SymmetryMode;
+  symmetryAngle: number;
+  symmetrySegments: number;
+  edgeSnapEnabled: boolean;
+  edgeSnapRadius: number;
+  showArcGuides: boolean;
+  showGravityGuides: boolean;
+  showMotionTrails: boolean;
   brushSize: number;
   wandTolerance: number;
 };

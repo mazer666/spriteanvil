@@ -8,6 +8,7 @@ type Props = {
   onGrow: () => void;
   onShrink: () => void;
   onFeather: (radius: number) => void;
+  onDetectObject: () => void;
 };
 
 export default function SelectionPanel({
@@ -18,6 +19,7 @@ export default function SelectionPanel({
   onGrow,
   onShrink,
   onFeather,
+  onDetectObject,
 }: Props) {
   return (
     <div className="panel">
@@ -30,6 +32,9 @@ export default function SelectionPanel({
           <div className="option-label">Selection Tools</div>
           <button className="uiBtn uiBtn--full" onClick={onSelectAll}>
             Select All (Cmd+A)
+          </button>
+          <button className="uiBtn uiBtn--full" onClick={onDetectObject}>
+            Select Object Under Cursor
           </button>
           <button
             className="uiBtn uiBtn--full"

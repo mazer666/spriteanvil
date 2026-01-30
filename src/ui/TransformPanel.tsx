@@ -1,4 +1,5 @@
 import React from "react";
+import type { OutlineMode } from "../editor/outline";
 
 type Props = {
   onFlipHorizontal: () => void;
@@ -8,6 +9,7 @@ type Props = {
   onRotate180: () => void;
   onScale: (scaleX: number, scaleY: number) => void;
   onRotate: (degrees: number) => void;
+  onSmartOutline: (mode: OutlineMode) => void;
 };
 
 export default function TransformPanel({
@@ -18,11 +20,13 @@ export default function TransformPanel({
   onRotate180,
   onScale,
   onRotate,
+  onSmartOutline,
 }: Props) {
   const [scaleX, setScaleX] = React.useState(2);
   const [scaleY, setScaleY] = React.useState(2);
   const [lockAspect, setLockAspect] = React.useState(true);
   const [rotateDegrees, setRotateDegrees] = React.useState(90);
+  const [outlineMode, setOutlineMode] = React.useState<OutlineMode>("outside");
 
   function handleScaleXChange(value: number) {
     setScaleX(value);
@@ -136,6 +140,24 @@ export default function TransformPanel({
         >
           Apply Scale
         </button>
+      </div>
+
+      <div style={{ marginTop: '16px' }}>
+        <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '4px' }}>Smart Outline</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '6px', alignItems: 'center' }}>
+          <select
+            value={outlineMode}
+            onChange={(e) => setOutlineMode(e.target.value as OutlineMode)}
+            style={{ padding: '4px', background: '#1a1a1a', color: '#fff', border: '1px solid #444' }}
+          >
+            <option value="inside">Inside</option>
+            <option value="outside">Outside</option>
+            <option value="center">Centered</option>
+          </select>
+          <button onClick={() => onSmartOutline(outlineMode)} style={{ padding: '6px', fontSize: '12px' }}>
+            Apply
+          </button>
+        </div>
       </div>
     </div>
   );

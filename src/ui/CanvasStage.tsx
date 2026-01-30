@@ -5,7 +5,7 @@ import { cloneBuffer, drawLine, hexToRgb, getPixel, setPixel } from "../editor/p
 import { compositeLayers } from "../editor/layers";
 import { floodFill, floodFillWithTolerance } from "../editor/tools/fill";
 import { applyFloydSteinbergDither, drawGradient } from "../editor/tools/gradient";
-import { drawSymmetryGuides } from "../editor/symmetry";
+import { drawSymmetryGuides, getSymmetryTransforms } from "../editor/symmetry";
 import {
   drawRectangle,
   fillRectangle,
@@ -46,6 +46,7 @@ export default function CanvasStage(props: {
   onCursorMove?: (position: { x: number; y: number } | null) => void;
   frames?: Frame[];
   currentFrameIndex?: number;
+  remoteCursors?: Record<string, { x: number; y: number; color: string }>;
 }) {
   const {
     settings,
@@ -65,7 +66,8 @@ export default function CanvasStage(props: {
     onColorPick,
     onCursorMove,
     frames,
-    currentFrameIndex
+    currentFrameIndex,
+    remoteCursors
   } = props;
 
   const shapePreviewTools: ToolId[] = [
@@ -137,7 +139,31 @@ export default function CanvasStage(props: {
     bufRef.current = buffer;
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buffer, compositeBuffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB, shapePreview, lassoPreview, selection, floatingBuffer, panOffset, animFrame]);
+  }, [
+    buffer,
+    compositeBuffer,
+    settings.zoom,
+    settings.showGrid,
+    settings.gridSize,
+    settings.backgroundMode,
+    settings.checkerSize,
+    settings.checkerA,
+    settings.checkerB,
+    settings.symmetryMode,
+    settings.symmetryAngle,
+    settings.symmetrySegments,
+    settings.edgeSnapEnabled,
+    settings.edgeSnapRadius,
+    settings.showArcGuides,
+    settings.showGravityGuides,
+    settings.showMotionTrails,
+    shapePreview,
+    lassoPreview,
+    selection,
+    floatingBuffer,
+    panOffset,
+    animFrame,
+  ]);
 
   useEffect(() => {
     function isInputFocused(): boolean {
@@ -318,7 +344,13 @@ export default function CanvasStage(props: {
     }
 
     let changedAny = false;
-    const transforms = getSymmetryTransforms(canvasSpec.width, canvasSpec.height, settings.symmetryMode);
+    const transforms = getSymmetryTransforms(
+      canvasSpec.width,
+      canvasSpec.height,
+      settings.symmetryMode,
+      settings.symmetryAngle,
+      settings.symmetrySegments
+    );
     const seen = new Set<string>();
     transforms.forEach((transform) => {
       const start = transform(startX, startY);
@@ -344,7 +376,13 @@ export default function CanvasStage(props: {
     }
 
     let changedAny = false;
-    const transforms = getSymmetryTransforms(canvasSpec.width, canvasSpec.height, settings.symmetryMode);
+    const transforms = getSymmetryTransforms(
+      canvasSpec.width,
+      canvasSpec.height,
+      settings.symmetryMode,
+      settings.symmetryAngle,
+      settings.symmetrySegments
+    );
     const seen = new Set<string>();
     transforms.forEach((transform) => {
       const start = transform(startX, startY);
@@ -584,16 +622,23 @@ export default function CanvasStage(props: {
     }
 
     if (tool === "pen" || tool === "eraser") {
+      const snapped = snapToEdge(p.x, p.y);
+      st.lastX = snapped.x;
+      st.lastY = snapped.y;
+      st.startX = snapped.x;
+      st.startY = snapped.y;
       const did = drawBrushLineWithSymmetry(
         bufRef.current,
         canvasSpec.width,
         canvasSpec.height,
-        p.x,
-        p.y,
-        p.x,
-        p.y,
+        snapped.x,
+        snapped.y,
+        snapped.x,
+        snapped.y,
         c,
         settings.symmetryMode,
+        settings.symmetryAngle,
+        settings.symmetrySegments,
         settings.brushSize,
         selection ?? undefined
       );
@@ -633,8 +678,9 @@ export default function CanvasStage(props: {
     if (tool === "pen" || tool === "eraser") {
       const stabilized = applyStabilizer(p0.x + 0.5, p0.y + 0.5);
 
-      const x = Math.floor(stabilized.x);
-      const y = Math.floor(stabilized.y);
+      const snapped = snapToEdge(Math.floor(stabilized.x), Math.floor(stabilized.y));
+      const x = snapped.x;
+      const y = snapped.y;
 
       if (x === st.lastX && y === st.lastY) return;
 
@@ -649,6 +695,8 @@ export default function CanvasStage(props: {
         y,
         c,
         settings.symmetryMode,
+        settings.symmetryAngle,
+        settings.symmetrySegments,
         settings.brushSize,
         selection ?? undefined
       );
@@ -694,6 +742,41 @@ export default function CanvasStage(props: {
     if (strokeRef.current.active) {
       moveStroke(e);
     }
+  }
+
+  function isEdgePixel(pixels: Uint8ClampedArray, x: number, y: number) {
+    const idx = (y * canvasSpec.width + x) * 4;
+    if (pixels[idx + 3] === 0) return false;
+    const neighbors = [
+      { x: x - 1, y },
+      { x: x + 1, y },
+      { x, y: y - 1 },
+      { x, y: y + 1 },
+    ];
+    return neighbors.some((n) => {
+      if (n.x < 0 || n.y < 0 || n.x >= canvasSpec.width || n.y >= canvasSpec.height) return true;
+      const nIdx = (n.y * canvasSpec.width + n.x) * 4;
+      return pixels[nIdx + 3] === 0;
+    });
+  }
+
+  function snapToEdge(x: number, y: number): { x: number; y: number } {
+    if (!settings.edgeSnapEnabled) return { x, y };
+    const radius = Math.max(1, Math.min(12, settings.edgeSnapRadius));
+    let best: { x: number; y: number; dist: number } | null = null;
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= canvasSpec.width || ny >= canvasSpec.height) continue;
+        if (!isEdgePixel(compositeBuffer, nx, ny)) continue;
+        const dist = dx * dx + dy * dy;
+        if (!best || dist < best.dist) {
+          best = { x: nx, y: ny, dist };
+        }
+      }
+    }
+    return best ? { x: best.x, y: best.y } : { x, y };
   }
 
   function endStroke(e?: React.PointerEvent) {
@@ -742,18 +825,20 @@ export default function CanvasStage(props: {
       const { startX, startY, endX, endY } = shapePreview;
 
       if (tool === "line") {
-        const did = drawLineWithSymmetry(
-          bufRef.current,
-          canvasSpec.width,
-          canvasSpec.height,
-          startX,
-          startY,
-          endX,
-          endY,
-          c,
-          settings.symmetryMode,
-          selection ?? undefined
-        );
+          const did = drawLineWithSymmetry(
+            bufRef.current,
+            canvasSpec.width,
+            canvasSpec.height,
+            startX,
+            startY,
+            endX,
+            endY,
+            c,
+            settings.symmetryMode,
+            settings.symmetryAngle,
+            settings.symmetrySegments,
+            selection ?? undefined
+          );
         if (did) st.changed = true;
       }
 
@@ -1004,8 +1089,124 @@ export default function CanvasStage(props: {
     if (settings.symmetryMode !== "none") {
       ctx.save();
       ctx.translate(originX, originY);
-      drawSymmetryGuides(ctx, canvasSpec.width, canvasSpec.height, settings.symmetryMode, zoom);
+      drawSymmetryGuides(
+        ctx,
+        canvasSpec.width,
+        canvasSpec.height,
+        settings.symmetryMode,
+        zoom,
+        settings.symmetryAngle,
+        settings.symmetrySegments
+      );
       ctx.restore();
+    }
+
+    if (settings.showArcGuides || settings.showGravityGuides) {
+      ctx.save();
+      ctx.translate(originX, originY);
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 4]);
+      ctx.globalAlpha = 0.6;
+
+      /**
+       * Physics guide math (beginner friendly):
+       *
+       * A projectile arc can be modeled with a parabola:
+       *   y = a(x - h)^2 + k
+       * where (h, k) is the apex (highest point). We pick h at mid-width,
+       * k at 20% height, and solve for a so the curve passes through both
+       * endpoints at the bottom of the canvas.
+       */
+      if (settings.showArcGuides) {
+        ctx.strokeStyle = "rgba(122, 162, 247, 0.9)";
+        const w = canvasSpec.width * zoom;
+        const h = canvasSpec.height * zoom;
+        const apexX = w / 2;
+        const apexY = h * 0.2;
+        const endY = h * 0.85;
+        const a = (endY - apexY) / Math.pow(0 - apexX, 2);
+        ctx.beginPath();
+        for (let x = 0; x <= w; x += Math.max(1, zoom)) {
+          const y = a * Math.pow(x - apexX, 2) + apexY;
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      /**
+       * Gravity/circular guide math:
+       * A circular path follows x = r cos(t), y = r sin(t).
+       * We render a circle centered in the canvas to visualize
+       * consistent angular motion.
+       */
+      if (settings.showGravityGuides) {
+        ctx.strokeStyle = "rgba(92, 252, 187, 0.9)";
+        const radius = Math.min(canvasSpec.width, canvasSpec.height) * zoom * 0.35;
+        ctx.beginPath();
+        ctx.arc(
+          canvasSpec.width * zoom * 0.5,
+          canvasSpec.height * zoom * 0.5,
+          radius,
+          0,
+          Math.PI * 2
+        );
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    if (settings.showOnionSkin && settings.showMotionTrails && frames && currentFrameIndex !== undefined) {
+      const maxTrailFrames = Math.min(frames.length - 1, settings.onionPrev + settings.onionNext);
+      if (maxTrailFrames > 0) {
+        const trailPoints: Array<{ x: number; y: number }> = [];
+        for (let offset = -settings.onionPrev; offset <= settings.onionNext; offset++) {
+          const idx = currentFrameIndex + offset;
+          if (idx < 0 || idx >= frames.length || idx === currentFrameIndex) continue;
+          const centroid = getFrameCentroid(frames[idx].pixels, canvasSpec.width, canvasSpec.height);
+          if (centroid) {
+            trailPoints.push({
+              x: originX + centroid.x * zoom + zoom * 0.5,
+              y: originY + centroid.y * zoom + zoom * 0.5,
+            });
+          }
+        }
+        if (trailPoints.length > 1) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(255, 184, 108, 0.65)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(trailPoints[0].x, trailPoints[0].y);
+          trailPoints.slice(1).forEach((point) => ctx.lineTo(point.x, point.y));
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+
+    if (remoteCursors && Object.keys(remoteCursors).length > 0) {
+      Object.entries(remoteCursors).forEach(([id, cursor]) => {
+        const cx = originX + cursor.x * zoom + zoom * 0.5;
+        const cy = originY + cursor.y * zoom + zoom * 0.5;
+        ctx.save();
+        ctx.strokeStyle = cursor.color;
+        ctx.fillStyle = cursor.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(3, zoom * 0.4), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - 6, cy);
+        ctx.lineTo(cx + 6, cy);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 6);
+        ctx.lineTo(cx, cy + 6);
+        ctx.stroke();
+        ctx.font = "10px sans-serif";
+        ctx.fillText(id.slice(0, 4), cx + 6, cy - 6);
+        ctx.restore();
+      });
     }
 
     if (shapePreview) {
@@ -1401,6 +1602,8 @@ function drawLineWithSymmetry(
   y1: number,
   rgba: { r: number; g: number; b: number; a: number },
   symmetryMode: UiSettings["symmetryMode"],
+  symmetryAngle: UiSettings["symmetryAngle"],
+  symmetrySegments: UiSettings["symmetrySegments"],
   selection?: Uint8Array
 ): boolean {
   if (symmetryMode === "none") {
@@ -1410,7 +1613,7 @@ function drawLineWithSymmetry(
   }
 
   let changedAny = false;
-  const transforms = getSymmetryTransforms(width, height, symmetryMode);
+  const transforms = getSymmetryTransforms(width, height, symmetryMode, symmetryAngle, symmetrySegments);
   const seenLines = new Set<string>();
 
   transforms.forEach((transform) => {
@@ -1439,6 +1642,8 @@ function drawBrushLineWithSymmetry(
   y1: number,
   rgba: { r: number; g: number; b: number; a: number },
   symmetryMode: UiSettings["symmetryMode"],
+  symmetryAngle: UiSettings["symmetryAngle"],
+  symmetrySegments: UiSettings["symmetrySegments"],
   brushSize: number,
   selection?: Uint8Array
 ): boolean {
@@ -1447,7 +1652,7 @@ function drawBrushLineWithSymmetry(
   }
 
   let changedAny = false;
-  const transforms = getSymmetryTransforms(width, height, symmetryMode);
+  const transforms = getSymmetryTransforms(width, height, symmetryMode, symmetryAngle, symmetrySegments);
   const seenLines = new Set<string>();
 
   transforms.forEach((transform) => {
@@ -1462,85 +1667,6 @@ function drawBrushLineWithSymmetry(
   });
 
   return changedAny;
-}
-
-function getSymmetryTransforms(
-  width: number,
-  height: number,
-  symmetryMode: UiSettings["symmetryMode"]
-): Array<(x: number, y: number) => { x: number; y: number }> {
-  const cx = Math.floor(width / 2);
-  const cy = Math.floor(height / 2);
-
-  const transforms: Array<(x: number, y: number) => { x: number; y: number }> = [];
-  const seen = new Set<string>();
-
-  function addTransform(fn: (x: number, y: number) => { x: number; y: number }) {
-    const sampleA = fn(0, 0);
-    const sampleB = fn(1, 0);
-    const key = `${sampleA.x},${sampleA.y}|${sampleB.x},${sampleB.y}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    transforms.push(fn);
-  }
-
-  const identity = (x: number, y: number) => ({ x, y });
-  addTransform(identity);
-
-  if (symmetryMode === "horizontal" || symmetryMode === "both") {
-    addTransform((x, y) => ({ x: 2 * cx - x, y }));
-  }
-
-  if (symmetryMode === "vertical" || symmetryMode === "both") {
-    addTransform((x, y) => ({ x, y: 2 * cy - y }));
-  }
-
-  if (symmetryMode === "both") {
-    addTransform((x, y) => ({ x: 2 * cx - x, y: 2 * cy - y }));
-  }
-
-  if (symmetryMode === "radial4" || symmetryMode === "radial8") {
-    addTransform((x, y) => {
-      const dx = x - cx;
-      const dy = y - cy;
-      return { x: cx - dy, y: cy + dx };
-    });
-    addTransform((x, y) => {
-      const dx = x - cx;
-      const dy = y - cy;
-      return { x: cx - dx, y: cy - dy };
-    });
-    addTransform((x, y) => {
-      const dx = x - cx;
-      const dy = y - cy;
-      return { x: cx + dy, y: cy - dx };
-    });
-  }
-
-  if (symmetryMode === "radial8") {
-    addTransform((x, y) => {
-      const dx = x - cx;
-      const dy = y - cy;
-      return { x: cx + dy, y: cy + dx };
-    });
-    addTransform((x, y) => {
-      const dx = x - cx;
-      const dy = y - cy;
-      return { x: cx - dy, y: cy - dx };
-    });
-    addTransform((x, y) => {
-      const dx = x - cx;
-      const dy = y - cy;
-      return { x: cx - dx, y: cy + dy };
-    });
-    addTransform((x, y) => {
-      const dx = x - cx;
-      const dy = y - cy;
-      return { x: cx + dx, y: cy - dy };
-    });
-  }
-
-  return transforms;
 }
 
 function applySelectionMask(
@@ -1559,6 +1685,28 @@ function applySelectionMask(
       after[idx + 3] = before[idx + 3];
     }
   }
+}
+
+function getFrameCentroid(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number
+): { x: number; y: number } | null {
+  let sumX = 0;
+  let sumY = 0;
+  let count = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      if (pixels[idx + 3] > 0) {
+        sumX += x;
+        sumY += y;
+        count += 1;
+      }
+    }
+  }
+  if (count === 0) return null;
+  return { x: sumX / count, y: sumY / count };
 }
 
 type SelectionMode = "replace" | "union" | "subtract" | "intersect";

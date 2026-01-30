@@ -166,3 +166,121 @@ export function downloadCanvasAsPNG(canvas: HTMLCanvasElement, filename: string)
     URL.revokeObjectURL(url);
   }, "image/png");
 }
+
+export type EngineTarget = "spriteanvil" | "godot" | "unity" | "phaser";
+export type EngineJsonFormat = "hash" | "array";
+
+type FrameRect = { x: number; y: number; w: number; h: number };
+
+function formatFloat(value: number, digits = 4) {
+  return Number.isFinite(value) ? value.toFixed(digits) : "0.0000";
+}
+
+function buildFrameName(index: number) {
+  return `frame_${String(index).padStart(3, "0")}`;
+}
+
+/**
+ * Generates Godot .tres AtlasTexture files using string templates.
+ * Each frame gets its own resource referencing the spritesheet atlas.
+ */
+export function generateGodotAtlasTextures(
+  projectName: string,
+  imageName: string,
+  frameRects: FrameRect[]
+): Array<{ filename: string; content: string }> {
+  return frameRects.map((rect, index) => {
+    const name = buildFrameName(index);
+    const content = `[gd_resource type="AtlasTexture" format=3]\n\n` +
+      `[ext_resource path="res://${imageName}" type="Texture2D" id=1]\n\n` +
+      `[resource]\n` +
+      `atlas = ExtResource( 1 )\n` +
+      `region = Rect2( ${rect.x}, ${rect.y}, ${rect.w}, ${rect.h} )\n`;
+    return { filename: `${projectName}_${name}.tres`, content };
+  });
+}
+
+export function generateUnitySpritesheetJSON(
+  frames: Frame[],
+  frameRects: FrameRect[],
+  canvasWidth: number,
+  canvasHeight: number,
+  sheetWidth: number,
+  sheetHeight: number,
+  imageName: string,
+  format: EngineJsonFormat
+): string {
+  const entries = frames.map((frame, index) => {
+    const rect = frameRects[index];
+    const pivot = frame.pivot ?? { x: Math.floor(canvasWidth / 2), y: canvasHeight - 1 };
+    const pivotX = pivot.x / canvasWidth;
+    const pivotY = pivot.y / canvasHeight;
+    if (format === "hash") {
+      return `    \"${buildFrameName(index)}\": {\n` +
+        `      \"frame\": { \"x\": ${rect.x}, \"y\": ${rect.y}, \"w\": ${rect.w}, \"h\": ${rect.h} },\n` +
+        `      \"pivot\": { \"x\": ${formatFloat(pivotX)}, \"y\": ${formatFloat(pivotY)} },\n` +
+        `      \"duration\": ${frame.durationMs}\n` +
+        `    }`;
+    }
+    return `    {\n` +
+      `      \"filename\": \"${buildFrameName(index)}\",\n` +
+      `      \"frame\": { \"x\": ${rect.x}, \"y\": ${rect.y}, \"w\": ${rect.w}, \"h\": ${rect.h} },\n` +
+      `      \"pivot\": { \"x\": ${formatFloat(pivotX)}, \"y\": ${formatFloat(pivotY)} },\n` +
+      `      \"duration\": ${frame.durationMs}\n` +
+      `    }`;
+  });
+
+  const framesBlock = format === "hash"
+    ? `  \"frames\": {\n${entries.join(",\n")}\n  }`
+    : `  \"frames\": [\n${entries.join(",\n")}\n  ]`;
+
+  return `{\n${framesBlock},\n  \"meta\": {\n` +
+    `    \"app\": \"SpriteAnvil\",\n` +
+    `    \"engine\": \"unity\",\n` +
+    `    \"image\": \"${imageName}\",\n` +
+    `    \"size\": { \"w\": ${sheetWidth}, \"h\": ${sheetHeight} },\n` +
+    `    \"canvas\": { \"w\": ${canvasWidth}, \"h\": ${canvasHeight} }\n` +
+    `  }\n}`;
+}
+
+export function generatePhaserAtlasJSON(
+  frames: Frame[],
+  frameRects: FrameRect[],
+  canvasWidth: number,
+  canvasHeight: number,
+  sheetWidth: number,
+  sheetHeight: number,
+  imageName: string,
+  format: EngineJsonFormat
+): string {
+  const entries = frames.map((frame, index) => {
+    const rect = frameRects[index];
+    const pivot = frame.pivot ?? { x: Math.floor(canvasWidth / 2), y: canvasHeight - 1 };
+    const pivotX = pivot.x / canvasWidth;
+    const pivotY = pivot.y / canvasHeight;
+    const base = `      \"frame\": { \"x\": ${rect.x}, \"y\": ${rect.y}, \"w\": ${rect.w}, \"h\": ${rect.h} },\n` +
+      `      \"spriteSourceSize\": { \"x\": 0, \"y\": 0, \"w\": ${canvasWidth}, \"h\": ${canvasHeight} },\n` +
+      `      \"sourceSize\": { \"w\": ${canvasWidth}, \"h\": ${canvasHeight} },\n` +
+      `      \"pivot\": { \"x\": ${formatFloat(pivotX)}, \"y\": ${formatFloat(pivotY)} },\n` +
+      `      \"duration\": ${frame.durationMs}`;
+    if (format === "hash") {
+      return `    \"${buildFrameName(index)}\": {\n${base}\n    }`;
+    }
+    return `    {\n` +
+      `      \"filename\": \"${buildFrameName(index)}\",\n` +
+      `${base}\n` +
+      `    }`;
+  });
+
+  const framesBlock = format === "hash"
+    ? `  \"frames\": {\n${entries.join(",\n")}\n  }`
+    : `  \"frames\": [\n${entries.join(",\n")}\n  ]`;
+
+  return `{\n${framesBlock},\n  \"meta\": {\n` +
+    `    \"app\": \"SpriteAnvil\",\n` +
+    `    \"engine\": \"phaser\",\n` +
+    `    \"image\": \"${imageName}\",\n` +
+    `    \"size\": { \"w\": ${sheetWidth}, \"h\": ${sheetHeight} },\n` +
+    `    \"scale\": \"1\"\n` +
+    `  }\n}`;
+}

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { CanvasSpec, Frame, UiSettings } from "../types";
+import type { EasingCurve } from "../editor/animation";
 import { AnimationTag } from "../lib/supabase/animation_tags";
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
   onDeleteFrame: () => void;
   onUpdateFrameDuration: (index: number, durationMs: number) => void;
   onTogglePlayback: () => void;
+  onGenerateTweens: (startIndex: number, endIndex: number, count: number, easing: EasingCurve) => void;
   animationTags: AnimationTag[];
   activeTagId: string | null;
   loopTagOnly: boolean;
@@ -38,6 +40,7 @@ export default function Timeline({
   onDeleteFrame,
   onUpdateFrameDuration,
   onTogglePlayback,
+  onGenerateTweens,
   animationTags,
   activeTagId,
   loopTagOnly,
@@ -52,6 +55,10 @@ export default function Timeline({
   const [newTagStart, setNewTagStart] = useState(0);
   const [newTagEnd, setNewTagEnd] = useState(0);
   const [newTagColor, setNewTagColor] = useState("#4bb8bf");
+  const [tweenStart, setTweenStart] = useState(0);
+  const [tweenEnd, setTweenEnd] = useState(1);
+  const [tweenCount, setTweenCount] = useState(1);
+  const [tweenEasing, setTweenEasing] = useState<EasingCurve>("linear");
 
   useEffect(() => {
     frames.forEach((frame, index) => {
@@ -82,6 +89,24 @@ export default function Timeline({
     setNewTagStart((prev) => Math.min(prev, frames.length - 1));
     setNewTagEnd((prev) => Math.min(Math.max(prev, 0), frames.length - 1));
   }, [frames.length]);
+
+  useEffect(() => {
+    if (frames.length < 2) {
+      setTweenStart(0);
+      setTweenEnd(0);
+      return;
+    }
+    setTweenStart((prev) => Math.min(prev, frames.length - 2));
+    setTweenEnd((prev) => Math.min(Math.max(prev, 1), frames.length - 1));
+  }, [frames.length]);
+
+  function handleGenerateTweens() {
+    if (frames.length < 2) return;
+    const start = Math.min(tweenStart, tweenEnd);
+    const end = Math.max(tweenStart, tweenEnd);
+    if (start === end) return;
+    onGenerateTweens(start, end, Math.max(1, tweenCount), tweenEasing);
+  }
 
   function handleDurationChange(index: number, value: string) {
     const ms = Math.max(10, Math.min(5000, Number(value)));
@@ -267,6 +292,73 @@ export default function Timeline({
               </button>
             </div>
           )}
+        </div>
+
+        <div style={{ padding: "8px", borderBottom: "1px solid #333" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+            <strong style={{ fontSize: "12px" }}>Tween Generator</strong>
+            <span style={{ fontSize: "11px", color: "#aaa" }}>
+              Build in-between frames with easing
+            </span>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+            <label style={{ fontSize: "11px", color: "#aaa" }}>From</label>
+            <select
+              value={tweenStart}
+              onChange={(e) => setTweenStart(Number(e.target.value))}
+              style={{ padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+            >
+              {frames.map((_, index) => (
+                <option key={`tween-start-${index}`} value={index}>
+                  {index + 1}
+                </option>
+              ))}
+            </select>
+
+            <label style={{ fontSize: "11px", color: "#aaa" }}>To</label>
+            <select
+              value={tweenEnd}
+              onChange={(e) => setTweenEnd(Number(e.target.value))}
+              style={{ padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+            >
+              {frames.map((_, index) => (
+                <option key={`tween-end-${index}`} value={index}>
+                  {index + 1}
+                </option>
+              ))}
+            </select>
+
+            <label style={{ fontSize: "11px", color: "#aaa" }}>In-betweens</label>
+            <input
+              type="number"
+              min={1}
+              max={32}
+              value={tweenCount}
+              onChange={(e) => setTweenCount(Number(e.target.value))}
+              style={{ width: "70px", padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+            />
+
+            <label style={{ fontSize: "11px", color: "#aaa" }}>Easing</label>
+            <select
+              value={tweenEasing}
+              onChange={(e) => setTweenEasing(e.target.value as EasingCurve)}
+              style={{ padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+            >
+              <option value="linear">Linear</option>
+              <option value="easeInQuad">Ease In Quad</option>
+              <option value="easeOutQuad">Ease Out Quad</option>
+              <option value="elastic">Elastic</option>
+            </select>
+
+            <button
+              onClick={handleGenerateTweens}
+              style={{ padding: "6px", fontSize: "11px" }}
+              disabled={frames.length < 2}
+            >
+              Generate Tweens
+            </button>
+          </div>
         </div>
 
         <div className="timeline__frames">

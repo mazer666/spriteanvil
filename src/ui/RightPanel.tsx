@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { UiSettings, ToolId, LayerData, BlendMode } from "../types";
+import { UiSettings, ToolId, LayerData, BlendMode, CanvasSpec } from "../types";
 import LayerPanel from "./LayerPanel";
 import PalettePanel from "./PalettePanel";
 import { PaletteData } from "../lib/projects/snapshot";
@@ -8,11 +8,18 @@ import ColorAdjustPanel from "./ColorAdjustPanel";
 import ToolOptionsPanel from "./ToolOptionsPanel";
 import SelectionPanel from "./SelectionPanel";
 import AIPanel from "./AIPanel";
+import MipmapPreview from "./MipmapPreview";
 
 type Props = {
   tool: ToolId;
   settings: UiSettings;
   onChangeSettings: (next: UiSettings) => void;
+  canvasSpec?: CanvasSpec;
+  previewBuffer?: Uint8ClampedArray;
+  selectionMask?: Uint8Array | null;
+  layerPixels?: Uint8ClampedArray | null;
+  onInpaint?: (payload: { prompt: string; denoiseStrength: number; promptInfluence: number }) => Promise<string>;
+  onImageToImage?: (payload: { prompt: string; denoiseStrength: number; promptInfluence: number }) => Promise<string>;
 
   layers?: LayerData[];
   activeLayerId?: string | null;
@@ -56,6 +63,7 @@ type Props = {
     onRotate180: () => void;
     onScale: (scaleX: number, scaleY: number) => void;
     onRotate: (degrees: number) => void;
+    onSmartOutline: (mode: import("../editor/outline").OutlineMode) => void;
   };
 
   onColorAdjustOperations?: {
@@ -75,6 +83,7 @@ type Props = {
     onGrow: () => void;
     onShrink: () => void;
     onFeather: (radius: number) => void;
+    onDetectObject: () => void;
   };
 };
 
@@ -93,6 +102,12 @@ export default function RightPanel({
   onColorAdjustOperations,
   hasSelection,
   onSelectionOperations,
+  canvasSpec,
+  previewBuffer,
+  selectionMask,
+  layerPixels,
+  onInpaint,
+  onImageToImage,
 }: Props) {
   const tabs = useMemo(
     () => ["Tool", "Layers", "Palette", "Transform", "Color", "Selection", "AI"] as const,
@@ -117,7 +132,12 @@ export default function RightPanel({
 
       <div className="rightpanel__content" style={{ height: "calc(100% - 40px)", overflow: "auto" }}>
         {active === "Tool" && (
-          <ToolOptionsPanel tool={tool} settings={settings} onChangeSettings={onChangeSettings} />
+          <>
+            <ToolOptionsPanel tool={tool} settings={settings} onChangeSettings={onChangeSettings} />
+            {canvasSpec && previewBuffer && (
+              <MipmapPreview canvasSpec={canvasSpec} pixels={previewBuffer} />
+            )}
+          </>
         )}
 
         {active === "Layers" && layers && activeLayerId && onLayerOperations && (
@@ -151,7 +171,16 @@ export default function RightPanel({
           <SelectionPanel hasSelection={!!hasSelection} {...onSelectionOperations} />
         )}
 
-        {active === "AI" && <AIPanel enabled />}
+        {active === "AI" && (
+          <AIPanel
+            enabled
+            canvasSpec={canvasSpec}
+            selectionMask={selectionMask}
+            layerPixels={layerPixels}
+            onInpaint={onInpaint}
+            onImageToImage={onImageToImage}
+          />
+        )}
       </div>
     </div>
   );
