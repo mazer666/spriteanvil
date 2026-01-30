@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { UiSettings, ToolId, LayerData, BlendMode } from "../types";
 import LayerPanel from "./LayerPanel";
-import PalettePanel, { PaletteData } from "./PalettePanel";
+import PalettePanel from "./PalettePanel";
+import { PaletteData } from "../lib/projects/snapshot";
 import TransformPanel from "./TransformPanel";
 import ColorAdjustPanel from "./ColorAdjustPanel";
 import ToolOptionsPanel from "./ToolOptionsPanel";
@@ -42,6 +43,9 @@ type Props = {
     onSelectColor: (color: string) => void;
     onSwapColors: (fromColor: string, toColor: string) => void;
     onExtractPalette: () => void;
+    onImportPalette: (file: File) => void;
+    onExportPalette: (format: "gpl" | "ase") => void;
+    onGenerateRamp: (steps: number) => void;
   };
 
   onTransformOperations?: {

@@ -6,6 +6,7 @@ export type Command = {
   description?: string;
   shortcut?: string;
   category?: string;
+  keywords?: string[];
   action: () => void;
 };
 
@@ -20,12 +21,20 @@ export default function CommandPalette({ commands, isOpen, onClose }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filteredCommands = commands.filter(
-    (cmd) =>
-      cmd.name.toLowerCase().includes(search.toLowerCase()) ||
-      cmd.description?.toLowerCase().includes(search.toLowerCase()) ||
-      cmd.category?.toLowerCase().includes(search.toLowerCase())
-  );
+  const query = search.toLowerCase();
+  const filteredCommands = commands.filter((cmd) => {
+    const haystack = [
+      cmd.name,
+      cmd.description,
+      cmd.category,
+      cmd.shortcut,
+      ...(cmd.keywords ?? []),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(query);
+  });
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -100,7 +109,7 @@ export default function CommandPalette({ commands, isOpen, onClose }: Props) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Search commands..."
+          placeholder="Searchable actions..."
           style={{
             width: "100%",
             padding: "16px",

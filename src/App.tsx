@@ -7,7 +7,7 @@ import { HistoryStack } from "./editor/history";
 import { cloneBuffer, createBuffer } from "./editor/pixels";
 import { copySelection, cutSelection, pasteClipboard, ClipboardData } from "./editor/clipboard";
 import { compositeLayers, mergeDown, flattenImage } from "./editor/layers";
-import { PaletteData } from "./ui/PalettePanel";
+import { PaletteData, ProjectSnapshot } from "./lib/projects/snapshot";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { AnimationTag } from "./lib/supabase/animation_tags";
 import {
@@ -31,10 +31,31 @@ import {
 } from "./editor/tools/coloradjust";
 import { invertSelection } from "./editor/selection";
 import { extractPaletteFromPixels } from "./editor/palette";
+import {
+  createProject,
+  getProjects,
+  loadProjectSnapshot,
+  saveProjectSnapshot,
+  Project,
+  ProjectSnapshotPayload,
+} from "./lib/supabase/projects";
+import { buildPaletteRamp, exportPaletteFile, importPaletteFile } from "./lib/supabase/palettes";
+import { cacheProjectSnapshot, getCachedProjectSnapshot } from "./lib/storage/frameCache";
+import ProjectDashboard, { NewProjectRequest } from "./ui/ProjectDashboard";
+import ShortcutOverlay, { ShortcutGroup } from "./ui/ShortcutOverlay";
+import StatusBar from "./ui/StatusBar";
+import { hexToRgb } from "./utils/colors";
 
 export default function App() {
-  const [canvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
+  const [canvasSpec, setCanvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
   const [tool, setTool] = useState<ToolId>("pen");
+  const [projectView, setProjectView] = useState<"dashboard" | "editor">("dashboard");
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectLoading, setProjectLoading] = useState(false);
+  const [projectError, setProjectError] = useState<string | null>(null);
+  const [showShortcutOverlay, setShowShortcutOverlay] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
 
   const initialFrameId = useMemo(() => crypto.randomUUID(), []);
   const createEmptyPixels = () =>
@@ -58,6 +79,7 @@ export default function App() {
   const [floatingBuffer, setFloatingBuffer] = useState<FloatingSelection | null>(null);
   const [isTransforming, setIsTransforming] = useState(false);
   const clipboardRef = useRef<ClipboardData | null>(null);
+  const paletteImportRef = useRef<HTMLInputElement | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const playbackTimerRef = useRef<number | null>(null);
@@ -84,6 +106,78 @@ export default function App() {
       is_visible: true,
       is_locked: false,
       pixels: pixels ?? createEmptyPixels(),
+    };
+  }
+
+  function encodePixels(buffer: Uint8ClampedArray): string {
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let i = 0; i < buffer.length; i += chunkSize) {
+      binary += String.fromCharCode(...buffer.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  function decodePixels(data: string): Uint8ClampedArray {
+    const binary = atob(data);
+    const bytes = new Uint8ClampedArray(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  function serializeSnapshot(snapshot: ProjectSnapshot): ProjectSnapshotPayload {
+    return {
+      version: snapshot.version,
+      canvas: snapshot.canvas,
+      current_frame_index: snapshot.currentFrameIndex,
+      active_layer_ids: snapshot.activeLayerIds,
+      palettes: snapshot.palettes,
+      active_palette_id: snapshot.activePaletteId,
+      recent_colors: snapshot.recentColors,
+      settings: snapshot.settings ?? {},
+      frames: snapshot.frames.map((frame) => ({
+        id: frame.id,
+        duration_ms: frame.durationMs,
+        pivot: frame.pivot,
+        layers: frame.layers.map((layer) => ({
+          id: layer.id,
+          name: layer.name,
+          opacity: layer.opacity,
+          blend_mode: layer.blend_mode,
+          is_visible: layer.is_visible,
+          is_locked: layer.is_locked,
+          pixel_data: encodePixels(layer.pixels),
+        })),
+      })),
+    };
+  }
+
+  function deserializeSnapshot(payload: ProjectSnapshotPayload): ProjectSnapshot {
+    return {
+      version: payload.version,
+      canvas: payload.canvas,
+      currentFrameIndex: payload.current_frame_index,
+      activeLayerIds: payload.active_layer_ids,
+      palettes: payload.palettes,
+      activePaletteId: payload.active_palette_id,
+      recentColors: payload.recent_colors,
+      settings: payload.settings as Partial<UiSettings>,
+      frames: payload.frames.map((frame) => ({
+        id: frame.id,
+        durationMs: frame.duration_ms,
+        pivot: frame.pivot,
+        layers: frame.layers.map((layer) => ({
+          id: layer.id,
+          name: layer.name,
+          opacity: layer.opacity,
+          blend_mode: layer.blend_mode as BlendMode,
+          is_visible: layer.is_visible,
+          is_locked: layer.is_locked,
+          pixels: decodePixels(layer.pixel_data),
+        })),
+      })),
     };
   }
 
@@ -144,6 +238,111 @@ export default function App() {
   }));
 
   const zoomLabel = useMemo(() => `${Math.round(settings.zoom * 100)}%`, [settings.zoom]);
+  const colorRgbLabel = useMemo(() => {
+    const rgb = hexToRgb(settings.primaryColor);
+    if (!rgb) return "rgb(0, 0, 0)";
+    return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+  }, [settings.primaryColor]);
+  const memoryUsageLabel = useMemo(() => {
+    const totalBytes = Object.values(frameLayers).reduce((sum, layers) => {
+      return (
+        sum +
+        layers.reduce((layerSum, layer) => layerSum + (layer.pixels?.length ?? 0), 0)
+      );
+    }, 0);
+    const kb = totalBytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    return `${(kb / 1024).toFixed(2)} MB`;
+  }, [frameLayers]);
+  const cursorLabel = cursorPosition ? `${cursorPosition.x}, ${cursorPosition.y}` : "--";
+  const statusInfo = useMemo(
+    () => ({
+      colorHex: settings.primaryColor.toUpperCase(),
+      colorRgb: colorRgbLabel,
+      zoomLabel,
+      memoryUsage: memoryUsageLabel,
+      cursor: cursorLabel,
+    }),
+    [settings.primaryColor, colorRgbLabel, zoomLabel, memoryUsageLabel, cursorLabel]
+  );
+
+  const shortcutGroups: ShortcutGroup[] = useMemo(
+    () => [
+      {
+        title: "File",
+        items: [
+          { label: "Command Palette", shortcut: "Cmd+K" },
+          { label: "Save Snapshot", shortcut: "Cmd+S" },
+          { label: "Export", shortcut: "Cmd+E" },
+          { label: "Shortcut Cheat Sheet", shortcut: "Cmd+/" },
+        ],
+      },
+      {
+        title: "Edit",
+        items: [
+          { label: "Undo", shortcut: "Cmd+Z" },
+          { label: "Redo", shortcut: "Cmd+Shift+Z / Cmd+Y" },
+          { label: "Copy", shortcut: "Cmd+C" },
+          { label: "Cut", shortcut: "Cmd+X" },
+          { label: "Paste", shortcut: "Cmd+V" },
+          { label: "Select All", shortcut: "Cmd+A" },
+        ],
+      },
+      {
+        title: "View",
+        items: [
+          { label: "Zoom In", shortcut: "Cmd+=" },
+          { label: "Zoom Out", shortcut: "Cmd+-" },
+          { label: "Reset Zoom", shortcut: "Cmd+0" },
+          { label: "Toggle Grid", shortcut: "Cmd+'" },
+        ],
+      },
+      {
+        title: "Animation",
+        items: [
+          { label: "Play/Pause", shortcut: "Space" },
+          { label: "Next/Prev Frame", shortcut: "Alt+← / Alt+→" },
+        ],
+      },
+      {
+        title: "Tools",
+        items: [
+          { label: "Pen", shortcut: "B" },
+          { label: "Eraser", shortcut: "E" },
+          { label: "Fill", shortcut: "F" },
+          { label: "Eyedropper", shortcut: "I" },
+        ],
+      },
+    ],
+    []
+  );
+
+  async function refreshProjects() {
+    setProjectLoading(true);
+    setProjectError(null);
+    try {
+      const list = await getProjects();
+      setProjects(list);
+    } catch (error) {
+      setProjectError(error instanceof Error ? error.message : "Failed to load projects.");
+    } finally {
+      setProjectLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshProjects();
+  }, []);
+
+  useEffect(() => {
+    if (projects.length === 0) return;
+    const lastProjectId = localStorage.getItem("spriteanvil:lastProjectId");
+    if (!lastProjectId || activeProject) return;
+    const match = projects.find((project) => project.id === lastProjectId);
+    if (match) {
+      handleSelectProject(match);
+    }
+  }, [projects, activeProject]);
 
   function syncHistoryFlags() {
     setCanUndo(historyRef.current.canUndo());
@@ -212,19 +411,35 @@ export default function App() {
   }, [activeTag, currentFrameIndex, loopTagOnly]);
 
   function handleUndo() {
-    const next = historyRef.current.undo(buffer);
-    if (next !== buffer && activeLayerId) {
-      updateActiveLayerPixels(next);
-      syncHistoryFlags();
+    const next = historyRef.current.undo(buffer, frameLayers);
+    if (!next) return;
+    if (next.kind === "buffer") {
+      if (activeLayerId) {
+        updateActiveLayerPixels(next.snapshot);
+      }
+    } else {
+      setFrameLayers(() => {
+        rebuildFramesFromLayers(next.snapshot);
+        return next.snapshot;
+      });
     }
+    syncHistoryFlags();
   }
 
   function handleRedo() {
-    const next = historyRef.current.redo(buffer);
-    if (next !== buffer && activeLayerId) {
-      updateActiveLayerPixels(next);
-      syncHistoryFlags();
+    const next = historyRef.current.redo(buffer, frameLayers);
+    if (!next) return;
+    if (next.kind === "buffer") {
+      if (activeLayerId) {
+        updateActiveLayerPixels(next.snapshot);
+      }
+    } else {
+      setFrameLayers(() => {
+        rebuildFramesFromLayers(next.snapshot);
+        return next.snapshot;
+      });
     }
+    syncHistoryFlags();
   }
 
   function handleCopy() {
@@ -348,6 +563,208 @@ export default function App() {
       return { ...prev, [frameId]: nextLayers };
     });
   }
+
+  function rebuildFramesFromLayers(nextFrameLayers: Record<string, LayerData[]>) {
+    setFrames((prev) =>
+      prev.map((frame) => {
+        const layersForFrame = nextFrameLayers[frame.id] || [];
+        const composite = compositeLayers(layersForFrame, canvasSpec.width, canvasSpec.height);
+        return { ...frame, pixels: composite };
+      })
+    );
+  }
+
+  function buildSnapshot(): ProjectSnapshot {
+    const snapshotFrames = frames.map((frame) => ({
+      id: frame.id,
+      durationMs: frame.durationMs,
+      pivot: frame.pivot,
+      layers: (frameLayers[frame.id] || []).map((layer) => ({
+        id: layer.id,
+        name: layer.name,
+        opacity: layer.opacity,
+        blend_mode: layer.blend_mode,
+        is_visible: layer.is_visible,
+        is_locked: layer.is_locked,
+        pixels: layer.pixels ?? createEmptyPixels(),
+      })),
+    }));
+
+    return {
+      version: 1,
+      canvas: canvasSpec,
+      frames: snapshotFrames,
+      currentFrameIndex,
+      activeLayerIds: frameActiveLayerIds,
+      palettes,
+      activePaletteId,
+      recentColors,
+      settings,
+    };
+  }
+
+  function applySnapshot(snapshot: ProjectSnapshot) {
+    setCanvasSpec(snapshot.canvas);
+    setFrames(
+      snapshot.frames.map((frame) => ({
+        id: frame.id,
+        durationMs: frame.durationMs,
+        pixels: compositeLayers(frame.layers, snapshot.canvas.width, snapshot.canvas.height),
+        pivot: frame.pivot,
+      }))
+    );
+    setFrameLayers(() =>
+      snapshot.frames.reduce<Record<string, LayerData[]>>((acc, frame) => {
+        acc[frame.id] = frame.layers;
+        return acc;
+      }, {})
+    );
+    const activeIds = { ...snapshot.activeLayerIds };
+    snapshot.frames.forEach((frame) => {
+      if (!activeIds[frame.id] && frame.layers[0]) {
+        activeIds[frame.id] = frame.layers[0].id;
+      }
+    });
+    setFrameActiveLayerIds(activeIds);
+    setCurrentFrameIndex(
+      Math.min(snapshot.currentFrameIndex, Math.max(snapshot.frames.length - 1, 0))
+    );
+    setPalettes(snapshot.palettes);
+    setActivePaletteId(snapshot.activePaletteId);
+    setRecentColors(snapshot.recentColors);
+    if (snapshot.settings) {
+      setSettings((prev) => ({ ...prev, ...snapshot.settings }));
+    }
+    historyRef.current = new HistoryStack();
+    syncHistoryFlags();
+    setSelection(null);
+    setFloatingBuffer(null);
+    setIsTransforming(false);
+  }
+
+  async function handleSelectProject(project: Project) {
+    setProjectLoading(true);
+    setProjectError(null);
+    try {
+      const cached = await getCachedProjectSnapshot(project.id);
+      if (cached) {
+        applySnapshot(cached);
+      } else {
+        const cloudSnapshot = await loadProjectSnapshot(project.id);
+        if (cloudSnapshot) {
+          const snapshot = deserializeSnapshot(cloudSnapshot);
+          applySnapshot(snapshot);
+          await cacheProjectSnapshot(project.id, snapshot);
+        } else {
+          const fallbackSnapshot: ProjectSnapshot = {
+            version: 1,
+            canvas: { width: 64, height: 64 },
+            frames: [
+              {
+                id: crypto.randomUUID(),
+                durationMs: 100,
+                pivot: { x: 32, y: 63 },
+                layers: [createLayer("Layer 1", createBuffer(64, 64))],
+              },
+            ],
+            currentFrameIndex: 0,
+            activeLayerIds: {},
+            palettes,
+            activePaletteId,
+            recentColors,
+            settings,
+          };
+          const frameId = fallbackSnapshot.frames[0].id;
+          fallbackSnapshot.activeLayerIds[frameId] = fallbackSnapshot.frames[0].layers[0].id;
+          applySnapshot(fallbackSnapshot);
+        }
+      }
+      setActiveProject(project);
+      setProjectView("editor");
+      localStorage.setItem("spriteanvil:lastProjectId", project.id);
+    } catch (error) {
+      setProjectError(error instanceof Error ? error.message : "Failed to load project.");
+    } finally {
+      setProjectLoading(false);
+    }
+  }
+
+  async function handleCreateProject(request: NewProjectRequest) {
+    setProjectLoading(true);
+    setProjectError(null);
+    try {
+      const newSnapshot: ProjectSnapshot = {
+        version: 1,
+        canvas: { width: request.width, height: request.height },
+        frames: [
+          {
+            id: crypto.randomUUID(),
+            durationMs: 100,
+            pivot: { x: Math.floor(request.width / 2), y: request.height - 1 },
+            layers: [createLayer("Layer 1", createBuffer(request.width, request.height))],
+          },
+        ],
+        currentFrameIndex: 0,
+        activeLayerIds: {},
+        palettes,
+        activePaletteId,
+        recentColors,
+        settings,
+      };
+      const activeLayerId = newSnapshot.frames[0].layers[0].id;
+      newSnapshot.activeLayerIds[newSnapshot.frames[0].id] = activeLayerId;
+
+      const cloudPayload = serializeSnapshot(newSnapshot);
+      const created = await createProject({
+        name: request.name,
+        metadata: cloudPayload,
+      });
+
+      if (!created) throw new Error("Failed to create project.");
+
+      setProjects((prev) => [created, ...prev]);
+      applySnapshot(newSnapshot);
+      await cacheProjectSnapshot(created.id, newSnapshot);
+      setActiveProject(created);
+      setProjectView("editor");
+      localStorage.setItem("spriteanvil:lastProjectId", created.id);
+    } catch (error) {
+      setProjectError(error instanceof Error ? error.message : "Failed to create project.");
+    } finally {
+      setProjectLoading(false);
+    }
+  }
+
+  const autoSaveStateRef = useRef({
+    buildSnapshot,
+    activeProject,
+    saveProjectSnapshot,
+    cacheProjectSnapshot,
+    serializeSnapshot,
+  });
+  autoSaveStateRef.current = {
+    buildSnapshot,
+    activeProject,
+    saveProjectSnapshot,
+    cacheProjectSnapshot,
+    serializeSnapshot,
+  };
+
+  useEffect(() => {
+    if (!activeProject) return;
+    const handleAutoSave = async () => {
+      const currentProject = autoSaveStateRef.current.activeProject;
+      if (!currentProject) return;
+      const snapshot = autoSaveStateRef.current.buildSnapshot();
+      await autoSaveStateRef.current.cacheProjectSnapshot(currentProject.id, snapshot);
+      const payload = autoSaveStateRef.current.serializeSnapshot(snapshot);
+      await autoSaveStateRef.current.saveProjectSnapshot(currentProject.id, payload);
+    };
+    const id = window.setInterval(() => {
+      handleAutoSave();
+    }, 60000);
+    return () => window.clearInterval(id);
+  }, [activeProject]);
 
   function onStrokeEnd(before: Uint8ClampedArray, after: Uint8ClampedArray) {
     historyRef.current.commit(before);
@@ -570,6 +987,28 @@ export default function App() {
     setActivePaletteId(newPalette.id);
   }
 
+  async function handleImportPalette(file: File) {
+    try {
+      const { name, colors } = await importPaletteFile(file);
+      if (colors.length === 0) return;
+      handleCreatePalette(name, colors);
+    } catch (error) {
+      console.error("Palette import failed:", error);
+    }
+  }
+
+  function handleExportPalette(format: "gpl" | "ase") {
+    const palette = palettes.find((p) => p.id === activePaletteId);
+    if (!palette) return;
+    const blob = exportPaletteFile(palette.name, palette.colors, format);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${palette.name}.${format}`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   function handleExtractPaletteFromImage() {
     const colors = extractPaletteFromPixels(
       compositeBuffer,
@@ -585,6 +1024,19 @@ export default function App() {
     };
     setPalettes((prev) => [newPalette, ...prev]);
     setActivePaletteId(newPalette.id);
+  }
+
+  function handleGeneratePaletteRamp(steps: number) {
+    const ramp = buildPaletteRamp(settings.primaryColor, settings.secondaryColor || "#000000", steps);
+    if (ramp.length === 0) return;
+    if (!activePaletteId) return;
+    setPalettes((prev) =>
+      prev.map((palette) =>
+        palette.id === activePaletteId
+          ? { ...palette, colors: [...palette.colors, ...ramp] }
+          : palette
+      )
+    );
   }
 
   function handleDeletePalette(id: string) {
@@ -614,9 +1066,34 @@ export default function App() {
 
   function handleSwapColors(fromColor: string, toColor: string) {
     if (isActiveLayerLocked) return;
-    const before = cloneBuffer(buffer);
-    // Implementation would replace all pixels of fromColor with toColor
-    historyRef.current.commit(before);
+    const from = hexToRgb(fromColor);
+    const to = hexToRgb(toColor);
+    if (!from || !to) return;
+
+    historyRef.current.commitLayers(frameLayers);
+    setFrameLayers((prev) => {
+      const next: Record<string, LayerData[]> = {};
+      Object.entries(prev).forEach(([frameId, layers]) => {
+        next[frameId] = layers.map((layer) => {
+          if (!layer.pixels) return layer;
+          const updated = new Uint8ClampedArray(layer.pixels);
+          for (let i = 0; i < updated.length; i += 4) {
+            if (
+              updated[i] === from.r &&
+              updated[i + 1] === from.g &&
+              updated[i + 2] === from.b
+            ) {
+              updated[i] = to.r;
+              updated[i + 1] = to.g;
+              updated[i + 2] = to.b;
+            }
+          }
+          return { ...layer, pixels: updated };
+        });
+      });
+      rebuildFramesFromLayers(next);
+      return next;
+    });
     syncHistoryFlags();
   }
 
@@ -940,8 +1417,8 @@ export default function App() {
   }
 
   const commands: Command[] = useMemo(() => [
-    { id: "undo", name: "Undo", shortcut: "Cmd+Z", category: "Edit", action: handleUndo },
-    { id: "redo", name: "Redo", shortcut: "Cmd+Y", category: "Edit", action: handleRedo },
+    { id: "undo", name: "Undo", shortcut: "Cmd+Z", category: "Edit", action: handleUndo, keywords: ["history"] },
+    { id: "redo", name: "Redo", shortcut: "Cmd+Y", category: "Edit", action: handleRedo, keywords: ["history"] },
     { id: "copy", name: "Copy", shortcut: "Cmd+C", category: "Edit", action: handleCopy },
     { id: "cut", name: "Cut", shortcut: "Cmd+X", category: "Edit", action: handleCut },
     { id: "paste", name: "Paste", shortcut: "Cmd+V", category: "Edit", action: handlePaste },
@@ -952,6 +1429,14 @@ export default function App() {
     { id: "deleteFrame", name: "Delete Frame", category: "Animation", action: handleDeleteFrame },
     { id: "playPause", name: "Play/Pause", shortcut: "Space", category: "Animation", action: handleTogglePlayback },
     { id: "export", name: "Export", shortcut: "Cmd+E", category: "File", action: () => setShowExportPanel(true) },
+    { id: "saveProject", name: "Save Project Snapshot", shortcut: "Cmd+S", category: "File", action: handleAutoSave, keywords: ["autosave", "cloud"] },
+    { id: "openDashboard", name: "Project Dashboard", category: "File", action: () => setProjectView("dashboard"), keywords: ["projects"] },
+    { id: "importPalette", name: "Import Palette", category: "Palette", action: () => paletteImportRef.current?.click() },
+    { id: "exportPaletteGpl", name: "Export Palette (GPL)", category: "Palette", action: () => handleExportPalette("gpl") },
+    { id: "exportPaletteAse", name: "Export Palette (ASE)", category: "Palette", action: () => handleExportPalette("ase") },
+    { id: "paletteRamp", name: "Generate Palette Ramp", category: "Palette", action: () => handleGeneratePaletteRamp(6) },
+    { id: "colorSwap", name: "Swap Primary/Secondary", category: "Palette", action: () => handleSwapColors(settings.primaryColor, settings.secondaryColor || "#000000") },
+    { id: "shortcuts", name: "Show Shortcuts", shortcut: "Cmd+/", category: "Help", action: () => setShowShortcutOverlay(true) },
     { id: "flipH", name: "Flip Horizontal", shortcut: "Cmd+H", category: "Transform", action: handleFlipHorizontal },
     { id: "flipV", name: "Flip Vertical", shortcut: "Cmd+Shift+H", category: "Transform", action: handleFlipVertical },
     { id: "rotate90CW", name: "Rotate 90° CW", shortcut: "Cmd+R", category: "Transform", action: handleRotate90CW },
@@ -976,6 +1461,10 @@ export default function App() {
     handleDuplicateFrame,
     handleDeleteFrame,
     handleTogglePlayback,
+    handleAutoSave,
+    handleExportPalette,
+    handleGeneratePaletteRamp,
+    handleSwapColors,
     handleFlipHorizontal,
     handleFlipVertical,
     handleRotate90CW,
@@ -985,6 +1474,8 @@ export default function App() {
     handleDesaturate,
     handleCreateLayer,
     handleChangeTool,
+    settings.primaryColor,
+    settings.secondaryColor,
   ]);
 
   useKeyboardShortcuts({
@@ -997,6 +1488,7 @@ export default function App() {
     onSelectAll: handleSelectAll,
     onDeselect: handleDeselect,
     onChangeTool: handleChangeTool,
+    onSave: handleAutoSave,
     onExport: () => setShowExportPanel(true),
     onZoomIn: () => setSettings((s) => ({ ...s, zoom: Math.min(32, s.zoom + 1) })),
     onZoomOut: () => setSettings((s) => ({ ...s, zoom: Math.max(1, s.zoom - 1) })),
@@ -1008,13 +1500,14 @@ export default function App() {
     onRotate90CW: handleRotate90CW,
     onRotate90CCW: handleRotate90CCW,
     onOpenCommandPalette: () => setShowCommandPalette(true),
+    onToggleShortcutOverlay: () => setShowShortcutOverlay((prev) => !prev),
     onNewFrame: handleInsertFrame,
     onDuplicateFrame: handleDuplicateFrame,
     onDeleteFrame: handleDeleteFrame,
     onNextFrame: () => setCurrentFrameIndex((i) => Math.min(frames.length - 1, i + 1)),
     onPrevFrame: () => setCurrentFrameIndex((i) => Math.max(0, i - 1)),
     onPlayPause: handleTogglePlayback,
-  }, !showCommandPalette);
+  }, projectView === "editor" && !showCommandPalette && !showShortcutOverlay);
 
   function handleChangeSelection(next: Uint8Array | null) {
     if (isTransforming) {
@@ -1049,188 +1542,223 @@ export default function App() {
 
   return (
     <>
-      <DockLayout
-        settings={settings}
-        onChangeSettings={setSettings}
-        tool={tool}
-        onChangeTool={handleChangeTool}
-        canvasSpec={canvasSpec}
-        buffer={buffer}
-        compositeBuffer={compositeBuffer}
-        onStrokeEnd={onStrokeEnd}
-        selection={selection}
-        onChangeSelection={handleChangeSelection}
-        floatingBuffer={floatingBuffer}
-        onBeginTransform={beginSelectionTransform}
-        onUpdateTransform={updateFloating}
-        onColorPick={handleSelectColor}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        frames={frames}
-        currentFrameIndex={currentFrameIndex}
-        isPlaying={isPlaying}
-        onSelectFrame={handleSelectFrame}
-        onInsertFrame={handleInsertFrame}
-        onDuplicateFrame={handleDuplicateFrame}
-        onDeleteFrame={handleDeleteFrame}
-        onUpdateFrameDuration={handleUpdateFrameDuration}
-        onTogglePlayback={handleTogglePlayback}
-        animationTags={animationTags}
-        activeTagId={activeAnimationTagId}
-        loopTagOnly={loopTagOnly}
-        onToggleLoopTagOnly={setLoopTagOnly}
-        onSelectTag={setActiveAnimationTagId}
-        onCreateTag={handleCreateAnimationTag}
-        onUpdateTag={handleUpdateAnimationTag}
-        onDeleteTag={handleDeleteAnimationTag}
-        layers={layers}
-        activeLayerId={activeLayerId}
-        onLayerOperations={{
-          onSelectLayer: (id) =>
-            setFrameActiveLayerIds((prev) => ({ ...prev, [currentFrame.id]: id })),
-          onCreateLayer: handleCreateLayer,
-          onDeleteLayer: handleDeleteLayer,
-          onDuplicateLayer: handleDuplicateLayer,
-          onToggleVisibility: handleToggleLayerVisibility,
-          onToggleLock: handleToggleLayerLock,
-          onUpdateOpacity: handleUpdateLayerOpacity,
-          onUpdateBlendMode: handleUpdateLayerBlendMode,
-          onRenameLayer: handleRenameLayer,
-          onReorderLayers: handleReorderLayers,
-          onMergeDown: handleMergeDown,
-          onFlatten: handleFlattenLayers,
-        }}
-        palettes={palettes}
-        activePaletteId={activePaletteId}
-        recentColors={recentColors}
-        onPaletteOperations={{
-          onSelectPalette: setActivePaletteId,
-          onCreatePalette: handleCreatePalette,
-          onDeletePalette: handleDeletePalette,
-          onAddColorToPalette: handleAddColorToPalette,
-          onRemoveColorFromPalette: handleRemoveColorFromPalette,
-          onSelectColor: handleSelectColor,
-          onSwapColors: handleSwapColors,
-          onExtractPalette: handleExtractPaletteFromImage,
-        }}
-        onTransformOperations={{
-          onFlipHorizontal: handleFlipHorizontal,
-          onFlipVertical: handleFlipVertical,
-          onRotate90CW: handleRotate90CW,
-          onRotate90CCW: handleRotate90CCW,
-          onRotate180: handleRotate180,
-          onScale: handleScale,
-          onRotate: handleRotateDegrees,
-        }}
-        onColorAdjustOperations={{
-          onAdjustHue: handleAdjustHue,
-          onAdjustSaturation: handleAdjustSaturation,
-          onAdjustBrightness: handleAdjustBrightness,
-          onInvert: handleInvert,
-          onDesaturate: handleDesaturate,
-          onPosterize: handlePosterize,
-        }}
-        onSelectionOperations={{
-          onSelectAll: handleSelectAll,
-          onDeselect: handleDeselect,
-          onInvertSelection: handleInvertSelection,
-          onGrow: handleGrowSelection,
-          onShrink: handleShrinkSelection,
-          onFeather: handleFeatherSelection,
-        }}
-        topBar={
-          <div className="topbar">
-            <div className="brand">
-              <div className="brand__name">SpriteAnvil</div>
-              <div className="brand__tagline">Forge sprites. Shape motion.</div>
-            </div>
+      {projectView === "dashboard" ? (
+        <ProjectDashboard
+          projects={projects}
+          onSelect={handleSelectProject}
+          onCreate={handleCreateProject}
+          onRefresh={refreshProjects}
+          loading={projectLoading}
+          error={projectError}
+        />
+      ) : (
+        <DockLayout
+          settings={settings}
+          onChangeSettings={setSettings}
+          tool={tool}
+          onChangeTool={handleChangeTool}
+          canvasSpec={canvasSpec}
+          buffer={buffer}
+          compositeBuffer={compositeBuffer}
+          onStrokeEnd={onStrokeEnd}
+          selection={selection}
+          onChangeSelection={handleChangeSelection}
+          floatingBuffer={floatingBuffer}
+          onBeginTransform={beginSelectionTransform}
+          onUpdateTransform={updateFloating}
+          onColorPick={handleSelectColor}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          frames={frames}
+          currentFrameIndex={currentFrameIndex}
+          isPlaying={isPlaying}
+          onSelectFrame={handleSelectFrame}
+          onInsertFrame={handleInsertFrame}
+          onDuplicateFrame={handleDuplicateFrame}
+          onDeleteFrame={handleDeleteFrame}
+          onUpdateFrameDuration={handleUpdateFrameDuration}
+          onTogglePlayback={handleTogglePlayback}
+          animationTags={animationTags}
+          activeTagId={activeAnimationTagId}
+          loopTagOnly={loopTagOnly}
+          onToggleLoopTagOnly={setLoopTagOnly}
+          onSelectTag={setActiveAnimationTagId}
+          onCreateTag={handleCreateAnimationTag}
+          onUpdateTag={handleUpdateAnimationTag}
+          onDeleteTag={handleDeleteAnimationTag}
+          layers={layers}
+          activeLayerId={activeLayerId}
+          onLayerOperations={{
+            onSelectLayer: (id) =>
+              setFrameActiveLayerIds((prev) => ({ ...prev, [currentFrame.id]: id })),
+            onCreateLayer: handleCreateLayer,
+            onDeleteLayer: handleDeleteLayer,
+            onDuplicateLayer: handleDuplicateLayer,
+            onToggleVisibility: handleToggleLayerVisibility,
+            onToggleLock: handleToggleLayerLock,
+            onUpdateOpacity: handleUpdateLayerOpacity,
+            onUpdateBlendMode: handleUpdateLayerBlendMode,
+            onRenameLayer: handleRenameLayer,
+            onReorderLayers: handleReorderLayers,
+            onMergeDown: handleMergeDown,
+            onFlatten: handleFlattenLayers,
+          }}
+          palettes={palettes}
+          activePaletteId={activePaletteId}
+          recentColors={recentColors}
+          onPaletteOperations={{
+            onSelectPalette: setActivePaletteId,
+            onCreatePalette: handleCreatePalette,
+            onDeletePalette: handleDeletePalette,
+            onAddColorToPalette: handleAddColorToPalette,
+            onRemoveColorFromPalette: handleRemoveColorFromPalette,
+            onSelectColor: handleSelectColor,
+            onSwapColors: handleSwapColors,
+            onExtractPalette: handleExtractPaletteFromImage,
+            onImportPalette: handleImportPalette,
+            onExportPalette: handleExportPalette,
+            onGenerateRamp: handleGeneratePaletteRamp,
+          }}
+          onTransformOperations={{
+            onFlipHorizontal: handleFlipHorizontal,
+            onFlipVertical: handleFlipVertical,
+            onRotate90CW: handleRotate90CW,
+            onRotate90CCW: handleRotate90CCW,
+            onRotate180: handleRotate180,
+            onScale: handleScale,
+            onRotate: handleRotateDegrees,
+          }}
+          onColorAdjustOperations={{
+            onAdjustHue: handleAdjustHue,
+            onAdjustSaturation: handleAdjustSaturation,
+            onAdjustBrightness: handleAdjustBrightness,
+            onInvert: handleInvert,
+            onDesaturate: handleDesaturate,
+            onPosterize: handlePosterize,
+          }}
+          onSelectionOperations={{
+            onSelectAll: handleSelectAll,
+            onDeselect: handleDeselect,
+            onInvertSelection: handleInvertSelection,
+            onGrow: handleGrowSelection,
+            onShrink: handleShrinkSelection,
+            onFeather: handleFeatherSelection,
+          }}
+          onCursorMove={setCursorPosition}
+          topBar={
+            <div className="topbar">
+              <div className="brand">
+                <div className="brand__name">SpriteAnvil</div>
+                <div className="brand__tagline">Forge sprites. Shape motion.</div>
+              </div>
 
-            <div className="topbar__group">
-              <button className="uiBtn" onClick={handleUndo} disabled={!canUndo} title="Undo (Cmd+Z)">
-                Undo
-              </button>
-              <button className="uiBtn" onClick={handleRedo} disabled={!canRedo} title="Redo (Cmd+Y)">
-                Redo
-              </button>
-            </div>
+              <div className="topbar__group">
+                <button className="uiBtn" onClick={handleUndo} disabled={!canUndo} title="Undo (Cmd+Z)">
+                  Undo
+                </button>
+                <button className="uiBtn" onClick={handleRedo} disabled={!canRedo} title="Redo (Cmd+Y)">
+                  Redo
+                </button>
+              </div>
 
-            <div className="topbar__group">
-              <button
-                className="uiBtn"
-                onClick={() => setShowCommandPalette(true)}
-                title="Command Palette (Cmd+K)"
-              >
-                Commands
-              </button>
-              <button
-                className="uiBtn uiBtn--primary"
-                onClick={() => setShowExportPanel(true)}
-                title="Export Sprite (Cmd+E)"
-              >
-                Export
-              </button>
-            </div>
-
-            <div className="topbar__group">
-              <label className="ui-row">
-                <span>Color</span>
-                <input
-                  className="color"
-                  type="color"
-                  value={settings.primaryColor}
-                  onChange={(e) => handleSelectColor(e.target.value)}
-                  title="Primary Color"
-                />
-              </label>
-
-              <label className="ui-row">
-                <span>Zoom</span>
-                <input
-                  className="zoom"
-                  type="range"
-                  min={1}
-                  max={32}
-                  step={0.25}
-                  value={settings.zoom}
-                  onChange={(e) => setSettings((s) => ({ ...s, zoom: Number(e.target.value) }))}
-                />
-                <span className="mono">{zoomLabel}</span>
-              </label>
-            </div>
-
-            <div className="topbar__group">
-              <label className="ui-row">
-                <span>Background</span>
-                <select
-                  value={settings.backgroundMode}
-                  onChange={(e) =>
-                    setSettings((s) => ({ ...s, backgroundMode: e.target.value as any }))
-                  }
+              <div className="topbar__group">
+                <button
+                  className="uiBtn"
+                  onClick={() => setShowCommandPalette(true)}
+                  title="Command Palette (Cmd+K)"
                 >
-                  <option value="checker">Checkerboard</option>
-                  <option value="solidDark">Solid (Dark)</option>
-                  <option value="solidLight">Solid (Light)</option>
-                  <option value="greenscreen">Greenscreen</option>
-                  <option value="bluescreen">Bluescreen</option>
-                </select>
-              </label>
+                  Commands
+                </button>
+                <button
+                  className="uiBtn"
+                  onClick={() => setProjectView("dashboard")}
+                  title="Project Dashboard"
+                >
+                  Projects
+                </button>
+                <button
+                  className="uiBtn uiBtn--primary"
+                  onClick={() => setShowExportPanel(true)}
+                  title="Export Sprite (Cmd+E)"
+                >
+                  Export
+                </button>
+              </div>
 
-              <label className="ui-row">
-                <input
-                  type="checkbox"
-                  checked={settings.showGrid}
-                  onChange={(e) => setSettings((s) => ({ ...s, showGrid: e.target.checked }))}
-                />
-                <span>Grid</span>
-              </label>
+              <div className="topbar__group">
+                <label className="ui-row">
+                  <span>Color</span>
+                  <input
+                    className="color"
+                    type="color"
+                    value={settings.primaryColor}
+                    onChange={(e) => handleSelectColor(e.target.value)}
+                    title="Primary Color"
+                  />
+                </label>
+
+                <label className="ui-row">
+                  <span>Zoom</span>
+                  <input
+                    className="zoom"
+                    type="range"
+                    min={1}
+                    max={32}
+                    step={0.25}
+                    value={settings.zoom}
+                    onChange={(e) => setSettings((s) => ({ ...s, zoom: Number(e.target.value) }))}
+                  />
+                  <span className="mono">{zoomLabel}</span>
+                </label>
+              </div>
+
+              <div className="topbar__group">
+                <label className="ui-row">
+                  <span>Background</span>
+                  <select
+                    value={settings.backgroundMode}
+                    onChange={(e) =>
+                      setSettings((s) => ({ ...s, backgroundMode: e.target.value as any }))
+                    }
+                  >
+                    <option value="checker">Checkerboard</option>
+                    <option value="solidDark">Solid (Dark)</option>
+                    <option value="solidLight">Solid (Light)</option>
+                    <option value="greenscreen">Greenscreen</option>
+                    <option value="bluescreen">Bluescreen</option>
+                  </select>
+                </label>
+
+                <label className="ui-row">
+                  <input
+                    type="checkbox"
+                    checked={settings.showGrid}
+                    onChange={(e) => setSettings((s) => ({ ...s, showGrid: e.target.checked }))}
+                  />
+                  <span>Grid</span>
+                </label>
+              </div>
             </div>
-          </div>
-        }
+          }
+          statusBar={<StatusBar info={statusInfo} />}
+        />
+      )}
+
+      <input
+        ref={paletteImportRef}
+        type="file"
+        accept=".gpl,.ase"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleImportPalette(file);
+          e.currentTarget.value = "";
+        }}
       />
 
-      {showExportPanel && (
+      {showExportPanel && projectView === "editor" && (
         <ExportPanel
           frames={frames}
           canvasSpec={canvasSpec}
@@ -1244,6 +1772,14 @@ export default function App() {
           commands={commands}
           isOpen={showCommandPalette}
           onClose={() => setShowCommandPalette(false)}
+        />
+      )}
+
+      {showShortcutOverlay && (
+        <ShortcutOverlay
+          isOpen={showShortcutOverlay}
+          onClose={() => setShowShortcutOverlay(false)}
+          groups={shortcutGroups}
         />
       )}
     </>

@@ -23,6 +23,7 @@ export type ShortcutHandler = {
   onRotate90CW?: () => void;
   onRotate90CCW?: () => void;
   onOpenCommandPalette?: () => void;
+  onToggleShortcutOverlay?: () => void;
   onNewFrame?: () => void;
   onDuplicateFrame?: () => void;
   onDeleteFrame?: () => void;
@@ -103,6 +104,9 @@ export function useKeyboardShortcuts(handlers: ShortcutHandler, enabled: boolean
       } else if (mod && e.key === 'k' && handlers.onOpenCommandPalette) {
         e.preventDefault();
         handlers.onOpenCommandPalette();
+      } else if (mod && e.key === '/' && handlers.onToggleShortcutOverlay) {
+        e.preventDefault();
+        handlers.onToggleShortcutOverlay();
       } else if (!mod && !isInputFocused() && handlers.onChangeTool) {
         handleToolShortcut(e, handlers.onChangeTool);
       } else if (e.key === 'ArrowRight' && e.altKey && handlers.onNextFrame) {

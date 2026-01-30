@@ -5,7 +5,7 @@ import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
 import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode, FloatingSelection } from "../types";
 import { AnimationTag } from "../lib/supabase/animation_tags";
-import { PaletteData } from "./PalettePanel";
+import { PaletteData } from "../lib/projects/snapshot";
 
 type Props = {
   settings: UiSettings;
@@ -25,6 +25,7 @@ type Props = {
   onBeginTransform?: () => FloatingSelection | null;
   onUpdateTransform?: (next: FloatingSelection) => void;
   onColorPick?: (color: string) => void;
+  onCursorMove?: (position: { x: number; y: number } | null) => void;
 
   onUndo: () => void;
   onRedo: () => void;
@@ -109,6 +110,7 @@ type Props = {
   };
 
   topBar: ReactNode;
+  statusBar?: ReactNode;
 };
 
 /**
@@ -137,6 +139,7 @@ export default function DockLayout({
   onBeginTransform,
   onUpdateTransform,
   onColorPick,
+  onCursorMove,
   onUndo,
   onRedo,
   canUndo,
@@ -168,7 +171,8 @@ export default function DockLayout({
   onTransformOperations,
   onColorAdjustOperations,
   onSelectionOperations,
-  topBar
+  topBar,
+  statusBar
 }: Props) {
   const [rightWidth, setRightWidth] = useState<number>(() => loadNumber("dock:rightWidth", 280));
   const [timelineHeight, setTimelineHeight] = useState<number>(() =>
@@ -297,6 +301,7 @@ export default function DockLayout({
             onUpdateTransform={onUpdateTransform}
             onChangeZoom={(zoom) => onChangeSettings({ ...settings, zoom })}
             onColorPick={onColorPick}
+            onCursorMove={onCursorMove}
             frames={frames}
             currentFrameIndex={currentFrameIndex}
           />
@@ -335,28 +340,32 @@ export default function DockLayout({
       />
 
       <div className="dock__bottom">
-          <Timeline
-            settings={settings}
-            onChangeSettings={onChangeSettings}
-            canvasSpec={canvasSpec}
-            frames={frames}
-            currentFrameIndex={currentFrameIndex}
-            isPlaying={isPlaying}
-            onSelectFrame={onSelectFrame}
-            onInsertFrame={onInsertFrame}
-            onDuplicateFrame={onDuplicateFrame}
-            onDeleteFrame={onDeleteFrame}
-            onUpdateFrameDuration={onUpdateFrameDuration}
-            onTogglePlayback={onTogglePlayback}
-            animationTags={animationTags}
-            activeTagId={activeTagId}
-            loopTagOnly={loopTagOnly}
-            onToggleLoopTagOnly={onToggleLoopTagOnly}
-            onSelectTag={onSelectTag}
-            onCreateTag={onCreateTag}
-            onUpdateTag={onUpdateTag}
-            onDeleteTag={onDeleteTag}
-          />
+        <Timeline
+          settings={settings}
+          onChangeSettings={onChangeSettings}
+          canvasSpec={canvasSpec}
+          frames={frames}
+          currentFrameIndex={currentFrameIndex}
+          isPlaying={isPlaying}
+          onSelectFrame={onSelectFrame}
+          onInsertFrame={onInsertFrame}
+          onDuplicateFrame={onDuplicateFrame}
+          onDeleteFrame={onDeleteFrame}
+          onUpdateFrameDuration={onUpdateFrameDuration}
+          onTogglePlayback={onTogglePlayback}
+          animationTags={animationTags}
+          activeTagId={activeTagId}
+          loopTagOnly={loopTagOnly}
+          onToggleLoopTagOnly={onToggleLoopTagOnly}
+          onSelectTag={onSelectTag}
+          onCreateTag={onCreateTag}
+          onUpdateTag={onUpdateTag}
+          onDeleteTag={onDeleteTag}
+        />
+      </div>
+
+      <div className="dock__status">
+        {statusBar}
       </div>
     </div>
   );

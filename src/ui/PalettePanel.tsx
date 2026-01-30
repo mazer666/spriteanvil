@@ -1,11 +1,5 @@
-import React, { useState } from "react";
-
-export type PaletteData = {
-  id: string;
-  name: string;
-  colors: string[];
-  is_default: boolean;
-};
+import React, { useRef, useState } from "react";
+import { PaletteData } from "../lib/projects/snapshot";
 
 type Props = {
   palettes: PaletteData[];
@@ -21,6 +15,9 @@ type Props = {
   onSelectColor: (color: string) => void;
   onSwapColors: (fromColor: string, toColor: string) => void;
   onExtractPalette: () => void;
+  onImportPalette: (file: File) => void;
+  onExportPalette: (format: "gpl" | "ase") => void;
+  onGenerateRamp: (steps: number) => void;
 };
 
 export default function PalettePanel({
@@ -37,11 +34,16 @@ export default function PalettePanel({
   onSelectColor,
   onSwapColors,
   onExtractPalette,
+  onImportPalette,
+  onExportPalette,
+  onGenerateRamp,
 }: Props) {
   const [showNewPalette, setShowNewPalette] = useState(false);
   const [newPaletteName, setNewPaletteName] = useState("");
   const [colorPickerValue, setColorPickerValue] = useState(primaryColor);
   const [swapFromColor, setSwapFromColor] = useState<string | null>(null);
+  const [rampSteps, setRampSteps] = useState(6);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activePalette = palettes.find(p => p.id === activePaletteId);
 
@@ -236,6 +238,46 @@ export default function PalettePanel({
       </div>
 
       <div style={{ padding: '8px', borderTop: '1px solid #333', background: '#252525' }}>
+        <div style={{ display: "grid", gap: "6px", marginBottom: "8px" }}>
+          <div style={{ fontSize: "11px", color: "#aaa" }}>Palette Tools</div>
+          <div style={{ display: "flex", gap: "6px" }}>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              style={{ flex: 1, padding: "6px", fontSize: "12px" }}
+              title="Import .gpl or .ase palette"
+            >
+              Import Palette
+            </button>
+            <button
+              onClick={() => onExportPalette("gpl")}
+              style={{ flex: 1, padding: "6px", fontSize: "12px" }}
+              disabled={!activePalette}
+              title="Export palette as .gpl"
+            >
+              Export GPL
+            </button>
+            <button
+              onClick={() => onExportPalette("ase")}
+              style={{ flex: 1, padding: "6px", fontSize: "12px" }}
+              disabled={!activePalette}
+              title="Export palette as .ase"
+            >
+              Export ASE
+            </button>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".gpl,.ase"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onImportPalette(file);
+              e.currentTarget.value = "";
+            }}
+          />
+        </div>
+
         <button
           onClick={onExtractPalette}
           style={{ width: '100%', padding: '6px', fontSize: '12px', marginBottom: '6px' }}
@@ -243,6 +285,26 @@ export default function PalettePanel({
         >
           Extract Palette from Image
         </button>
+        <div style={{ display: "grid", gap: "6px", marginBottom: "6px" }}>
+          <label style={{ fontSize: "11px", color: "#aaa" }}>Palette Ramp Builder</label>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <input
+              type="number"
+              min={2}
+              max={32}
+              value={rampSteps}
+              onChange={(e) => setRampSteps(Number(e.target.value))}
+              style={{ width: "70px", padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+            />
+            <button
+              onClick={() => onGenerateRamp(rampSteps)}
+              style={{ flex: 1, padding: "6px", fontSize: "12px" }}
+              title="Generate gradient colors between primary and secondary"
+            >
+              Add Ramp
+            </button>
+          </div>
+        </div>
         <button
           onClick={() => setSwapFromColor(swapFromColor ? null : primaryColor)}
           style={{
