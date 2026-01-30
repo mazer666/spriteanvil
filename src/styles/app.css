@@ -89,8 +89,9 @@ body{
     "top"
     "main"
     "hsplitter"
-    "bottom";
-  grid-template-rows: 52px 1fr 4px var(--timelineHeight);
+    "bottom"
+    "status";
+  grid-template-rows: 52px 1fr 4px var(--timelineHeight) 32px;
   grid-template-columns: 100%;
   overflow: hidden;
 }
@@ -197,6 +198,255 @@ body{
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.dock__status{
+  grid-area: status;
+  background: #0d111b;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.status-bar{
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.status-item{
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.status-label{
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.status-value{
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.status-muted{
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.project-dashboard{
+  min-height: 100vh;
+  height: 100vh;
+  padding: 32px;
+  color: var(--ink);
+  overflow-y: auto;
+}
+
+.project-dashboard__header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.project-dashboard__header h1{
+  margin: 0;
+}
+
+.project-dashboard__error{
+  background: rgba(255, 80, 80, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.4);
+  color: #ff9a9a;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.project-dashboard__new{
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.project-dashboard__new-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.project-dashboard__new-grid label{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.project-dashboard__gallery{
+  margin-top: 12px;
+}
+
+.project-dashboard__title{
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.project-dashboard__grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.project-card{
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.project-card:hover{
+  transform: translateY(-2px);
+  border-color: rgba(75,184,191,0.6);
+}
+
+.project-card__thumb{
+  height: 120px;
+  background: #0b0f18;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-card__thumb img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.project-card__placeholder{
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: rgba(75,184,191,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.project-card__meta{
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.project-card__name{
+  font-weight: 600;
+}
+
+.project-card__date{
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.project-dashboard__empty{
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.shortcut-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.shortcut-card{
+  background: #161b26;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: min(900px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+  padding: 20px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+
+.shortcut-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.shortcut-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.shortcut-group{
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.shortcut-title{
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.shortcut-item{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.shortcut-key{
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", monospace;
+  font-size: 11px;
+}
+
+.shortcut-footer{
+  margin-top: 12px;
+  text-align: right;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 /* Topbar */

@@ -1,4 +1,5 @@
 import { Frame } from "../../types";
+import { reducePaletteInWorker } from "./workerClient";
 
 export type GIFExportOptions = {
   width: number;
@@ -34,7 +35,7 @@ export async function exportToGIF(options: GIFExportOptions): Promise<Blob> {
 
   for (const frame of frames) {
     const imageData = ctx.createImageData(width, height);
-    const reduced = reduceToPalette(frame.pixels, width, height, paletteSize, dither);
+    const reduced = await reduceToPaletteAsync(frame.pixels, width, height, paletteSize, dither);
     imageData.data.set(reduced);
     ctx.putImageData(imageData, 0, 0);
 
@@ -79,6 +80,22 @@ function reduceToPalette(
   return dither
     ? ditherFloydSteinberg(pixels, width, height, palette)
     : mapToPalette(pixels, palette);
+}
+
+async function reduceToPaletteAsync(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number,
+  paletteSize: number,
+  dither: boolean
+): Promise<Uint8ClampedArray> {
+  if (!dither) {
+    return reduceToPalette(pixels, width, height, paletteSize, false);
+  }
+
+  return reducePaletteInWorker(pixels, width, height, paletteSize, dither).catch(() =>
+    reduceToPalette(pixels, width, height, paletteSize, dither)
+  );
 }
 
 function buildQuantizedPalette(pixels: Uint8ClampedArray, paletteSize: number): RGB[] {

@@ -43,6 +43,7 @@ export default function CanvasStage(props: {
   onUpdateTransform?: (next: FloatingSelection) => void;
   onChangeZoom?: (zoom: number) => void;
   onColorPick?: (color: string) => void;
+  onCursorMove?: (position: { x: number; y: number } | null) => void;
   frames?: Frame[];
   currentFrameIndex?: number;
 }) {
@@ -62,6 +63,7 @@ export default function CanvasStage(props: {
     onUpdateTransform,
     onChangeZoom,
     onColorPick,
+    onCursorMove,
     frames,
     currentFrameIndex
   } = props;
@@ -686,6 +688,9 @@ export default function CanvasStage(props: {
   function handlePointerMove(e: React.PointerEvent) {
     const p0 = pointerToPixel(e);
     if (p0) setHoverPos(p0);
+    if (onCursorMove) {
+      onCursorMove(p0);
+    }
     if (strokeRef.current.active) {
       moveStroke(e);
     }
@@ -1212,7 +1217,10 @@ export default function CanvasStage(props: {
           handlePointerUpCleanup(e);
           endStroke(e);
         }}
-        onPointerLeave={() => setHoverPos(null)}
+        onPointerLeave={() => {
+          setHoverPos(null);
+          onCursorMove?.(null);
+        }}
       />
       <Minimap
         buffer={getCompositePreview()}

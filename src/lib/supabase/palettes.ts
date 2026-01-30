@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import { withRetry } from './retry';
 
 export type Palette = {
   id: string;
@@ -9,53 +10,295 @@ export type Palette = {
   created_at: string;
 };
 
+export type PaletteFileFormat = "gpl" | "ase";
+
+/**
+ * Palette color table format.
+ *
+ * Each palette color is stored as a hex string (#RRGGBB). This keeps palette sync
+ * deterministic when we serialize to disk or push to Supabase.
+ */
+export type PaletteColorTable = string[];
+
 export async function getPalettes(userId?: string): Promise<Palette[]> {
-  let query = supabase
-    .from('palettes')
-    .select('*')
-    .order('created_at', { ascending: false });
+  const result = await withRetry(async () => {
+    let query = supabase
+      .from('palettes')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (userId) {
-    query = query.or(`user_id.eq.${userId},is_default.eq.true`);
-  } else {
-    query = query.eq('is_default', true);
-  }
+    if (userId) {
+      query = query.or(`user_id.eq.${userId},is_default.eq.true`);
+    } else {
+      query = query.eq('is_default', true);
+    }
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data || [];
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  });
+
+  return result;
 }
 
 export async function createPalette(name: string, colors: string[], userId?: string): Promise<Palette> {
-  const { data, error } = await supabase
-    .from('palettes')
-    .insert({
-      name,
-      colors,
-      user_id: userId || null,
-      is_default: false
-    })
-    .select()
-    .single();
+  const { data, error } = await withRetry(() =>
+    supabase
+      .from('palettes')
+      .insert({
+        name,
+        colors,
+        user_id: userId || null,
+        is_default: false
+      })
+      .select()
+      .single()
+  );
 
   if (error) throw error;
   return data;
 }
 
 export async function updatePalette(paletteId: string, updates: Partial<Palette>): Promise<void> {
-  const { error } = await supabase
-    .from('palettes')
-    .update(updates)
-    .eq('id', paletteId);
+  const { error } = await withRetry(() =>
+    supabase
+      .from('palettes')
+      .update(updates)
+      .eq('id', paletteId)
+  );
 
   if (error) throw error;
 }
 
 export async function deletePalette(paletteId: string): Promise<void> {
-  const { error } = await supabase
-    .from('palettes')
-    .delete()
-    .eq('id', paletteId);
+  const { error } = await withRetry(() =>
+    supabase
+      .from('palettes')
+      .delete()
+      .eq('id', paletteId)
+  );
 
   if (error) throw error;
+}
+
+export function buildPaletteRamp(startHex: string, endHex: string, steps: number): PaletteColorTable {
+  const start = hexToRgb(startHex);
+  const end = hexToRgb(endHex);
+  if (!start || !end) return [];
+  const clampedSteps = Math.max(2, Math.min(64, Math.round(steps)));
+  const result: string[] = [];
+  for (let i = 0; i < clampedSteps; i++) {
+    const t = i / (clampedSteps - 1);
+    const r = Math.round(start.r + (end.r - start.r) * t);
+    const g = Math.round(start.g + (end.g - start.g) * t);
+    const b = Math.round(start.b + (end.b - start.b) * t);
+    result.push(rgbToHex({ r, g, b }));
+  }
+  return result;
+}
+
+export async function importPaletteFile(file: File): Promise<{ name: string; colors: PaletteColorTable }> {
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const baseName = file.name.replace(/\.[^/.]+$/, "");
+
+  if (extension === 'gpl') {
+    const text = await file.text();
+    return { name: baseName || 'Imported GPL', colors: parseGpl(text) };
+  }
+
+  if (extension === 'ase') {
+    const buffer = await file.arrayBuffer();
+    return { name: baseName || 'Imported ASE', colors: parseAse(buffer) };
+  }
+
+  throw new Error('Unsupported palette format. Use .gpl or .ase');
+}
+
+/**
+ * Export palette colors to disk-ready file data.
+ *
+ * The resulting file can be written as-is (Blob) to support external tools like
+ * Aseprite or GIMP while preserving the exact color table order used by SpriteAnvil.
+ */
+export function exportPaletteFile(name: string, colors: PaletteColorTable, format: PaletteFileFormat): Blob {
+  if (format === 'gpl') {
+    const text = serializeGpl(name, colors);
+    return new Blob([text], { type: 'text/plain' });
+  }
+
+  const buffer = serializeAse(name, colors);
+  return new Blob([buffer], { type: 'application/octet-stream' });
+}
+
+function parseGpl(text: string): PaletteColorTable {
+  const lines = text.split(/\r?\n/);
+  const colors: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    if (trimmed.startsWith('GIMP') || trimmed.startsWith('Name:') || trimmed.startsWith('Columns:')) continue;
+
+    const parts = trimmed.split(/\s+/).slice(0, 3).map(Number);
+    if (parts.length === 3 && parts.every((n) => Number.isFinite(n))) {
+      colors.push(rgbToHex({ r: parts[0], g: parts[1], b: parts[2] }));
+    }
+  }
+
+  return colors;
+}
+
+function serializeGpl(name: string, colors: PaletteColorTable): string {
+  const header = [
+    'GIMP Palette',
+    `Name: ${name}`,
+    `#Colors: ${colors.length}`,
+    '# Generated by SpriteAnvil',
+  ];
+
+  const body = colors.map((hex) => {
+    const rgb = hexToRgb(hex) ?? { r: 0, g: 0, b: 0 };
+    return `${rgb.r}\t${rgb.g}\t${rgb.b}\t${hex}`;
+  });
+
+  return [...header, ...body].join('\n');
+}
+
+function parseAse(buffer: ArrayBuffer): PaletteColorTable {
+  const view = new DataView(buffer);
+  let offset = 0;
+
+  const signature = readAscii(view, offset, 4);
+  offset += 4;
+  if (signature !== 'ASEF') {
+    throw new Error('Invalid ASE palette file.');
+  }
+
+  const major = view.getUint16(offset, false);
+  const minor = view.getUint16(offset + 2, false);
+  offset += 4;
+  if (major < 1) {
+    throw new Error('Unsupported ASE version.');
+  }
+
+  const blocks = view.getUint32(offset, false);
+  offset += 4;
+  const colors: string[] = [];
+
+  for (let i = 0; i < blocks; i++) {
+    const blockType = view.getUint16(offset, false);
+    offset += 2;
+    const blockLength = view.getUint32(offset, false);
+    offset += 4;
+    const blockStart = offset;
+
+    if (blockType === 0x0001) {
+      const nameLength = view.getUint16(offset, false);
+      offset += 2 + nameLength * 2;
+      const model = readAscii(view, offset, 4);
+      offset += 4;
+
+      if (model === 'RGB ') {
+        const r = Math.round(view.getFloat32(offset, false) * 255);
+        const g = Math.round(view.getFloat32(offset + 4, false) * 255);
+        const b = Math.round(view.getFloat32(offset + 8, false) * 255);
+        offset += 12;
+        colors.push(rgbToHex({ r, g, b }));
+      } else {
+        offset += blockLength - (2 + nameLength * 2 + 4);
+      }
+
+    }
+
+    offset = blockStart + blockLength;
+  }
+
+  return colors;
+}
+
+function serializeAse(name: string, colors: PaletteColorTable): ArrayBuffer {
+  const blocks: Uint8Array[] = [];
+  const encoder = new TextEncoder();
+
+  colors.forEach((hex, index) => {
+    const rgb = hexToRgb(hex) ?? { r: 0, g: 0, b: 0 };
+    const label = `${name} ${index + 1}`;
+    const labelBytes = encodeUtf16(label);
+    const blockLength = 2 + labelBytes.length + 4 + 12 + 2;
+
+    const block = new Uint8Array(2 + 4 + blockLength);
+    const view = new DataView(block.buffer);
+    let offset = 0;
+    view.setUint16(offset, 0x0001, false);
+    offset += 2;
+    view.setUint32(offset, blockLength, false);
+    offset += 4;
+    view.setUint16(offset, labelBytes.length / 2, false);
+    offset += 2;
+    block.set(labelBytes, offset);
+    offset += labelBytes.length;
+    block.set(encoder.encode('RGB '), offset);
+    offset += 4;
+    view.setFloat32(offset, rgb.r / 255, false);
+    view.setFloat32(offset + 4, rgb.g / 255, false);
+    view.setFloat32(offset + 8, rgb.b / 255, false);
+    offset += 12;
+    view.setUint16(offset, 0x0000, false);
+
+    blocks.push(block);
+  });
+
+  const header = new Uint8Array(12);
+  const headerView = new DataView(header.buffer);
+  header.set(encoder.encode('ASEF'), 0);
+  headerView.setUint16(4, 1, false);
+  headerView.setUint16(6, 0, false);
+  headerView.setUint32(8, blocks.length, false);
+
+  const totalLength = header.length + blocks.reduce((sum, block) => sum + block.length, 0);
+  const result = new Uint8Array(totalLength);
+  let cursor = 0;
+  result.set(header, cursor);
+  cursor += header.length;
+  for (const block of blocks) {
+    result.set(block, cursor);
+    cursor += block.length;
+  }
+
+  return result.buffer;
+}
+
+function encodeUtf16(text: string): Uint8Array {
+  const buffer = new Uint8Array((text.length + 1) * 2);
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    buffer[i * 2] = code >> 8;
+    buffer[i * 2 + 1] = code & 0xff;
+  }
+  return buffer;
+}
+
+function readAscii(view: DataView, offset: number, length: number): string {
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += String.fromCharCode(view.getUint8(offset + i));
+  }
+  return result;
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.replace('#', '').trim();
+  if (normalized.length !== 6) return null;
+  const r = Number.parseInt(normalized.slice(0, 2), 16);
+  const g = Number.parseInt(normalized.slice(2, 4), 16);
+  const b = Number.parseInt(normalized.slice(4, 6), 16);
+  if ([r, g, b].some((value) => Number.isNaN(value))) return null;
+  return { r, g, b };
+}
+
+function rgbToHex(rgb: { r: number; g: number; b: number }): string {
+  const clamp = (value: number) => Math.max(0, Math.min(255, Math.round(value)));
+  return `#${clamp(rgb.r).toString(16).padStart(2, '0')}${clamp(rgb.g)
+    .toString(16)
+    .padStart(2, '0')}${clamp(rgb.b).toString(16).padStart(2, '0')}`;
 }

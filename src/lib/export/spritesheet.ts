@@ -1,4 +1,5 @@
 import { Frame } from "../../types";
+import { generateSpritesheetInWorker } from "./workerClient";
 
 export type SpritesheetLayout = "grid" | "horizontal" | "vertical" | "packed";
 
@@ -140,6 +141,17 @@ export function generateSpritesheet(
     sheetWidth,
     sheetHeight
   };
+}
+
+export async function generateSpritesheetAsync(
+  frames: Frame[],
+  canvasWidth: number,
+  canvasHeight: number,
+  settings: SpritesheetSettings
+): Promise<SpritesheetResult> {
+  return generateSpritesheetInWorker(frames, canvasWidth, canvasHeight, settings).catch(() =>
+    generateSpritesheet(frames, canvasWidth, canvasHeight, settings)
+  );
 }
 
 export function downloadCanvasAsPNG(canvas: HTMLCanvasElement, filename: string) {
