@@ -1721,6 +1721,7 @@ export default function App() {
   function handleSmartOutline(mode: OutlineMode) {
     if (isActiveLayerLocked) return;
     const rgb = hexToRgb(settings.primaryColor);
+    if (!rgb) return;
     const outlineColor = { r: rgb.r, g: rgb.g, b: rgb.b, a: 255 };
     const before = cloneBuffer(buffer);
     const after = applySmartOutline(buffer, canvasSpec.width, canvasSpec.height, outlineColor, mode);

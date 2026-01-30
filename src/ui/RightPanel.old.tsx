@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import type { OutlineMode } from "../editor/outline";
 import { UiSettings, CanvasSpec, Frame } from "../types";
 import LayerPanel from "./LayerPanel";
 import { LayerData, BlendMode } from "../types";
@@ -53,6 +54,7 @@ type Props = {
     onRotate180: () => void;
     onScale: (scaleX: number, scaleY: number) => void;
     onRotate: (degrees: number) => void;
+    onSmartOutline: (mode: OutlineMode) => void;
   };
 
   onColorAdjustOperations?: {

@@ -294,20 +294,18 @@ export default function Timeline({
           )}
         </div>
 
-        <div style={{ padding: "8px", borderBottom: "1px solid #333" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-            <strong style={{ fontSize: "12px" }}>Tween Generator</strong>
-            <span style={{ fontSize: "11px", color: "#aaa" }}>
-              Build in-between frames with easing
-            </span>
+        <div className="timeline__tween">
+          <div className="timeline__tween-header">
+            <strong className="timeline__tween-title">Tween Generator</strong>
+            <span className="timeline__tween-subtitle">Build in-between frames with easing</span>
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
-            <label style={{ fontSize: "11px", color: "#aaa" }}>From</label>
+          <div className="timeline__tween-controls">
+            <label className="timeline__tween-label">From</label>
             <select
               value={tweenStart}
               onChange={(e) => setTweenStart(Number(e.target.value))}
-              style={{ padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+              className="timeline__tween-select"
             >
               {frames.map((_, index) => (
                 <option key={`tween-start-${index}`} value={index}>
@@ -316,11 +314,11 @@ export default function Timeline({
               ))}
             </select>
 
-            <label style={{ fontSize: "11px", color: "#aaa" }}>To</label>
+            <label className="timeline__tween-label">To</label>
             <select
               value={tweenEnd}
               onChange={(e) => setTweenEnd(Number(e.target.value))}
-              style={{ padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+              className="timeline__tween-select"
             >
               {frames.map((_, index) => (
                 <option key={`tween-end-${index}`} value={index}>
@@ -329,21 +327,21 @@ export default function Timeline({
               ))}
             </select>
 
-            <label style={{ fontSize: "11px", color: "#aaa" }}>In-betweens</label>
+            <label className="timeline__tween-label">In-betweens</label>
             <input
               type="number"
               min={1}
               max={32}
               value={tweenCount}
               onChange={(e) => setTweenCount(Number(e.target.value))}
-              style={{ width: "70px", padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+              className="timeline__tween-input"
             />
 
-            <label style={{ fontSize: "11px", color: "#aaa" }}>Easing</label>
+            <label className="timeline__tween-label">Easing</label>
             <select
               value={tweenEasing}
               onChange={(e) => setTweenEasing(e.target.value as EasingCurve)}
-              style={{ padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+              className="timeline__tween-select"
             >
               <option value="linear">Linear</option>
               <option value="easeInQuad">Ease In Quad</option>
@@ -353,7 +351,7 @@ export default function Timeline({
 
             <button
               onClick={handleGenerateTweens}
-              style={{ padding: "6px", fontSize: "11px" }}
+              className="timeline__tween-button"
               disabled={frames.length < 2}
             >
               Generate Tweens
