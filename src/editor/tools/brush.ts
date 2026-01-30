@@ -1,4 +1,4 @@
-import { setPixel, drawLine } from "../pixels";
+import { setPixel } from "../pixels";
 import { getSymmetryTransforms } from "../symmetry";
 import { UiSettings } from "../../types";
 import { getPatternMask, PatternId } from "./patterns";
@@ -74,46 +74,6 @@ export function drawBrushLine(
       y0 += sy;
     }
   }
-
-  return changedAny;
-}
-
-export function drawLineWithSymmetry(
-  buf: Uint8ClampedArray,
-  width: number,
-  height: number,
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  rgba: RGBA,
-  symmetryMode: UiSettings["symmetryMode"],
-  symmetryAngle: UiSettings["symmetryAngle"],
-  symmetrySegments: UiSettings["symmetrySegments"],
-  selection?: Uint8Array
-): boolean {
-  if (symmetryMode === "none") {
-    return selection
-      ? drawBrushLine(buf, width, height, x0, y0, x1, y1, rgba, 1, selection)
-      : drawLine(buf, width, height, x0, y0, x1, y1, rgba);
-  }
-
-  let changedAny = false;
-  const transforms = getSymmetryTransforms(width, height, symmetryMode, symmetryAngle, symmetrySegments);
-  const seenLines = new Set<string>();
-
-  transforms.forEach((transform) => {
-    const start = transform(x0, y0);
-    const end = transform(x1, y1);
-    const key = `${start.x},${start.y},${end.x},${end.y}`;
-    if (seenLines.has(key)) return;
-    seenLines.add(key);
-
-    const did = selection
-      ? drawBrushLine(buf, width, height, start.x, start.y, end.x, end.y, rgba, 1, selection)
-      : drawLine(buf, width, height, start.x, start.y, end.x, end.y, rgba);
-    if (did) changedAny = true;
-  });
 
   return changedAny;
 }

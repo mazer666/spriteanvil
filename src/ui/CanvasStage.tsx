@@ -24,7 +24,7 @@ import {
   selectionUnion,
 } from "../editor/selection";
 import { createLassoSelection, smoothLassoPoints } from "../editor/tools/lasso";
-import { drawBrushLineWithSymmetry, drawLineWithSymmetry } from "../editor/tools/brush";
+import { drawBrushLineWithSymmetry } from "../editor/tools/brush";
 import { smudgeLine } from "../editor/tools/smudge";
 import { PatternFill } from "../editor/tools/patterns";
 
@@ -897,20 +897,21 @@ export default function CanvasStage(props: {
       const { startX, startY, endX, endY } = shapePreview;
 
       if (tool === "line") {
-          const did = drawLineWithSymmetry(
-            bufRef.current,
-            canvasSpec.width,
-            canvasSpec.height,
-            startX,
-            startY,
-            endX,
-            endY,
-            c,
-            settings.symmetryMode,
-            settings.symmetryAngle,
-            settings.symmetrySegments,
-            selection ?? undefined
-          );
+        const did = drawBrushLineWithSymmetry(
+          bufRef.current,
+          canvasSpec.width,
+          canvasSpec.height,
+          startX,
+          startY,
+          endX,
+          endY,
+          c,
+          settings.symmetryMode,
+          settings.symmetryAngle,
+          settings.symmetrySegments,
+          1,
+          selection ?? undefined
+        );
         if (did) st.changed = true;
       }
 
