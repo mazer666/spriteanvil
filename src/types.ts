@@ -103,3 +103,11 @@ export type AnimationData = {
   frames: Frame[];
   currentFrameIndex: number;
 };
+
+export type FloatingSelection = {
+  pixels: Uint8ClampedArray;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+};

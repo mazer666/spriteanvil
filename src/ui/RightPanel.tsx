@@ -49,6 +49,7 @@ type Props = {
     onRotate90CCW: () => void;
     onRotate180: () => void;
     onScale: (scaleX: number, scaleY: number) => void;
+    onRotate: (degrees: number) => void;
   };
 
   onColorAdjustOperations?: {

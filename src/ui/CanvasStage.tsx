@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { CanvasSpec, ToolId, UiSettings, LayerData } from "../types";
+import { CanvasSpec, ToolId, UiSettings, LayerData, FloatingSelection } from "../types";
 import { cloneBuffer, drawLine, hexToRgb, getPixel, setPixel } from "../editor/pixels";
 import { compositeLayers } from "../editor/layers";
 import { floodFill, floodFillWithTolerance } from "../editor/tools/fill";
@@ -23,7 +23,6 @@ import {
   selectionUnion,
 } from "../editor/selection";
 import { createLassoSelection, smoothLassoPoints } from "../editor/tools/lasso";
-import { copySelection, pasteClipboard, ClipboardData } from "../editor/clipboard";
 
 import { Frame } from "../types";
 
@@ -38,6 +37,9 @@ export default function CanvasStage(props: {
   onStrokeEnd: (before: Uint8ClampedArray, after: Uint8ClampedArray) => void;
   selection: Uint8Array | null;
   onChangeSelection: (selection: Uint8Array | null) => void;
+  floatingBuffer?: FloatingSelection | null;
+  onBeginTransform?: () => FloatingSelection | null;
+  onUpdateTransform?: (next: FloatingSelection) => void;
   onColorPick?: (color: string) => void;
   frames?: Frame[];
   currentFrameIndex?: number;
@@ -53,6 +55,9 @@ export default function CanvasStage(props: {
     onStrokeEnd,
     selection,
     onChangeSelection,
+    floatingBuffer,
+    onBeginTransform,
+    onUpdateTransform,
     onColorPick,
     frames,
     currentFrameIndex
@@ -70,7 +75,6 @@ export default function CanvasStage(props: {
     endY: number;
   } | null>(null);
   const [lassoPreview, setLassoPreview] = useState<{ x: number; y: number }[] | null>(null);
-  const [moveSelectionPreview, setMoveSelectionPreview] = useState<Uint8Array | null>(null);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Animation frame counter for marching ants
@@ -88,11 +92,17 @@ export default function CanvasStage(props: {
     return () => clearInterval(interval);
   }, [selection]);
 
+  const floatingRef = useRef<FloatingSelection | null>(floatingBuffer ?? null);
+
+  useEffect(() => {
+    floatingRef.current = floatingBuffer ?? null;
+  }, [floatingBuffer]);
+
   useEffect(() => {
     bufRef.current = buffer;
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buffer, compositeBuffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB, shapePreview, lassoPreview, selection, moveSelectionPreview, panOffset, animFrame]);
+  }, [buffer, compositeBuffer, settings.zoom, settings.showGrid, settings.gridSize, settings.backgroundMode, settings.checkerSize, settings.checkerA, settings.checkerB, shapePreview, lassoPreview, selection, floatingBuffer, panOffset, animFrame]);
 
   useEffect(() => {
     function isInputFocused(): boolean {
@@ -135,10 +145,8 @@ export default function CanvasStage(props: {
     smoothY: number;
     hasSmooth: boolean;
     selectionMode: SelectionMode;
-    moveSelection: Uint8Array | null;
-    moveClipboard: ClipboardData | null;
-    moveBounds: { x: number; y: number; width: number; height: number } | null;
-    moveSelectionNext: Uint8Array | null;
+    moveOriginX: number;
+    moveOriginY: number;
     isPanning: boolean;
     panStartX: number;
     panStartY: number;
@@ -156,10 +164,8 @@ export default function CanvasStage(props: {
     smoothY: 0,
     hasSmooth: false,
     selectionMode: "replace",
-    moveSelection: null,
-    moveClipboard: null,
-    moveBounds: null,
-    moveSelectionNext: null,
+    moveOriginX: 0,
+    moveOriginY: 0,
     isPanning: false,
     panStartX: 0,
     panStartY: 0,
@@ -383,10 +389,6 @@ export default function CanvasStage(props: {
     st.startY = -1;
     st.hasSmooth = false;
     st.selectionMode = selectionModeFromEvent(e);
-    st.moveSelection = null;
-    st.moveClipboard = null;
-    st.moveBounds = null;
-    st.moveSelectionNext = null;
     st.isPanning = false;
 
     if (isPanningRef.current) {
@@ -460,25 +462,13 @@ export default function CanvasStage(props: {
         endStroke();
         return;
       }
-      if (!selection || !st.beforeSnapshot) {
+      const floating = onBeginTransform?.();
+      if (!floating || !selection) {
         endStroke();
         return;
       }
-      const bounds = getSelectionBounds(selection, canvasSpec.width, canvasSpec.height);
-      if (!bounds) {
-        endStroke();
-        return;
-      }
-      const clipboard = copySelection(bufRef.current, selection, canvasSpec.width, canvasSpec.height);
-      if (!clipboard) {
-        endStroke();
-        return;
-      }
-      st.moveSelection = new Uint8Array(selection);
-      st.moveClipboard = clipboard;
-      st.moveBounds = bounds;
-      st.moveSelectionNext = new Uint8Array(selection);
-      setMoveSelectionPreview(new Uint8Array(selection));
+      st.moveOriginX = floating.x;
+      st.moveOriginY = floating.y;
       return;
     }
 
@@ -571,31 +561,15 @@ export default function CanvasStage(props: {
     }
 
     if (tool === "move") {
-      if (!st.beforeSnapshot || !st.moveSelection || !st.moveClipboard || !st.moveBounds) return;
+      const floating = floatingRef.current;
+      if (!floating || !onUpdateTransform) return;
       const dx = p0.x - st.startX;
       const dy = p0.y - st.startY;
-      const movedSelection = moveSelectionMask(
-        st.moveSelection,
-        canvasSpec.width,
-        canvasSpec.height,
-        dx,
-        dy
-      );
-      const nextBuffer = cloneBuffer(st.beforeSnapshot);
-      clearSelectionFromBuffer(nextBuffer, st.moveSelection);
-      const movedBuffer = pasteClipboard(
-        nextBuffer,
-        st.moveClipboard,
-        canvasSpec.width,
-        canvasSpec.height,
-        st.moveBounds.x + dx,
-        st.moveBounds.y + dy
-      );
-      bufRef.current.set(movedBuffer);
-      st.changed = dx !== 0 || dy !== 0;
-      st.moveSelectionNext = movedSelection;
-      setMoveSelectionPreview(movedSelection);
-      draw();
+      onUpdateTransform({
+        ...floating,
+        x: st.moveOriginX + dx,
+        y: st.moveOriginY + dy,
+      });
       return;
     }
 
@@ -644,14 +618,9 @@ export default function CanvasStage(props: {
       setLassoPreview(null);
     }
 
-    if (tool === "move" && st.moveSelection && st.moveSelectionNext) {
-      onChangeSelection(st.moveSelectionNext);
-      setMoveSelectionPreview(null);
-    }
-
-    if (tool === "move" && st.moveSelection && st.moveSelectionNext) {
-      onChangeSelection(st.moveSelectionNext);
-      setMoveSelectionPreview(null);
+    if (tool === "move") {
+      st.moveOriginX = 0;
+      st.moveOriginY = 0;
     }
 
     if (shapePreview) {
@@ -866,6 +835,37 @@ export default function CanvasStage(props: {
       }
     }
 
+    if (floatingBuffer) {
+      const floatingImg = new ImageData(
+        new Uint8ClampedArray(floatingBuffer.pixels),
+        floatingBuffer.width,
+        floatingBuffer.height
+      );
+      const floatingCanvas = getOffscreen(floatingBuffer.width, floatingBuffer.height);
+      const floatingCtx = floatingCanvas.getContext("2d")!;
+      floatingCtx.putImageData(floatingImg, 0, 0);
+
+      const fx = originX + floatingBuffer.x * zoom;
+      const fy = originY + floatingBuffer.y * zoom;
+      const fw = floatingBuffer.width * zoom;
+      const fh = floatingBuffer.height * zoom;
+
+      ctx.save();
+      ctx.globalAlpha = 0.6;
+      ctx.drawImage(
+        floatingCanvas,
+        0,
+        0,
+        floatingBuffer.width,
+        floatingBuffer.height,
+        fx,
+        fy,
+        fw,
+        fh
+      );
+      ctx.restore();
+    }
+
     if (settings.showGrid && zoom >= 6) {
       drawGrid(ctx, originX, originY, canvasSpec.width, canvasSpec.height, zoom, settings.gridSize);
     }
@@ -960,7 +960,7 @@ export default function CanvasStage(props: {
       ctx.restore();
     }
 
-    const renderSelection = moveSelectionPreview ?? selection;
+    const renderSelection = selection;
 
     // Render selection with marching ants
     if (renderSelection) {
@@ -1410,62 +1410,23 @@ function getSymmetryTransforms(
   return transforms;
 }
 
-  function applySelectionMask(
-    after: Uint8ClampedArray,
-    before: Uint8ClampedArray,
-    selection: Uint8Array,
-    width: number,
-    height: number
-  ) {
-    for (let i = 0; i < width * height; i++) {
-      if (!selection[i]) {
-        const idx = i * 4;
-        after[idx + 0] = before[idx + 0];
-        after[idx + 1] = before[idx + 1];
-        after[idx + 2] = before[idx + 2];
-        after[idx + 3] = before[idx + 3];
-      }
+function applySelectionMask(
+  after: Uint8ClampedArray,
+  before: Uint8ClampedArray,
+  selection: Uint8Array,
+  width: number,
+  height: number
+) {
+  for (let i = 0; i < width * height; i++) {
+    if (!selection[i]) {
+      const idx = i * 4;
+      after[idx + 0] = before[idx + 0];
+      after[idx + 1] = before[idx + 1];
+      after[idx + 2] = before[idx + 2];
+      after[idx + 3] = before[idx + 3];
     }
   }
-
-  function clearSelectionFromBuffer(
-    bufferToClear: Uint8ClampedArray,
-    selectionMask: Uint8Array
-  ) {
-    for (let i = 0; i < selectionMask.length; i++) {
-      if (selectionMask[i]) {
-        const idx = i * 4;
-        bufferToClear[idx + 0] = 0;
-        bufferToClear[idx + 1] = 0;
-        bufferToClear[idx + 2] = 0;
-        bufferToClear[idx + 3] = 0;
-      }
-    }
-  }
-
-  function moveSelectionMask(
-    selectionMask: Uint8Array,
-    width: number,
-    height: number,
-    dx: number,
-    dy: number
-  ): Uint8Array {
-    const moved = new Uint8Array(width * height);
-    if (dx === 0 && dy === 0) return new Uint8Array(selectionMask);
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const idx = y * width + x;
-        if (!selectionMask[idx]) continue;
-        const nx = x + dx;
-        const ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-        moved[ny * width + nx] = 1;
-      }
-    }
-
-    return moved;
-  }
+}
 
 type SelectionMode = "replace" | "union" | "subtract" | "intersect";
 

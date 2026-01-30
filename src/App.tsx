@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import DockLayout from "./ui/DockLayout";
 import ExportPanel from "./ui/ExportPanel";
 import CommandPalette, { Command } from "./ui/CommandPalette";
-import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode } from "./types";
+import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode, FloatingSelection } from "./types";
 import { HistoryStack } from "./editor/history";
 import { cloneBuffer, createBuffer } from "./editor/pixels";
 import { copySelection, cutSelection, pasteClipboard, ClipboardData } from "./editor/clipboard";
@@ -16,6 +16,9 @@ import {
   rotate90CCW,
   rotate180,
   scaleNearest,
+  applyTransform,
+  liftSelection,
+  TransformMatrix,
 } from "./editor/tools/transform";
 import {
   adjustHue,
@@ -25,7 +28,7 @@ import {
   desaturate,
   posterize,
 } from "./editor/tools/coloradjust";
-import { getSelectionBounds, invertSelection } from "./editor/selection";
+import { invertSelection } from "./editor/selection";
 
 export default function App() {
   const [canvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
@@ -45,6 +48,8 @@ export default function App() {
 
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [selection, setSelection] = useState<Uint8Array | null>(null);
+  const [floatingBuffer, setFloatingBuffer] = useState<FloatingSelection | null>(null);
+  const [isTransforming, setIsTransforming] = useState(false);
   const clipboardRef = useRef<ClipboardData | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -56,6 +61,7 @@ export default function App() {
   const historyRef = useRef<HistoryStack>(new HistoryStack());
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const transformBeforeRef = useRef<Uint8ClampedArray | null>(null);
 
   const currentFrame = frames[currentFrameIndex];
 
@@ -195,12 +201,18 @@ export default function App() {
   }
 
   function handleCopy() {
+    if (isTransforming) {
+      commitTransform();
+    }
     if (!selection) return;
     const clip = copySelection(buffer, selection, canvasSpec.width, canvasSpec.height);
     if (clip) clipboardRef.current = clip;
   }
 
   function handleCut() {
+    if (isTransforming) {
+      commitTransform();
+    }
     if (!selection) return;
     if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
@@ -214,6 +226,9 @@ export default function App() {
   }
 
   function handlePaste() {
+    if (isTransforming) {
+      commitTransform();
+    }
     if (!clipboardRef.current) return;
     if (isActiveLayerLocked) return;
 
@@ -568,55 +583,20 @@ export default function App() {
     return mask;
   }
 
-  function clearSelectionPixels(
-    target: Uint8ClampedArray,
-    selectionMask: Uint8Array
-  ) {
-    for (let i = 0; i < selectionMask.length; i++) {
-      if (selectionMask[i]) {
-        const idx = i * 4;
-        target[idx] = 0;
-        target[idx + 1] = 0;
-        target[idx + 2] = 0;
-        target[idx + 3] = 0;
-      }
-    }
-  }
-
-  function applySelectionTransform(
-    transform: (pixels: Uint8ClampedArray, width: number, height: number) => { buffer: Uint8ClampedArray; width: number; height: number }
-  ): boolean {
-    if (!selection) return false;
-    const bounds = getSelectionBounds(selection, canvasSpec.width, canvasSpec.height);
-    if (!bounds) return false;
-    const clip = copySelection(buffer, selection, canvasSpec.width, canvasSpec.height);
-    if (!clip) return false;
-
-    const before = cloneBuffer(buffer);
-    const transformed = transform(clip.pixels, clip.width, clip.height);
-    const cleared = cloneBuffer(buffer);
-    clearSelectionPixels(cleared, selection);
-    const pasted = pasteClipboard(
-      cleared,
-      { pixels: transformed.buffer, width: transformed.width, height: transformed.height },
-      canvasSpec.width,
-      canvasSpec.height,
-      bounds.x,
-      bounds.y
+  function buildSelectionMaskFromFloating(floating: FloatingSelection): Uint8Array | null {
+    const mask = new Uint8Array(canvasSpec.width * canvasSpec.height);
+    const floatingMask = buildSelectionMaskFromBuffer(
+      floating.pixels,
+      floating.width,
+      floating.height
     );
 
-    const newSelection = new Uint8Array(selection.length);
-    const transformedMask = buildSelectionMaskFromBuffer(
-      transformed.buffer,
-      transformed.width,
-      transformed.height
-    );
-    for (let y = 0; y < transformed.height; y++) {
-      for (let x = 0; x < transformed.width; x++) {
-        const maskIdx = y * transformed.width + x;
-        if (!transformedMask[maskIdx]) continue;
-        const canvasX = bounds.x + x;
-        const canvasY = bounds.y + y;
+    for (let y = 0; y < floating.height; y++) {
+      for (let x = 0; x < floating.width; x++) {
+        const maskIdx = y * floating.width + x;
+        if (!floatingMask[maskIdx]) continue;
+        const canvasX = floating.x + x;
+        const canvasY = floating.y + y;
         if (
           canvasX < 0 ||
           canvasY < 0 ||
@@ -625,27 +605,90 @@ export default function App() {
         ) {
           continue;
         }
-        newSelection[canvasY * canvasSpec.width + canvasX] = 1;
+        mask[canvasY * canvasSpec.width + canvasX] = 1;
       }
     }
 
-    const hasSelection = newSelection.some((value) => value !== 0);
-    historyRef.current.commit(before);
+    const hasSelection = mask.some((value) => value !== 0);
+    return hasSelection ? mask : null;
+  }
+
+  function beginSelectionTransform(): FloatingSelection | null {
+    if (isActiveLayerLocked) return null;
+    if (floatingBuffer) {
+      if (!isTransforming) setIsTransforming(true);
+      return floatingBuffer;
+    }
+    if (!selection) return null;
+
+    const { floating, cleared } = liftSelection(
+      buffer,
+      selection,
+      canvasSpec.width,
+      canvasSpec.height
+    );
+    if (!floating) return null;
+
+    transformBeforeRef.current = cloneBuffer(buffer);
+    updateActiveLayerPixels(cleared);
+    setFloatingBuffer(floating);
+    setIsTransforming(true);
+    setSelection(buildSelectionMaskFromFloating(floating));
+    return floating;
+  }
+
+  function updateFloating(next: FloatingSelection) {
+    setFloatingBuffer(next);
+    setIsTransforming(true);
+    setSelection(buildSelectionMaskFromFloating(next));
+  }
+
+  function commitTransform() {
+    if (!floatingBuffer) return;
+    if (!transformBeforeRef.current) return;
+
+    const pasted = pasteClipboard(
+      buffer,
+      {
+        pixels: floatingBuffer.pixels,
+        width: floatingBuffer.width,
+        height: floatingBuffer.height,
+      },
+      canvasSpec.width,
+      canvasSpec.height,
+      floatingBuffer.x,
+      floatingBuffer.y
+    );
+    const newSelection = buildSelectionMaskFromFloating(floatingBuffer);
+    historyRef.current.commit(transformBeforeRef.current);
     updateActiveLayerPixels(pasted);
-    setSelection(hasSelection ? newSelection : null);
+    setFloatingBuffer(null);
+    setIsTransforming(false);
+    setSelection(newSelection);
+    transformBeforeRef.current = null;
     syncHistoryFlags();
+  }
+
+  function applyFloatingTransform(buildMatrix: (width: number, height: number) => TransformMatrix): boolean {
+    const floating = beginSelectionTransform();
+    if (!floating) return false;
+
+    const matrix = buildMatrix(floating.width, floating.height);
+    const next = applyTransform(floating, matrix, "nearest");
+    updateFloating(next);
     return true;
   }
 
   function handleFlipHorizontal() {
     if (isActiveLayerLocked) return;
-    if (applySelectionTransform((pixels, width, height) => ({
-      buffer: flipHorizontal(pixels, width, height),
-      width,
-      height,
-    }))) {
-      return;
-    }
+    if (applyFloatingTransform((width) => ({
+      a: -1,
+      b: 0,
+      c: 0,
+      d: 1,
+      e: width - 1,
+      f: 0,
+    }))) return;
     const before = cloneBuffer(buffer);
     const after = flipHorizontal(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -655,13 +698,14 @@ export default function App() {
 
   function handleFlipVertical() {
     if (isActiveLayerLocked) return;
-    if (applySelectionTransform((pixels, width, height) => ({
-      buffer: flipVertical(pixels, width, height),
-      width,
-      height,
-    }))) {
-      return;
-    }
+    if (applyFloatingTransform((_width, height) => ({
+      a: 1,
+      b: 0,
+      c: 0,
+      d: -1,
+      e: 0,
+      f: height - 1,
+    }))) return;
     const before = cloneBuffer(buffer);
     const after = flipVertical(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -671,9 +715,14 @@ export default function App() {
 
   function handleRotate90CW() {
     if (isActiveLayerLocked) return;
-    if (applySelectionTransform(rotate90CW)) {
-      return;
-    }
+    if (applyFloatingTransform((_width, height) => ({
+      a: 0,
+      b: 1,
+      c: -1,
+      d: 0,
+      e: height - 1,
+      f: 0,
+    }))) return;
     const before = cloneBuffer(buffer);
     const result = rotate90CW(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -683,9 +732,14 @@ export default function App() {
 
   function handleRotate90CCW() {
     if (isActiveLayerLocked) return;
-    if (applySelectionTransform(rotate90CCW)) {
-      return;
-    }
+    if (applyFloatingTransform((width) => ({
+      a: 0,
+      b: -1,
+      c: 1,
+      d: 0,
+      e: 0,
+      f: width - 1,
+    }))) return;
     const before = cloneBuffer(buffer);
     const result = rotate90CCW(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -695,13 +749,14 @@ export default function App() {
 
   function handleRotate180() {
     if (isActiveLayerLocked) return;
-    if (applySelectionTransform((pixels, width, height) => ({
-      buffer: rotate180(pixels, width, height),
-      width,
-      height,
-    }))) {
-      return;
-    }
+    if (applyFloatingTransform((width, height) => ({
+      a: -1,
+      b: 0,
+      c: 0,
+      d: -1,
+      e: width - 1,
+      f: height - 1,
+    }))) return;
     const before = cloneBuffer(buffer);
     const after = rotate180(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -711,14 +766,39 @@ export default function App() {
 
   function handleScale(scaleX: number, scaleY: number) {
     if (isActiveLayerLocked) return;
-    if (applySelectionTransform((pixels, width, height) => scaleNearest(pixels, width, height, scaleX, scaleY))) {
-      return;
-    }
+    if (scaleX <= 0 || scaleY <= 0) return;
+    if (applyFloatingTransform(() => ({
+      a: scaleX,
+      b: 0,
+      c: 0,
+      d: scaleY,
+      e: 0,
+      f: 0,
+    }))) return;
     const before = cloneBuffer(buffer);
     const result = scaleNearest(buffer, canvasSpec.width, canvasSpec.height, scaleX, scaleY);
     historyRef.current.commit(before);
     updateActiveLayerPixels(result.buffer);
     syncHistoryFlags();
+  }
+
+  function handleRotateDegrees(degrees: number) {
+    if (isActiveLayerLocked) return;
+    const snapped = Math.round(degrees / 90) * 90;
+    const normalized = ((snapped % 360) + 360) % 360;
+    if (normalized === 0) return;
+    if (normalized === 90) {
+      handleRotate90CW();
+      return;
+    }
+    if (normalized === 180) {
+      handleRotate180();
+      return;
+    }
+    if (normalized === 270) {
+      handleRotate90CCW();
+      return;
+    }
   }
 
   function handleAdjustHue(hueShift: number) {
@@ -796,11 +876,32 @@ export default function App() {
     { id: "invert", name: "Invert Colors", category: "Color", action: handleInvert },
     { id: "desaturate", name: "Desaturate", category: "Color", action: handleDesaturate },
     { id: "newLayer", name: "New Layer", category: "Layer", action: handleCreateLayer },
-    { id: "toolPen", name: "Pen Tool", shortcut: "B", category: "Tools", action: () => setTool("pen") },
-    { id: "toolEraser", name: "Eraser Tool", shortcut: "E", category: "Tools", action: () => setTool("eraser") },
-    { id: "toolFill", name: "Fill Tool", shortcut: "F", category: "Tools", action: () => setTool("fill") },
-    { id: "toolEyedropper", name: "Eyedropper Tool", shortcut: "I", category: "Tools", action: () => setTool("eyedropper") },
-  ], []);
+    { id: "toolPen", name: "Pen Tool", shortcut: "B", category: "Tools", action: () => handleChangeTool("pen") },
+    { id: "toolEraser", name: "Eraser Tool", shortcut: "E", category: "Tools", action: () => handleChangeTool("eraser") },
+    { id: "toolFill", name: "Fill Tool", shortcut: "F", category: "Tools", action: () => handleChangeTool("fill") },
+    { id: "toolEyedropper", name: "Eyedropper Tool", shortcut: "I", category: "Tools", action: () => handleChangeTool("eyedropper") },
+  ], [
+    handleUndo,
+    handleRedo,
+    handleCopy,
+    handleCut,
+    handlePaste,
+    handleSelectAll,
+    handleDeselect,
+    handleInsertFrame,
+    handleDuplicateFrame,
+    handleDeleteFrame,
+    handleTogglePlayback,
+    handleFlipHorizontal,
+    handleFlipVertical,
+    handleRotate90CW,
+    handleRotate90CCW,
+    handleRotate180,
+    handleInvert,
+    handleDesaturate,
+    handleCreateLayer,
+    handleChangeTool,
+  ]);
 
   useKeyboardShortcuts({
     onUndo: handleUndo,
@@ -811,7 +912,7 @@ export default function App() {
     onDelete: handleDeselect,
     onSelectAll: handleSelectAll,
     onDeselect: handleDeselect,
-    onChangeTool: setTool,
+    onChangeTool: handleChangeTool,
     onExport: () => setShowExportPanel(true),
     onZoomIn: () => setSettings((s) => ({ ...s, zoom: Math.min(32, s.zoom + 1) })),
     onZoomOut: () => setSettings((s) => ({ ...s, zoom: Math.max(1, s.zoom - 1) })),
@@ -832,8 +933,35 @@ export default function App() {
   }, !showCommandPalette);
 
   function handleChangeSelection(next: Uint8Array | null) {
+    if (isTransforming) {
+      commitTransform();
+    }
     setSelection(next);
   }
+
+  function handleChangeTool(nextTool: ToolId) {
+    if (isTransforming) {
+      commitTransform();
+    }
+    setTool(nextTool);
+  }
+
+  useEffect(() => {
+    function isInputFocused(): boolean {
+      const active = document.activeElement;
+      return active?.tagName === "INPUT" || active?.tagName === "TEXTAREA" || (active?.hasAttribute("contenteditable") ?? false);
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Enter" && isTransforming && !isInputFocused()) {
+        e.preventDefault();
+        commitTransform();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isTransforming]);
 
   return (
     <>
@@ -841,13 +969,16 @@ export default function App() {
         settings={settings}
         onChangeSettings={setSettings}
         tool={tool}
-        onChangeTool={setTool}
+        onChangeTool={handleChangeTool}
         canvasSpec={canvasSpec}
         buffer={buffer}
         compositeBuffer={compositeBuffer}
         onStrokeEnd={onStrokeEnd}
         selection={selection}
         onChangeSelection={handleChangeSelection}
+        floatingBuffer={floatingBuffer}
+        onBeginTransform={beginSelectionTransform}
+        onUpdateTransform={updateFloating}
         onColorPick={handleSelectColor}
         onUndo={handleUndo}
         onRedo={handleRedo}
@@ -897,6 +1028,7 @@ export default function App() {
           onRotate90CCW: handleRotate90CCW,
           onRotate180: handleRotate180,
           onScale: handleScale,
+          onRotate: handleRotateDegrees,
         }}
         onColorAdjustOperations={{
           onAdjustHue: handleAdjustHue,

@@ -3,7 +3,7 @@ import ToolRail from "./ToolRail";
 import RightPanel from "./RightPanel";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
-import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode } from "../types";
+import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode, FloatingSelection } from "../types";
 import { PaletteData } from "./PalettePanel";
 
 type Props = {
@@ -20,6 +20,9 @@ type Props = {
 
   selection: Uint8Array | null;
   onChangeSelection: (selection: Uint8Array | null) => void;
+  floatingBuffer?: FloatingSelection | null;
+  onBeginTransform?: () => FloatingSelection | null;
+  onUpdateTransform?: (next: FloatingSelection) => void;
   onColorPick?: (color: string) => void;
 
   onUndo: () => void;
@@ -73,6 +76,7 @@ type Props = {
     onRotate90CCW: () => void;
     onRotate180: () => void;
     onScale: (scaleX: number, scaleY: number) => void;
+    onRotate: (degrees: number) => void;
   };
 
   onColorAdjustOperations?: {
@@ -118,6 +122,9 @@ export default function DockLayout({
   onStrokeEnd,
   selection,
   onChangeSelection,
+  floatingBuffer,
+  onBeginTransform,
+  onUpdateTransform,
   onColorPick,
   onUndo,
   onRedo,
@@ -224,6 +231,9 @@ export default function DockLayout({
             onStrokeEnd={onStrokeEnd}
             selection={selection}
             onChangeSelection={onChangeSelection}
+            floatingBuffer={floatingBuffer}
+            onBeginTransform={onBeginTransform}
+            onUpdateTransform={onUpdateTransform}
             onColorPick={onColorPick}
             frames={frames}
             currentFrameIndex={currentFrameIndex}
