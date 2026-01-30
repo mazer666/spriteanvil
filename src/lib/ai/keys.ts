@@ -27,9 +27,9 @@ export async function decryptKey(
   record: EncryptedKeyRecord,
   passphrase: string
 ): Promise<string> {
-  const encryptedBytes = base64ToBytes(record.encrypted);
-  const iv = base64ToBytes(record.iv);
-  const salt = base64ToBytes(record.salt);
+  const encryptedBytes = base64ToArrayBuffer(record.encrypted);
+  const iv = base64ToArrayBuffer(record.iv);
+  const salt = base64ToArrayBuffer(record.salt);
 
   const keyMaterial = await getKeyMaterial(passphrase);
   const key = await deriveKey(keyMaterial, salt);
@@ -53,7 +53,7 @@ async function getKeyMaterial(passphrase: string): Promise<CryptoKey> {
   );
 }
 
-async function deriveKey(keyMaterial: CryptoKey, salt: Uint8Array): Promise<CryptoKey> {
+async function deriveKey(keyMaterial: CryptoKey, salt: ArrayBuffer): Promise<CryptoKey> {
   return crypto.subtle.deriveKey(
     {
       name: "PBKDF2",
@@ -68,11 +68,12 @@ async function deriveKey(keyMaterial: CryptoKey, salt: Uint8Array): Promise<Cryp
   );
 }
 
-function base64ToBytes(value: string): Uint8Array {
+function base64ToArrayBuffer(value: string): ArrayBuffer {
   const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
+  const buffer = new ArrayBuffer(binary.length);
+  const bytes = new Uint8Array(buffer);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  return bytes;
+  return buffer;
 }
