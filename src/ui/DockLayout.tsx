@@ -199,6 +199,7 @@ export default function DockLayout({
   const [isMobile, setIsMobile] = useState(false);
   const [isToolRailOpen, setIsToolRailOpen] = useState(false);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
+  const [isMinimapVisible, setIsMinimapVisible] = useState(true);
 
   useEffect(() => saveNumber("dock:rightWidth", rightWidth), [rightWidth]);
   useEffect(() => saveNumber("dock:timelineHeight", timelineHeight), [timelineHeight]);
@@ -212,6 +213,9 @@ export default function DockLayout({
       if (!media.matches) {
         setIsToolRailOpen(false);
         setIsRightPanelOpen(false);
+        setIsMinimapVisible(true);
+      } else {
+        setIsMinimapVisible(false);
       }
     };
     update();
@@ -288,6 +292,13 @@ export default function DockLayout({
             </button>
             <button
               className="uiBtn"
+              onClick={() => setIsMinimapVisible((prev) => !prev)}
+              title="Toggle minimap"
+            >
+              ◳ Map
+            </button>
+            <button
+              className="uiBtn"
               onClick={() => setIsRightPanelOpen((prev) => !prev)}
               title="Toggle panel"
             >
@@ -323,6 +334,7 @@ export default function DockLayout({
             remoteCursors={remoteCursors}
             frames={frames}
             currentFrameIndex={currentFrameIndex}
+            showMinimap={!isMobile || isMinimapVisible}
           />
         </div>
 

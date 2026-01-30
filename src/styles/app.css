@@ -553,7 +553,7 @@ body{
   :root{
     --rightPanelWidth: 100vw;
     --timelineHeight: 120px;
-    --topbarHeight: 48px;
+    --topbarHeight: 92px;
     --statusBarHeight: 24px;
   }
 
@@ -571,7 +571,7 @@ body{
     position: absolute;
     top: var(--topbarHeight);
     bottom: calc(var(--timelineHeight) + var(--statusBarHeight));
-    width: 260px;
+    width: min(320px, 88vw);
     max-width: 90vw;
     transform: translateX(-110%);
     transition: transform 0.2s ease;
@@ -603,16 +603,19 @@ body{
   }
 
   .dock__mobileControls{
-    top: 6px;
+    top: 8px;
     right: 8px;
     gap: 6px;
   }
 
   .topbar{
     height: var(--topbarHeight);
-    padding: 6px 8px;
-    gap: 10px;
-    padding-right: 124px;
+    padding: 8px 10px;
+    gap: 8px;
+    row-gap: 6px;
+    padding-right: 168px;
+    flex-wrap: wrap;
+    align-content: center;
   }
 
   .brand__name{
@@ -626,6 +629,7 @@ body{
   .topbar__group{
     gap: 6px;
     padding: 4px 6px;
+    border-radius: 6px;
   }
 
   .uiBtn{
@@ -638,7 +642,7 @@ body{
   }
 
   .zoom{
-    width: 110px;
+    width: 90px;
   }
 
   .timeline__header{
@@ -652,6 +656,27 @@ body{
 
   .timeline__info{
     width: 100%;
+  }
+
+  .stage__hud{
+    top: 8px;
+    left: 8px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .hudpill{
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .minimap{
+    width: 100px;
+    height: 100px;
+    right: 10px;
+    bottom: 10px;
+    padding: 4px;
   }
 }
 
