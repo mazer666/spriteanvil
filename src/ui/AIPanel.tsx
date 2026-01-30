@@ -7,6 +7,12 @@ type Props = {
   enabled?: boolean;
 };
 
+const EMPTY_KEYS: Record<AIProviderId, string> = {
+  "openai-dalle3": "",
+  "stability-ai": "",
+  "hugging-face": "",
+};
+
 export default function AIPanel({ enabled = false }: Props) {
   const [userId, setUserId] = useState("");
   const [passphrase, setPassphrase] = useState("");
@@ -14,7 +20,7 @@ export default function AIPanel({ enabled = false }: Props) {
   const [selectedPrompt, setSelectedPrompt] = useState(PIXEL_ART_PROMPTS[0]?.prompt ?? "");
   const [customPrompt, setCustomPrompt] = useState("");
   const [status, setStatus] = useState<string | null>(null);
-  const [keys, setKeys] = useState<Record<AIProviderId, string>>({});
+  const [keys, setKeys] = useState<Record<AIProviderId, string>>(() => ({ ...EMPTY_KEYS }));
 
   const providerOptions = useMemo(() => PROVIDERS, []);
 
@@ -26,7 +32,7 @@ export default function AIPanel({ enabled = false }: Props) {
     setStatus("Loading encrypted keys...");
     try {
       const encrypted = await loadEncryptedKeys(userId);
-      const nextKeys: Record<AIProviderId, string> = {};
+      const nextKeys: Record<AIProviderId, string> = { ...EMPTY_KEYS };
       for (const record of encrypted) {
         nextKeys[record.provider] = await decryptKey(record, passphrase);
       }

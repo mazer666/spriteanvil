@@ -24,6 +24,7 @@ type Props = {
     onRenameLayer: (id: string, name: string) => void;
     onReorderLayers: (fromIndex: number, toIndex: number) => void;
     onMergeDown: (id: string) => void;
+    onFlatten: () => void;
   };
 
   palettes?: PaletteData[];
@@ -36,6 +37,7 @@ type Props = {
     onAddColorToPalette: (paletteId: string, color: string) => void;
     onRemoveColorFromPalette: (paletteId: string, colorIndex: number) => void;
     onSwapColors: (fromColor: string, toColor: string) => void;
+    onExtractPalette: () => void;
   };
 
   onTransformOperations?: {
@@ -45,6 +47,7 @@ type Props = {
     onRotate90CCW: () => void;
     onRotate180: () => void;
     onScale: (scaleX: number, scaleY: number) => void;
+    onRotate: (degrees: number) => void;
   };
 
   onColorAdjustOperations?: {

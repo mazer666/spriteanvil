@@ -670,6 +670,14 @@ export default function CanvasStage(props: {
     }
   }
 
+  function handlePointerMove(e: React.PointerEvent) {
+    const p0 = pointerToPixel(e);
+    if (p0) setHoverPos(p0);
+    if (strokeRef.current.active) {
+      moveStroke(e);
+    }
+  }
+
   function endStroke(e?: React.PointerEvent) {
     const st = strokeRef.current;
     if (!st.active) return;
@@ -1528,14 +1536,6 @@ function applySelectionMask(
       after[idx + 1] = before[idx + 1];
       after[idx + 2] = before[idx + 2];
       after[idx + 3] = before[idx + 3];
-    }
-  }
-
-  function handlePointerMove(e: React.PointerEvent) {
-    const p0 = pointerToPixel(e);
-    if (p0) setHoverPos(p0);
-    if (strokeRef.current.active) {
-      moveStroke(e);
     }
   }
 }
