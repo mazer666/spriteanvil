@@ -66,6 +66,19 @@ export default function CanvasStage(props: {
     currentFrameIndex
   } = props;
 
+  const shapePreviewTools: ToolId[] = [
+    "line",
+    "rectangle",
+    "rectangleFilled",
+    "circle",
+    "circleFilled",
+    "ellipse",
+    "ellipseFilled",
+    "selectRect",
+    "selectEllipse",
+    "gradient",
+  ];
+
   const stageRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -591,7 +604,7 @@ export default function CanvasStage(props: {
       return;
     }
 
-    if (tool === "line" || tool === "rectangle" || tool === "rectangleFilled" || tool === "circle" || tool === "circleFilled" || tool === "ellipse" || tool === "ellipseFilled" || tool === "selectRect" || tool === "selectEllipse" || tool === "gradient") {
+    if (shapePreviewTools.includes(tool)) {
       setShapePreview({ startX: p.x, startY: p.y, endX: p.x, endY: p.y });
     }
   }
@@ -665,7 +678,7 @@ export default function CanvasStage(props: {
       });
     }
 
-    if (tool === "line" || tool === "rectangle" || tool === "rectangleFilled" || tool === "circle" || tool === "circleFilled" || tool === "ellipse" || tool === "ellipseFilled" || tool === "selectRect" || tool === "selectEllipse" || tool === "gradient") {
+    if (shapePreviewTools.includes(tool)) {
       setShapePreview({ startX: st.startX, startY: st.startY, endX: p0.x, endY: p0.y });
     }
   }
