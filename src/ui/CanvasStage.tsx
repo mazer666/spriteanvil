@@ -1154,34 +1154,6 @@ export default function CanvasStage(props: {
       }
     }
 
-    if (renderSelection) {
-      const bounds = getSelectionBounds(renderSelection, canvasSpec.width, canvasSpec.height);
-      if (bounds) {
-        const handleSize = Math.max(4, Math.floor(zoom));
-        const half = Math.floor(handleSize / 2);
-        const x0 = originX + bounds.x * zoom;
-        const y0 = originY + bounds.y * zoom;
-        const x1 = originX + (bounds.x + bounds.width) * zoom;
-        const y1 = originY + (bounds.y + bounds.height) * zoom;
-
-        ctx.save();
-        ctx.fillStyle = "#ffffff";
-        ctx.strokeStyle = "#000000";
-        ctx.lineWidth = 1;
-
-        const drawHandle = (x: number, y: number) => {
-          ctx.fillRect(x - half, y - half, handleSize, handleSize);
-          ctx.strokeRect(x - half, y - half, handleSize, handleSize);
-        };
-
-        drawHandle(x0, y0);
-        drawHandle(x1, y0);
-        drawHandle(x0, y1);
-        drawHandle(x1, y1);
-        ctx.restore();
-      }
-    }
-
     ctx.strokeStyle = "rgba(255,255,255,0.28)";
     ctx.lineWidth = 1;
     ctx.strokeRect(originX + 0.5, originY + 0.5, imgW - 1, imgH - 1);
