@@ -101,6 +101,7 @@ export default function App() {
 
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showTopbarMenu, setShowTopbarMenu] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [animationTags, setAnimationTags] = useState<AnimationTag[]>([]);
@@ -385,6 +386,8 @@ export default function App() {
     brushTexture: "none",
     smudgeStrength: 60,
     wandTolerance: 32,
+    pressureMode: "size",
+    pressureEasing: 0.25,
   }));
 
   const zoomLabel = useMemo(() => `${Math.round(settings.zoom * 100)}%`, [settings.zoom]);
@@ -445,6 +448,7 @@ export default function App() {
           { label: "Zoom Out", shortcut: "Cmd+-" },
           { label: "Reset Zoom", shortcut: "Cmd+0" },
           { label: "Toggle Grid", shortcut: "Cmd+'" },
+          { label: "Zen Mode", shortcut: "Tab" },
         ],
       },
       {
@@ -2192,128 +2196,236 @@ export default function App() {
           onCursorMove={handleCursorMove}
           topBar={
             <div className="topbar">
-              <div className="brand">
-                <div className="brand__name">SpriteAnvil</div>
-                <div className="brand__tagline">Forge sprites. Shape motion.</div>
+              <div className="topbar__main">
+                <div className="brand">
+                  <div className="brand__name">SpriteAnvil</div>
+                  <div className="brand__tagline">Forge sprites. Shape motion.</div>
+                </div>
+
+                <div className="topbar__group topbar__group--primary">
+                  <button className="uiBtn" onClick={handleUndo} disabled={!canUndo} title="Undo (Cmd+Z)">
+                    Undo
+                  </button>
+                  <button className="uiBtn" onClick={handleRedo} disabled={!canRedo} title="Redo (Cmd+Y)">
+                    Redo
+                  </button>
+                </div>
               </div>
 
-              <div className="topbar__group">
-                <button className="uiBtn" onClick={handleUndo} disabled={!canUndo} title="Undo (Cmd+Z)">
-                  Undo
-                </button>
-                <button className="uiBtn" onClick={handleRedo} disabled={!canRedo} title="Redo (Cmd+Y)">
-                  Redo
-                </button>
-              </div>
-
-              <div className="topbar__group">
-                <button
-                  className="uiBtn"
-                  onClick={() => setShowCommandPalette(true)}
-                  title="Command Palette (Cmd+K)"
-                >
-                  Commands
-                </button>
-                <button
-                  className="uiBtn"
-                  onClick={() => setProjectView("dashboard")}
-                  title="Project Dashboard"
-                >
-                  Projects
-                </button>
-                <button
-                  className="uiBtn uiBtn--primary"
-                  onClick={() => setShowExportPanel(true)}
-                  title="Export Sprite (Cmd+E)"
-                >
-                  Export
-                </button>
-              </div>
-
-              <div className="topbar__group">
-                {activeCollaborators.length > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span style={{ fontSize: "11px", color: "#aaa" }}>Active:</span>
-                    <div style={{ display: "flex", gap: "4px" }}>
-                      {activeCollaborators.slice(0, 5).map((user) => (
-                        <span
-                          key={user.id}
-                          title={`User ${user.id}`}
-                          style={{
-                            width: "18px",
-                            height: "18px",
-                            borderRadius: "999px",
-                            background: user.color,
-                            color: "#111",
-                            fontSize: "9px",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          {user.id.slice(0, 2)}
-                        </span>
-                      ))}
-                    </div>
-                    {activeCollaborators.length > 5 && (
-                      <span style={{ fontSize: "11px", color: "#aaa" }}>
-                        +{activeCollaborators.length - 5}
-                      </span>
-                    )}
-                  </div>
-                )}
-                <label className="ui-row">
-                  <span>Color</span>
-                  <input
-                    className="color"
-                    type="color"
-                    value={settings.primaryColor}
-                    onChange={(e) => handleSelectColor(e.target.value)}
-                    title="Primary Color"
-                  />
-                </label>
-
-                <label className="ui-row">
-                  <span>Zoom</span>
-                  <input
-                    className="zoom"
-                    type="range"
-                    min={1}
-                    max={32}
-                    step={0.25}
-                    value={settings.zoom}
-                    onChange={(e) => setSettings((s) => ({ ...s, zoom: Number(e.target.value) }))}
-                  />
-                  <span className="mono">{zoomLabel}</span>
-                </label>
-              </div>
-
-              <div className="topbar__group">
-                <label className="ui-row">
-                  <span>Background</span>
-                  <select
-                    value={settings.backgroundMode}
-                    onChange={(e) =>
-                      setSettings((s) => ({ ...s, backgroundMode: e.target.value as any }))
-                    }
+              <div className="topbar__groups">
+                <div className="topbar__group">
+                  <button
+                    className="uiBtn"
+                    onClick={() => setShowCommandPalette(true)}
+                    title="Command Palette (Cmd+K)"
                   >
-                    <option value="checker">Checkerboard</option>
-                    <option value="solidDark">Solid (Dark)</option>
-                    <option value="solidLight">Solid (Light)</option>
-                    <option value="greenscreen">Greenscreen</option>
-                    <option value="bluescreen">Bluescreen</option>
-                  </select>
-                </label>
+                    Commands
+                  </button>
+                  <button
+                    className="uiBtn"
+                    onClick={() => setProjectView("dashboard")}
+                    title="Project Dashboard"
+                  >
+                    Projects
+                  </button>
+                  <button
+                    className="uiBtn uiBtn--primary"
+                    onClick={() => setShowExportPanel(true)}
+                    title="Export Sprite (Cmd+E)"
+                  >
+                    Export
+                  </button>
+                </div>
 
-                <label className="ui-row">
-                  <input
-                    type="checkbox"
-                    checked={settings.showGrid}
-                    onChange={(e) => setSettings((s) => ({ ...s, showGrid: e.target.checked }))}
-                  />
-                  <span>Grid</span>
-                </label>
+                <div className="topbar__group">
+                  {activeCollaborators.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ fontSize: "11px", color: "#aaa" }}>Active:</span>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        {activeCollaborators.slice(0, 5).map((user) => (
+                          <span
+                            key={user.id}
+                            title={`User ${user.id}`}
+                            style={{
+                              width: "18px",
+                              height: "18px",
+                              borderRadius: "999px",
+                              background: user.color,
+                              color: "#111",
+                              fontSize: "9px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            {user.id.slice(0, 2)}
+                          </span>
+                        ))}
+                      </div>
+                      {activeCollaborators.length > 5 && (
+                        <span style={{ fontSize: "11px", color: "#aaa" }}>
+                          +{activeCollaborators.length - 5}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <label className="ui-row">
+                    <span>Color</span>
+                    <input
+                      className="color"
+                      type="color"
+                      value={settings.primaryColor}
+                      onChange={(e) => handleSelectColor(e.target.value)}
+                      title="Primary Color"
+                    />
+                  </label>
+
+                  <label className="ui-row">
+                    <span>Zoom</span>
+                    <input
+                      className="zoom"
+                      type="range"
+                      min={1}
+                      max={32}
+                      step={0.25}
+                      value={settings.zoom}
+                      onChange={(e) => setSettings((s) => ({ ...s, zoom: Number(e.target.value) }))}
+                    />
+                    <span className="mono">{zoomLabel}</span>
+                  </label>
+                </div>
+
+                <div className="topbar__group">
+                  <label className="ui-row">
+                    <span>Background</span>
+                    <select
+                      value={settings.backgroundMode}
+                      onChange={(e) =>
+                        setSettings((s) => ({ ...s, backgroundMode: e.target.value as any }))
+                      }
+                    >
+                      <option value="checker">Checkerboard</option>
+                      <option value="solidDark">Solid (Dark)</option>
+                      <option value="solidLight">Solid (Light)</option>
+                      <option value="greenscreen">Greenscreen</option>
+                      <option value="bluescreen">Bluescreen</option>
+                    </select>
+                  </label>
+
+                  <label className="ui-row">
+                    <input
+                      type="checkbox"
+                      checked={settings.showGrid}
+                      onChange={(e) => setSettings((s) => ({ ...s, showGrid: e.target.checked }))}
+                    />
+                    <span>Grid</span>
+                  </label>
+                </div>
               </div>
+
+              <button
+                className="uiBtn topbar__menuBtn"
+                onClick={() => setShowTopbarMenu((prev) => !prev)}
+                title="Toggle topbar menu"
+              >
+                ☰
+              </button>
+
+              {showTopbarMenu && (
+                <div className="topbar__menu">
+                  <div className="topbar__menu-header">
+                    <span>Quick Controls</span>
+                    <button
+                      className="uiBtn uiBtn--ghost"
+                      onClick={() => setShowTopbarMenu(false)}
+                      title="Close menu"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="topbar__menu-body">
+                    <div className="topbar__group">
+                      <button
+                        className="uiBtn"
+                        onClick={() => setShowCommandPalette(true)}
+                        title="Command Palette (Cmd+K)"
+                      >
+                        Commands
+                      </button>
+                      <button
+                        className="uiBtn"
+                        onClick={() => setProjectView("dashboard")}
+                        title="Project Dashboard"
+                      >
+                        Projects
+                      </button>
+                      <button
+                        className="uiBtn uiBtn--primary"
+                        onClick={() => setShowExportPanel(true)}
+                        title="Export Sprite (Cmd+E)"
+                      >
+                        Export
+                      </button>
+                    </div>
+
+                    <div className="topbar__group">
+                      <label className="ui-row">
+                        <span>Color</span>
+                        <input
+                          className="color"
+                          type="color"
+                          value={settings.primaryColor}
+                          onChange={(e) => handleSelectColor(e.target.value)}
+                          title="Primary Color"
+                        />
+                      </label>
+                      <label className="ui-row">
+                        <span>Zoom</span>
+                        <input
+                          className="zoom"
+                          type="range"
+                          min={1}
+                          max={32}
+                          step={0.25}
+                          value={settings.zoom}
+                          onChange={(e) =>
+                            setSettings((s) => ({ ...s, zoom: Number(e.target.value) }))
+                          }
+                        />
+                        <span className="mono">{zoomLabel}</span>
+                      </label>
+                    </div>
+
+                    <div className="topbar__group">
+                      <label className="ui-row">
+                        <span>Background</span>
+                        <select
+                          value={settings.backgroundMode}
+                          onChange={(e) =>
+                            setSettings((s) => ({ ...s, backgroundMode: e.target.value as any }))
+                          }
+                        >
+                          <option value="checker">Checkerboard</option>
+                          <option value="solidDark">Solid (Dark)</option>
+                          <option value="solidLight">Solid (Light)</option>
+                          <option value="greenscreen">Greenscreen</option>
+                          <option value="bluescreen">Bluescreen</option>
+                        </select>
+                      </label>
+                      <label className="ui-row">
+                        <input
+                          type="checkbox"
+                          checked={settings.showGrid}
+                          onChange={(e) =>
+                            setSettings((s) => ({ ...s, showGrid: e.target.checked }))
+                          }
+                        />
+                        <span>Grid</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           }
           statusBar={<StatusBar info={statusInfo} />}

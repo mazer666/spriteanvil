@@ -73,6 +73,12 @@ body{
   transform: none;
 }
 
+.uiBtn--ghost{
+  background: rgba(0,0,0,0.2);
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: none;
+}
+
 .uiInput{
   width: 100%;
   padding: 6px 8px;
@@ -126,6 +132,7 @@ body{
   grid-template-rows: var(--topbarHeight) 1fr 4px var(--timelineHeight) var(--statusBarHeight);
   grid-template-columns: 100%;
   overflow: hidden;
+  transition: grid-template-rows 0.2s ease;
 }
 
 .dock__top{
@@ -221,6 +228,35 @@ body{
 
 .dock__right--collapsed .rightpanel__content{
   display: none;
+}
+
+.dock--left-hidden .dock__left,
+.dock--right-hidden .dock__right{
+  display: none;
+}
+
+.dock--right-hidden .splitter--v{
+  display: none;
+}
+
+.dock--timeline-collapsed .dock__bottom,
+.dock--timeline-collapsed .splitter--h{
+  display: none;
+}
+
+.dock--zen .dock__top,
+.dock--zen .dock__status{
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dock__panelControls{
+  position: absolute;
+  right: 12px;
+  top: 8px;
+  display: flex;
+  gap: 8px;
+  z-index: 130;
 }
 
 .dock__right--collapsed .rightpanel__tabs{
@@ -611,10 +647,57 @@ body{
   align-items: center;
   padding: 8px 10px;
   gap: 16px;
+  position: relative;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   scrollbar-width: thin;
   scrollbar-color: rgba(214,178,107,0.4) transparent;
+}
+.topbar__main{
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.topbar__groups{
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: nowrap;
+}
+
+.topbar__menuBtn{
+  margin-left: auto;
+  display: none;
+}
+
+.topbar__menu{
+  position: absolute;
+  top: 60px;
+  right: 12px;
+  width: min(360px, 92vw);
+  background: rgba(15, 13, 11, 0.98);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+  padding: 12px;
+  z-index: 200;
+}
+
+.topbar__menu-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+  margin-bottom: 8px;
+}
+
+.topbar__menu-body{
+  display: grid;
+  gap: 10px;
 }
 .topbar::-webkit-scrollbar{
   height: 4px;
@@ -658,6 +741,10 @@ body{
   background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.4));
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+.topbar__group--primary{
+  background: rgba(0,0,0,0.35);
 }
 
 @media (max-width: 1199px){
@@ -738,6 +825,14 @@ body{
     padding-right: 168px;
     flex-wrap: wrap;
     align-content: center;
+  }
+
+  .topbar__groups{
+    display: none;
+  }
+
+  .topbar__menuBtn{
+    display: inline-flex;
   }
 
   .brand__name{
@@ -918,6 +1013,32 @@ body{
   align-items: center;
   gap: 6px;
 }
+
+@media (pointer: coarse){
+  .uiBtn,
+  .uiInput,
+  .option-row input,
+  .option-row select,
+  .palette-panel__tool-btn,
+  .palette-panel__full-btn,
+  .palette-panel__small-btn,
+  .palette-panel__text-input,
+  .palette-panel__number-input,
+  .palette-panel__hex-input{
+    min-height: 44px;
+  }
+
+  input[type="range"]{
+    height: 32px;
+  }
+
+  .color,
+  .colorSmall,
+  .palette-panel__color-input{
+    width: 44px;
+    height: 44px;
+  }
+}
 .tab__icon{
   font-size: 14px;
 }
@@ -963,6 +1084,40 @@ body{
   font-size: 12px;
   line-height: 1.6;
   color: var(--muted);
+}
+
+.accordion-section{
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  background: rgba(0,0,0,0.25);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.accordion-section__header{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.45));
+  border: 0;
+  color: var(--accent-strong);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.accordion-section__icon{
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.accordion-section__body{
+  padding: 10px;
+  display: grid;
+  gap: 12px;
 }
 
 /* Palette panel */
@@ -1020,7 +1175,6 @@ body{
 .palette-panel__list{
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
   padding: 8px;
 }
 .palette-panel__list-header{
@@ -1028,6 +1182,29 @@ body{
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+}
+.palette-panel__list-header--secondary{
+  margin-top: 8px;
+}
+
+.palette-panel__collapse-btn{
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.palette-panel__section{
+  margin-bottom: 10px;
+}
+
+.palette-panel__scroll{
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+  display: grid;
+  gap: 8px;
 }
 .palette-panel__small-btn{
   padding: 4px 8px;

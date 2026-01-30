@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { UiSettings, ToolId, LayerData, BlendMode, CanvasSpec } from "../types";
 import LayerPanel from "./LayerPanel";
 import PalettePanel from "./PalettePanel";
@@ -113,88 +113,99 @@ export default function RightPanel({
   onImageToImage,
   collapsed = false,
 }: Props) {
-  const tabs = useMemo(
-    () => ["Tool", "Layers", "Palette", "Transform", "Color", "Selection", "AI"] as const,
-    []
-  );
-  const [active, setActive] = useState<(typeof tabs)[number]>("Tool");
-  const tabIcons: Record<(typeof tabs)[number], string> = {
-    Tool: "🛠",
-    Layers: "🗂",
-    Palette: "🎨",
-    Transform: "🧭",
-    Color: "🌈",
-    Selection: "🔲",
-    AI: "🤖",
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    art: true,
+    color: true,
+    transform: true,
+  });
+
+  const toggleSection = (key: string) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   return (
     <div className={"rightpanel" + (collapsed ? " rightpanel--collapsed" : "")}>
-      <div className="rightpanel__tabs">
-        {tabs.map((t) => (
+      <div className="rightpanel__content">
+        <section className="accordion-section">
           <button
-            key={t}
-            className={"tab" + (active === t ? " tab--active" : "")}
-            onClick={() => setActive(t)}
+            className="accordion-section__header"
+            onClick={() => toggleSection("art")}
+            aria-expanded={openSections.art}
           >
-            <span className="tab__icon" aria-hidden="true">{tabIcons[t]}</span>
-            <span className="tab__label">{t}</span>
-            {t === "Selection" && hasSelection && <span className="tab__badge">•</span>}
+            <span>Art & Layers</span>
+            <span className="accordion-section__icon">{openSections.art ? "−" : "+"}</span>
           </button>
-        ))}
-      </div>
+          {openSections.art && (
+            <div className="accordion-section__body">
+              <ToolOptionsPanel tool={tool} settings={settings} onChangeSettings={onChangeSettings} />
+              {canvasSpec && previewBuffer && (
+                <MipmapPreview canvasSpec={canvasSpec} pixels={previewBuffer} />
+              )}
+              {layers && activeLayerId && onLayerOperations && (
+                <LayerPanel
+                  layers={layers}
+                  activeLayerId={activeLayerId}
+                  {...onLayerOperations}
+                />
+              )}
+            </div>
+          )}
+        </section>
 
-      <div className="rightpanel__content" style={{ height: "calc(100% - 40px)", overflow: "auto" }}>
-        {active === "Tool" && (
-          <>
-            <ToolOptionsPanel tool={tool} settings={settings} onChangeSettings={onChangeSettings} />
-            {canvasSpec && previewBuffer && (
-              <MipmapPreview canvasSpec={canvasSpec} pixels={previewBuffer} />
-            )}
-          </>
-        )}
+        <section className="accordion-section">
+          <button
+            className="accordion-section__header"
+            onClick={() => toggleSection("color")}
+            aria-expanded={openSections.color}
+          >
+            <span>Colors & Palettes</span>
+            <span className="accordion-section__icon">{openSections.color ? "−" : "+"}</span>
+          </button>
+          {openSections.color && (
+            <div className="accordion-section__body">
+              {palettes && activePaletteId && onPaletteOperations && (
+                <PalettePanel
+                  palettes={palettes}
+                  activePaletteId={activePaletteId}
+                  primaryColor={settings.primaryColor}
+                  secondaryColor={settings.secondaryColor}
+                  recentColors={recentColors || []}
+                  {...onPaletteOperations}
+                />
+              )}
+              {onColorAdjustOperations && (
+                <ColorAdjustPanel {...onColorAdjustOperations} />
+              )}
+            </div>
+          )}
+        </section>
 
-        {active === "Layers" && layers && activeLayerId && onLayerOperations && (
-          <LayerPanel
-            layers={layers}
-            activeLayerId={activeLayerId}
-            {...onLayerOperations}
-          />
-        )}
-
-        {active === "Palette" && palettes && activePaletteId && onPaletteOperations && (
-          <PalettePanel
-            palettes={palettes}
-            activePaletteId={activePaletteId}
-            primaryColor={settings.primaryColor}
-            secondaryColor={settings.secondaryColor}
-            recentColors={recentColors || []}
-            {...onPaletteOperations}
-          />
-        )}
-
-        {active === "Transform" && onTransformOperations && (
-          <TransformPanel {...onTransformOperations} />
-        )}
-
-        {active === "Color" && onColorAdjustOperations && (
-          <ColorAdjustPanel {...onColorAdjustOperations} />
-        )}
-
-        {active === "Selection" && onSelectionOperations && (
-          <SelectionPanel hasSelection={!!hasSelection} {...onSelectionOperations} />
-        )}
-
-        {active === "AI" && (
-          <AIPanel
-            enabled
-            canvasSpec={canvasSpec}
-            selectionMask={selectionMask}
-            layerPixels={layerPixels}
-            onInpaint={onInpaint}
-            onImageToImage={onImageToImage}
-          />
-        )}
+        <section className="accordion-section">
+          <button
+            className="accordion-section__header"
+            onClick={() => toggleSection("transform")}
+            aria-expanded={openSections.transform}
+          >
+            <span>Transform & AI</span>
+            <span className="accordion-section__icon">{openSections.transform ? "−" : "+"}</span>
+          </button>
+          {openSections.transform && (
+            <div className="accordion-section__body">
+              {onTransformOperations && <TransformPanel {...onTransformOperations} />}
+              {onSelectionOperations && (
+                <SelectionPanel hasSelection={!!hasSelection} {...onSelectionOperations} />
+              )}
+              <AIPanel
+                enabled
+                canvasSpec={canvasSpec}
+                selectionMask={selectionMask}
+                layerPixels={layerPixels}
+                onInpaint={onInpaint}
+                onImageToImage={onImageToImage}
+              />
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

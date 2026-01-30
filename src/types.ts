@@ -97,6 +97,8 @@ export type UiSettings = {
   brushTexture: "none" | "noise" | "dither";
   smudgeStrength: number;
   wandTolerance: number;
+  pressureMode: "off" | "size" | "opacity";
+  pressureEasing: number;
 };
 
 export type CanvasSpec = {

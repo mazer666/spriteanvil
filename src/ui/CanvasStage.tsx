@@ -92,6 +92,7 @@ export default function CanvasStage(props: {
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [stageSize, setStageSize] = useState<{ width: number; height: number } | null>(null);
 
   const bufRef = useRef<Uint8ClampedArray>(buffer);
 
@@ -106,6 +107,8 @@ export default function CanvasStage(props: {
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const [viewRect, setViewRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const viewRectRef = useRef<typeof viewRect>(null);
+  const pressureRef = useRef<{ value: number }>({ value: 1 });
+  const activePenPointerIdRef = useRef<number | null>(null);
 
   // Animation frame counter for marching ants
   const [animFrame, setAnimFrame] = useState(0);
@@ -170,7 +173,26 @@ export default function CanvasStage(props: {
     floatingBuffer,
     panOffset,
     animFrame,
+    stageSize,
   ]);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        setStageSize({ width, height });
+      }
+    });
+    observer.observe(stage);
+
+    const rect = stage.getBoundingClientRect();
+    setStageSize({ width: rect.width, height: rect.height });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     function isInputFocused(): boolean {
@@ -270,10 +292,39 @@ export default function CanvasStage(props: {
     return Math.max(1, Math.floor(n));
   }
 
-  function getDrawColor(): { r: number; g: number; b: number; a: number } {
+  function getDrawColor(alphaScale = 1): { r: number; g: number; b: number; a: number } {
     if (tool === "eraser") return { r: 0, g: 0, b: 0, a: 0 };
     const { r, g, b } = hexToRgb(settings.primaryColor);
-    return { r, g, b, a: 255 };
+    const alpha = Math.max(0, Math.min(255, Math.round(255 * alphaScale)));
+    return { r, g, b, a: alpha };
+  }
+
+  function getPressureValue(e: React.PointerEvent): number {
+    if (settings.pressureMode === "off") {
+      pressureRef.current.value = 1;
+      return 1;
+    }
+    const raw = e.pointerType === "pen" ? e.pressure : 1;
+    const clamped = Math.max(0, Math.min(1, raw || 0));
+    const eased = pressureRef.current.value + (clamped - pressureRef.current.value) * settings.pressureEasing;
+    pressureRef.current.value = eased;
+    return eased;
+  }
+
+  function resetPressure(e: React.PointerEvent) {
+    const raw = e.pointerType === "pen" ? e.pressure : 1;
+    pressureRef.current.value = Math.max(0, Math.min(1, raw || 0)) || 1;
+  }
+
+  function getDynamicBrushSize(pressure: number): number {
+    if (settings.pressureMode !== "size") return settings.brushSize;
+    const scale = 0.35 + pressure * 0.65;
+    return Math.max(1, Math.round(settings.brushSize * scale));
+  }
+
+  function getDynamicAlphaScale(pressure: number): number {
+    if (settings.pressureMode !== "opacity") return 1;
+    return 0.15 + pressure * 0.85;
   }
 
   function applyStabilizer(rawX: number, rawY: number): { x: number; y: number } {
@@ -517,6 +568,20 @@ export default function CanvasStage(props: {
 
   function beginStroke(e: React.PointerEvent) {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    if (activePenPointerIdRef.current !== null && e.pointerType === "touch") {
+      return;
+    }
+    if (e.pointerType === "pen") {
+      activePenPointerIdRef.current = e.pointerId;
+    }
+    if (e.pointerType === "touch") {
+      if (handleGestureStart(e)) {
+        return;
+      }
+      if (isDrawingTool(tool)) {
+        return;
+      }
+    }
     if (handleGestureStart(e)) {
       return;
     }
@@ -532,6 +597,7 @@ export default function CanvasStage(props: {
     st.hasSmooth = false;
     st.selectionMode = selectionModeFromEvent(e);
     st.isPanning = false;
+    resetPressure(e);
 
     if (isPanningRef.current) {
       st.isPanning = true;
@@ -554,7 +620,10 @@ export default function CanvasStage(props: {
     st.startX = p.x;
     st.startY = p.y;
 
-    const c = getDrawColor();
+    const pressure = getPressureValue(e);
+    const brushSize = getDynamicBrushSize(pressure);
+    const alphaScale = getDynamicAlphaScale(pressure);
+    const c = getDrawColor(alphaScale);
 
     if (tool === "eyedropper") {
       const sampleBuffer = getCompositePreview();
@@ -661,7 +730,7 @@ export default function CanvasStage(props: {
         settings.symmetryMode,
         settings.symmetryAngle,
         settings.symmetrySegments,
-        settings.brushSize,
+        brushSize,
         selection ?? undefined,
         tool === "pen" ? settings.brushTexture : "none"
       );
@@ -675,7 +744,10 @@ export default function CanvasStage(props: {
       st.lastY = snapped.y;
       st.startX = snapped.x;
       st.startY = snapped.y;
-      const strength = Math.min(1, Math.max(0.1, settings.smudgeStrength / 100));
+      const strengthBase = Math.min(1, Math.max(0.1, settings.smudgeStrength / 100));
+      const strength = settings.pressureMode === "opacity"
+        ? Math.min(1, strengthBase * alphaScale)
+        : strengthBase;
       const did = smudgeLine(
         bufRef.current,
         canvasSpec.width,
@@ -684,7 +756,7 @@ export default function CanvasStage(props: {
         snapped.y,
         snapped.x,
         snapped.y,
-        settings.brushSize,
+        brushSize,
         strength,
         selection ?? undefined
       );
@@ -709,6 +781,9 @@ export default function CanvasStage(props: {
     if (handleGestureMove(e)) {
       return;
     }
+    if (activePenPointerIdRef.current !== null && e.pointerType === "touch") {
+      return;
+    }
 
     if (st.isPanning) {
       const dx = e.clientX - st.panStartX;
@@ -730,7 +805,9 @@ export default function CanvasStage(props: {
 
       if (x === st.lastX && y === st.lastY) return;
 
-      const c = getDrawColor();
+      const pressure = getPressureValue(e);
+      const brushSize = getDynamicBrushSize(pressure);
+      const c = getDrawColor(getDynamicAlphaScale(pressure));
       const did = drawBrushLineWithSymmetry(
         bufRef.current,
         canvasSpec.width,
@@ -743,7 +820,7 @@ export default function CanvasStage(props: {
         settings.symmetryMode,
         settings.symmetryAngle,
         settings.symmetrySegments,
-        settings.brushSize,
+        brushSize,
         selection ?? undefined,
         tool === "pen" ? settings.brushTexture : "none"
       );
@@ -761,7 +838,12 @@ export default function CanvasStage(props: {
       const y = snapped.y;
       if (x === st.lastX && y === st.lastY) return;
 
-      const strength = Math.min(1, Math.max(0.1, settings.smudgeStrength / 100));
+      const pressure = getPressureValue(e);
+      const brushSize = getDynamicBrushSize(pressure);
+      const strengthBase = Math.min(1, Math.max(0.1, settings.smudgeStrength / 100));
+      const strength = settings.pressureMode === "opacity"
+        ? Math.min(1, strengthBase * getDynamicAlphaScale(pressure))
+        : strengthBase;
       const did = smudgeLine(
         bufRef.current,
         canvasSpec.width,
@@ -770,7 +852,7 @@ export default function CanvasStage(props: {
         st.lastY,
         x,
         y,
-        settings.brushSize,
+        brushSize,
         strength,
         selection ?? undefined
       );
@@ -806,6 +888,9 @@ export default function CanvasStage(props: {
   }
 
   function handlePointerMove(e: React.PointerEvent) {
+    if (activePenPointerIdRef.current !== null && e.pointerType === "touch") {
+      return;
+    }
     const p0 = pointerToPixel(e);
     if (p0) setHoverPos(p0);
     if (onCursorMove) {
@@ -856,6 +941,9 @@ export default function CanvasStage(props: {
     if (!st.active) return;
 
     st.active = false;
+    if (e?.pointerType === "pen" && activePenPointerIdRef.current === e.pointerId) {
+      activePenPointerIdRef.current = null;
+    }
 
     if (st.isPanning) {
       st.isPanning = false;
@@ -1035,9 +1123,11 @@ export default function CanvasStage(props: {
     if (!cnv || !stage) return;
 
     const rect = stage.getBoundingClientRect();
+    const width = stageSize?.width ?? rect.width;
+    const height = stageSize?.height ?? rect.height;
 
-    const w = cssPx(rect.width);
-    const h = cssPx(rect.height);
+    const w = cssPx(width);
+    const h = cssPx(height);
     if (cnv.width !== w) cnv.width = w;
     if (cnv.height !== h) cnv.height = h;
 

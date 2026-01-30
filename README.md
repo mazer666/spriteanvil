@@ -18,6 +18,8 @@ SpriteAnvil is an in-browser **pixel-art sprite + animation editor** focused on 
 - Canvas-based pixel editing with a typed-array pixel buffer
 - Tool system wiring (ToolRail → CanvasStage → editor tools)
 - Early tool set (pen/eraser + more tools being integrated per plan)
+- Adaptive docking UI with collapsible panels, zen mode, and responsive topbar menus
+- Apple Pencil pressure support with configurable smoothing + palm rejection on touch devices
 - Undo/redo foundation
 - Selection model foundation (mask-based), with UI wiring evolving
 - Realtime collaboration scaffolding (presence + live cursors + pixel patch sync)
