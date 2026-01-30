@@ -185,7 +185,6 @@ export default function RightPanel({
             primaryColor={settings.primaryColor}
             secondaryColor={settings.secondaryColor}
             recentColors={recentColors || []}
-            onSelectColor={(color) => onChangeSettings({ ...settings, primaryColor: color })}
             {...onPaletteOperations}
           />
         )}

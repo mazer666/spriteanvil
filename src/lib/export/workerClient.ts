@@ -61,7 +61,8 @@ export async function generateSpritesheetInWorker(
   canvas.height = response.sheetHeight;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Cannot render spritesheet");
-  const imageData = new ImageData(response.pixels, response.sheetWidth, response.sheetHeight);
+  const pixels = response.pixels as Uint8ClampedArray<ArrayBuffer>;
+  const imageData = new ImageData(pixels, response.sheetWidth, response.sheetHeight);
   ctx.putImageData(imageData, 0, 0);
 
   return {

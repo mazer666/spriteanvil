@@ -128,8 +128,8 @@ export async function loadProjectSnapshot(projectId: string): Promise<ProjectSna
  */
 export async function createProject(data: CreateProjectData): Promise<Project | null> {
   try {
-    const { data: project, error } = await withRetry(() =>
-      supabase
+    const { data: project, error } = await withRetry(async () => {
+      const response = await supabase
         .from("projects")
         .insert({
           name: data.name,
@@ -139,7 +139,8 @@ export async function createProject(data: CreateProjectData): Promise<Project | 
         })
         .select()
         .maybeSingle()
-    )
+      return response
+    })
 
     if (error) {
       console.error("Error creating project:", error)
@@ -193,9 +194,10 @@ export async function getProjects(includeArchived = false): Promise<Project[]> {
  */
 export async function getProject(projectId: string): Promise<Project | null> {
   try {
-    const { data, error } = await withRetry(() =>
-      supabase.from("projects").select("*").eq("id", projectId).maybeSingle()
-    )
+    const { data, error } = await withRetry(async () => {
+      const response = await supabase.from("projects").select("*").eq("id", projectId).maybeSingle()
+      return response
+    })
 
     if (error) {
       console.error("Error fetching project:", error)
@@ -227,9 +229,10 @@ export async function updateProject(
   data: UpdateProjectData
 ): Promise<Project | null> {
   try {
-    const { data: project, error } = await withRetry(() =>
-      supabase.from("projects").update(data).eq("id", projectId).select().maybeSingle()
-    )
+    const { data: project, error } = await withRetry(async () => {
+      const response = await supabase.from("projects").update(data).eq("id", projectId).select().maybeSingle()
+      return response
+    })
 
     if (error) {
       console.error("Error updating project:", error)

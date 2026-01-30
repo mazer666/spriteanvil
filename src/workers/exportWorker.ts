@@ -1,3 +1,5 @@
+/// <reference lib="webworker" />
+
 export type SpritesheetLayout = "grid" | "horizontal" | "vertical" | "packed";
 
 export type SpritesheetSettings = {

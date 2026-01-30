@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DockLayout from "./ui/DockLayout";
 import ExportPanel from "./ui/ExportPanel";
 import CommandPalette, { Command } from "./ui/CommandPalette";
@@ -97,7 +97,10 @@ export default function App() {
 
   const currentFrame = frames[currentFrameIndex];
 
-  function createLayer(name: string, pixels?: Uint8ClampedArray): LayerData {
+  function createLayer(
+    name: string,
+    pixels?: Uint8ClampedArray
+  ): LayerData & { pixels: Uint8ClampedArray } {
     return {
       id: crypto.randomUUID(),
       name,
@@ -418,10 +421,8 @@ export default function App() {
         updateActiveLayerPixels(next.snapshot);
       }
     } else {
-      setFrameLayers(() => {
-        rebuildFramesFromLayers(next.snapshot);
-        return next.snapshot;
-      });
+      setFrameLayers(next.snapshot);
+      rebuildFramesFromLayers(next.snapshot);
     }
     syncHistoryFlags();
   }
@@ -434,10 +435,8 @@ export default function App() {
         updateActiveLayerPixels(next.snapshot);
       }
     } else {
-      setFrameLayers(() => {
-        rebuildFramesFromLayers(next.snapshot);
-        return next.snapshot;
-      });
+      setFrameLayers(next.snapshot);
+      rebuildFramesFromLayers(next.snapshot);
     }
     syncHistoryFlags();
   }
@@ -664,7 +663,9 @@ export default function App() {
                 id: crypto.randomUUID(),
                 durationMs: 100,
                 pivot: { x: 32, y: 63 },
-                layers: [createLayer("Layer 1", createBuffer(64, 64))],
+                layers: [
+                  createLayer("Layer 1", createBuffer(64, 64, { r: 0, g: 0, b: 0, a: 0 })),
+                ],
               },
             ],
             currentFrameIndex: 0,
@@ -701,7 +702,12 @@ export default function App() {
             id: crypto.randomUUID(),
             durationMs: 100,
             pivot: { x: Math.floor(request.width / 2), y: request.height - 1 },
-            layers: [createLayer("Layer 1", createBuffer(request.width, request.height))],
+            layers: [
+              createLayer(
+                "Layer 1",
+                createBuffer(request.width, request.height, { r: 0, g: 0, b: 0, a: 0 })
+              ),
+            ],
           },
         ],
         currentFrameIndex: 0,
@@ -750,21 +756,22 @@ export default function App() {
     serializeSnapshot,
   };
 
+  const handleAutoSave = useCallback(async () => {
+    const currentProject = autoSaveStateRef.current.activeProject;
+    if (!currentProject) return;
+    const snapshot = autoSaveStateRef.current.buildSnapshot();
+    await autoSaveStateRef.current.cacheProjectSnapshot(currentProject.id, snapshot);
+    const payload = autoSaveStateRef.current.serializeSnapshot(snapshot);
+    await autoSaveStateRef.current.saveProjectSnapshot(currentProject.id, payload);
+  }, []);
+
   useEffect(() => {
     if (!activeProject) return;
-    const handleAutoSave = async () => {
-      const currentProject = autoSaveStateRef.current.activeProject;
-      if (!currentProject) return;
-      const snapshot = autoSaveStateRef.current.buildSnapshot();
-      await autoSaveStateRef.current.cacheProjectSnapshot(currentProject.id, snapshot);
-      const payload = autoSaveStateRef.current.serializeSnapshot(snapshot);
-      await autoSaveStateRef.current.saveProjectSnapshot(currentProject.id, payload);
-    };
     const id = window.setInterval(() => {
       handleAutoSave();
     }, 60000);
     return () => window.clearInterval(id);
-  }, [activeProject]);
+  }, [activeProject, handleAutoSave]);
 
   function onStrokeEnd(before: Uint8ClampedArray, after: Uint8ClampedArray) {
     historyRef.current.commit(before);
@@ -1071,29 +1078,27 @@ export default function App() {
     if (!from || !to) return;
 
     historyRef.current.commitLayers(frameLayers);
-    setFrameLayers((prev) => {
-      const next: Record<string, LayerData[]> = {};
-      Object.entries(prev).forEach(([frameId, layers]) => {
-        next[frameId] = layers.map((layer) => {
-          if (!layer.pixels) return layer;
-          const updated = new Uint8ClampedArray(layer.pixels);
-          for (let i = 0; i < updated.length; i += 4) {
-            if (
-              updated[i] === from.r &&
-              updated[i + 1] === from.g &&
-              updated[i + 2] === from.b
-            ) {
-              updated[i] = to.r;
-              updated[i + 1] = to.g;
-              updated[i + 2] = to.b;
-            }
+    const next: Record<string, LayerData[]> = {};
+    Object.entries(frameLayers).forEach(([frameId, layers]) => {
+      next[frameId] = layers.map((layer) => {
+        if (!layer.pixels) return layer;
+        const updated = new Uint8ClampedArray(layer.pixels);
+        for (let i = 0; i < updated.length; i += 4) {
+          if (
+            updated[i] === from.r &&
+            updated[i + 1] === from.g &&
+            updated[i + 2] === from.b
+          ) {
+            updated[i] = to.r;
+            updated[i + 1] = to.g;
+            updated[i + 2] = to.b;
           }
-          return { ...layer, pixels: updated };
-        });
+        }
+        return { ...layer, pixels: updated };
       });
-      rebuildFramesFromLayers(next);
-      return next;
     });
+    setFrameLayers(next);
+    rebuildFramesFromLayers(next);
     syncHistoryFlags();
   }
 

@@ -42,8 +42,8 @@ export async function getPalettes(userId?: string): Promise<Palette[]> {
 }
 
 export async function createPalette(name: string, colors: string[], userId?: string): Promise<Palette> {
-  const { data, error } = await withRetry(() =>
-    supabase
+  const { data, error } = await withRetry(async () => {
+    const response = await supabase
       .from('palettes')
       .insert({
         name,
@@ -52,31 +52,34 @@ export async function createPalette(name: string, colors: string[], userId?: str
         is_default: false
       })
       .select()
-      .single()
-  );
+      .single();
+    return response;
+  });
 
   if (error) throw error;
   return data;
 }
 
 export async function updatePalette(paletteId: string, updates: Partial<Palette>): Promise<void> {
-  const { error } = await withRetry(() =>
-    supabase
+  const { error } = await withRetry(async () => {
+    const response = await supabase
       .from('palettes')
       .update(updates)
-      .eq('id', paletteId)
-  );
+      .eq('id', paletteId);
+    return response;
+  });
 
   if (error) throw error;
 }
 
 export async function deletePalette(paletteId: string): Promise<void> {
-  const { error } = await withRetry(() =>
-    supabase
+  const { error } = await withRetry(async () => {
+    const response = await supabase
       .from('palettes')
       .delete()
-      .eq('id', paletteId)
-  );
+      .eq('id', paletteId);
+    return response;
+  });
 
   if (error) throw error;
 }
