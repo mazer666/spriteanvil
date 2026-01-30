@@ -40,7 +40,9 @@ import { supabaseConfig } from "../../config"
  * This check helps catch configuration errors early in development.
  * If these aren't set, database operations will fail mysteriously.
  */
-if (!supabaseConfig.url || !supabaseConfig.anonKey) {
+const hasSupabaseConfig = Boolean(supabaseConfig.url && supabaseConfig.anonKey);
+
+if (!hasSupabaseConfig) {
   console.error(
     "❌ Supabase configuration missing!\n" +
       "Make sure you have a .env file with:\n" +
@@ -79,7 +81,10 @@ if (!supabaseConfig.url || !supabaseConfig.anonKey) {
  * 2. Use .maybeSingle() instead of .single() when you expect 0 or 1 results
  * 3. Row Level Security enforces access control - no need to filter by user_id manually
  */
-export const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey, {
+const supabaseUrl = hasSupabaseConfig ? supabaseConfig.url : "https://placeholder.supabase.co";
+const supabaseAnonKey = hasSupabaseConfig ? supabaseConfig.anonKey : "public-anon-key";
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     // Persist authentication state across page reloads
     autoRefreshToken: true,
