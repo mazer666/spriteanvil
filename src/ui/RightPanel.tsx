@@ -27,6 +27,7 @@ type Props = {
     onRenameLayer: (id: string, name: string) => void;
     onReorderLayers: (fromIndex: number, toIndex: number) => void;
     onMergeDown: (id: string) => void;
+    onFlatten: () => void;
   };
 
   palettes?: PaletteData[];
@@ -40,6 +41,7 @@ type Props = {
     onRemoveColorFromPalette: (paletteId: string, colorIndex: number) => void;
     onSelectColor: (color: string) => void;
     onSwapColors: (fromColor: string, toColor: string) => void;
+    onExtractPalette: () => void;
   };
 
   onTransformOperations?: {

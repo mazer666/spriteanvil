@@ -97,6 +97,7 @@ export type Frame = {
   id: string;
   pixels: Uint8ClampedArray;
   durationMs: number;
+  pivot?: { x: number; y: number };
 };
 
 export type AnimationData = {

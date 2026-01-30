@@ -1,6 +1,6 @@
 import { Frame } from "../../types";
 
-export type SpritesheetLayout = "grid" | "horizontal" | "vertical";
+export type SpritesheetLayout = "grid" | "horizontal" | "vertical" | "packed";
 
 export interface SpritesheetSettings {
   layout: SpritesheetLayout;
@@ -73,6 +73,29 @@ export function generateSpritesheet(
         h: scaledHeight
       });
     }
+  } else if (layout === "packed") {
+    const maxCols = Math.ceil(Math.sqrt(frames.length));
+    const maxWidth = padding * 2 + maxCols * scaledWidth + (maxCols - 1) * spacing;
+    let cursorX = padding;
+    let cursorY = padding;
+    let rowHeight = scaledHeight;
+
+    for (let i = 0; i < frames.length; i++) {
+      if (cursorX + scaledWidth > maxWidth) {
+        cursorX = padding;
+        cursorY += rowHeight + spacing;
+      }
+      frameRects.push({
+        x: cursorX,
+        y: cursorY,
+        w: scaledWidth,
+        h: scaledHeight
+      });
+      cursorX += scaledWidth + spacing;
+    }
+
+    sheetWidth = maxWidth;
+    sheetHeight = cursorY + rowHeight + padding;
   }
 
   const canvas = document.createElement("canvas");

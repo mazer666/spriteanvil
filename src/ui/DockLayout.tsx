@@ -4,6 +4,7 @@ import RightPanel from "./RightPanel";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
 import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode, FloatingSelection } from "../types";
+import { AnimationTag } from "../lib/supabase/animation_tags";
 import { PaletteData } from "./PalettePanel";
 
 type Props = {
@@ -39,6 +40,14 @@ type Props = {
   onDeleteFrame: () => void;
   onUpdateFrameDuration: (index: number, durationMs: number) => void;
   onTogglePlayback: () => void;
+  animationTags: AnimationTag[];
+  activeTagId: string | null;
+  loopTagOnly: boolean;
+  onToggleLoopTagOnly: (next: boolean) => void;
+  onSelectTag: (id: string | null) => void;
+  onCreateTag: (tag: Omit<AnimationTag, "id" | "created_at">) => void;
+  onUpdateTag: (id: string, updates: Partial<AnimationTag>) => void;
+  onDeleteTag: (id: string) => void;
 
   layers?: LayerData[];
   activeLayerId?: string | null;
@@ -54,6 +63,7 @@ type Props = {
     onRenameLayer: (id: string, name: string) => void;
     onReorderLayers: (fromIndex: number, toIndex: number) => void;
     onMergeDown: (id: string) => void;
+    onFlatten: () => void;
   };
 
   palettes?: PaletteData[];
@@ -67,6 +77,7 @@ type Props = {
     onRemoveColorFromPalette: (paletteId: string, colorIndex: number) => void;
     onSelectColor: (color: string) => void;
     onSwapColors: (fromColor: string, toColor: string) => void;
+    onExtractPalette: () => void;
   };
 
   onTransformOperations?: {
@@ -139,6 +150,14 @@ export default function DockLayout({
   onDeleteFrame,
   onUpdateFrameDuration,
   onTogglePlayback,
+  animationTags,
+  activeTagId,
+  loopTagOnly,
+  onToggleLoopTagOnly,
+  onSelectTag,
+  onCreateTag,
+  onUpdateTag,
+  onDeleteTag,
   layers,
   activeLayerId,
   onLayerOperations,
@@ -273,20 +292,28 @@ export default function DockLayout({
       />
 
       <div className="dock__bottom">
-        <Timeline
-          settings={settings}
-          onChangeSettings={onChangeSettings}
-          canvasSpec={canvasSpec}
-          frames={frames}
-          currentFrameIndex={currentFrameIndex}
-          isPlaying={isPlaying}
-          onSelectFrame={onSelectFrame}
-          onInsertFrame={onInsertFrame}
-          onDuplicateFrame={onDuplicateFrame}
-          onDeleteFrame={onDeleteFrame}
-          onUpdateFrameDuration={onUpdateFrameDuration}
-          onTogglePlayback={onTogglePlayback}
-        />
+          <Timeline
+            settings={settings}
+            onChangeSettings={onChangeSettings}
+            canvasSpec={canvasSpec}
+            frames={frames}
+            currentFrameIndex={currentFrameIndex}
+            isPlaying={isPlaying}
+            onSelectFrame={onSelectFrame}
+            onInsertFrame={onInsertFrame}
+            onDuplicateFrame={onDuplicateFrame}
+            onDeleteFrame={onDeleteFrame}
+            onUpdateFrameDuration={onUpdateFrameDuration}
+            onTogglePlayback={onTogglePlayback}
+            animationTags={animationTags}
+            activeTagId={activeTagId}
+            loopTagOnly={loopTagOnly}
+            onToggleLoopTagOnly={onToggleLoopTagOnly}
+            onSelectTag={onSelectTag}
+            onCreateTag={onCreateTag}
+            onUpdateTag={onUpdateTag}
+            onDeleteTag={onDeleteTag}
+          />
       </div>
     </div>
   );

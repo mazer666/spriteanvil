@@ -6,9 +6,10 @@ import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode, FloatingSe
 import { HistoryStack } from "./editor/history";
 import { cloneBuffer, createBuffer } from "./editor/pixels";
 import { copySelection, cutSelection, pasteClipboard, ClipboardData } from "./editor/clipboard";
-import { compositeLayers, mergeLayerIntoBelow } from "./editor/layers";
+import { compositeLayers, mergeDown, flattenImage } from "./editor/layers";
 import { PaletteData } from "./ui/PalettePanel";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { AnimationTag } from "./lib/supabase/animation_tags";
 import {
   flipHorizontal,
   flipVertical,
@@ -29,6 +30,7 @@ import {
   posterize,
 } from "./editor/tools/coloradjust";
 import { invertSelection } from "./editor/selection";
+import { extractPaletteFromPixels } from "./editor/palette";
 
 export default function App() {
   const [canvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
@@ -37,12 +39,17 @@ export default function App() {
   const initialFrameId = useMemo(() => crypto.randomUUID(), []);
   const createEmptyPixels = () =>
     createBuffer(canvasSpec.width, canvasSpec.height, { r: 0, g: 0, b: 0, a: 0 });
+  const defaultPivot = useMemo(
+    () => ({ x: Math.floor(canvasSpec.width / 2), y: canvasSpec.height - 1 }),
+    [canvasSpec.width, canvasSpec.height]
+  );
 
   const [frames, setFrames] = useState<Frame[]>(() => [
     {
       id: initialFrameId,
       pixels: createEmptyPixels(),
-      durationMs: 100
+      durationMs: 100,
+      pivot: defaultPivot
     }
   ]);
 
@@ -57,6 +64,9 @@ export default function App() {
 
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [animationTags, setAnimationTags] = useState<AnimationTag[]>([]);
+  const [activeAnimationTagId, setActiveAnimationTagId] = useState<string | null>(null);
+  const [loopTagOnly, setLoopTagOnly] = useState(false);
 
   const historyRef = useRef<HistoryStack>(new HistoryStack());
   const [canUndo, setCanUndo] = useState(false);
@@ -140,13 +150,23 @@ export default function App() {
     setCanRedo(historyRef.current.canRedo());
   }
 
+  const activeTag = useMemo(
+    () => animationTags.find((tag) => tag.id === activeAnimationTagId) || null,
+    [activeAnimationTagId, animationTags]
+  );
+
   useEffect(() => {
     if (!isPlaying) return;
 
     const advanceFrame = () => {
       setCurrentFrameIndex((prev) => {
-        const next = (prev + 1) % frames.length;
-        const nextDuration = frames[next].durationMs;
+        const tagStart = activeTag?.start_frame ?? 0;
+        const tagEnd = activeTag?.end_frame ?? frames.length - 1;
+        const loopRange = loopTagOnly && activeTag ? { start: tagStart, end: tagEnd } : null;
+        const next = loopRange
+          ? (prev + 1 > loopRange.end ? loopRange.start : prev + 1)
+          : (prev + 1) % frames.length;
+        const nextDuration = frames[next]?.durationMs ?? currentFrame.durationMs;
         playbackTimerRef.current = window.setTimeout(advanceFrame, nextDuration);
         return next;
       });
@@ -160,7 +180,7 @@ export default function App() {
         playbackTimerRef.current = null;
       }
     };
-  }, [isPlaying, currentFrame.durationMs, frames.length]);
+  }, [activeTag, currentFrame.durationMs, frames, isPlaying, loopTagOnly]);
 
   useEffect(() => {
     setFrameLayers((prev) => {
@@ -183,6 +203,13 @@ export default function App() {
       return { ...prev, [currentFrame.id]: [baseLayer] };
     });
   }, [canvasSpec.height, canvasSpec.width, currentFrame.id]);
+
+  useEffect(() => {
+    if (!loopTagOnly || !activeTag) return;
+    if (currentFrameIndex < activeTag.start_frame || currentFrameIndex > activeTag.end_frame) {
+      setCurrentFrameIndex(activeTag.start_frame);
+    }
+  }, [activeTag, currentFrameIndex, loopTagOnly]);
 
   function handleUndo() {
     const next = historyRef.current.undo(buffer);
@@ -334,7 +361,8 @@ export default function App() {
     const newFrame: Frame = {
       id: crypto.randomUUID(),
       pixels: composite,
-      durationMs: 100
+      durationMs: 100,
+      pivot: defaultPivot
     };
 
     setFrames((prev) => {
@@ -360,7 +388,8 @@ export default function App() {
     const duplicate: Frame = {
       id: crypto.randomUUID(),
       pixels: composite,
-      durationMs: currentFrame.durationMs
+      durationMs: currentFrame.durationMs,
+      pivot: currentFrame.pivot ?? defaultPivot
     };
 
     setFrames((prev) => {
@@ -507,27 +536,50 @@ export default function App() {
 
   function handleMergeDown(id: string) {
     const index = layers.findIndex((l) => l.id === id);
-    if (index === layers.length - 1) return;
-    const above = layers[index];
-    const below = layers[index + 1];
-    if (!above || !below) return;
-    const mergedPixels = mergeLayerIntoBelow(
-      below,
-      above,
-      canvasSpec.width,
-      canvasSpec.height
-    );
-    const updated = [...layers];
-    updated.splice(index, 1);
-    updated[index] = { ...below, pixels: mergedPixels };
+    const updated = mergeDown(layers, index, canvasSpec.width, canvasSpec.height);
+    if (updated === layers) return;
     setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: updated }));
     updateCurrentFrameComposite(currentFrame.id, updated);
+  }
+
+  function handleFlattenLayers() {
+    if (!layers.length) return;
+    const flattenedPixels = flattenImage(layers, canvasSpec.width, canvasSpec.height);
+    const baseLayer: LayerData = {
+      id: crypto.randomUUID(),
+      name: "Flattened Layer",
+      opacity: 1,
+      blend_mode: "normal",
+      is_visible: true,
+      is_locked: false,
+      pixels: flattenedPixels,
+    };
+    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: [baseLayer] }));
+    setFrameActiveLayerIds((prev) => ({ ...prev, [currentFrame.id]: baseLayer.id }));
+    updateCurrentFrameComposite(currentFrame.id, [baseLayer]);
   }
 
   function handleCreatePalette(name: string, colors: string[]) {
     const newPalette: PaletteData = {
       id: `palette-${Date.now()}`,
       name,
+      colors,
+      is_default: false,
+    };
+    setPalettes((prev) => [newPalette, ...prev]);
+    setActivePaletteId(newPalette.id);
+  }
+
+  function handleExtractPaletteFromImage() {
+    const colors = extractPaletteFromPixels(
+      compositeBuffer,
+      canvasSpec.width,
+      canvasSpec.height
+    );
+    if (colors.length === 0) return;
+    const newPalette: PaletteData = {
+      id: `palette-${Date.now()}`,
+      name: `Extracted ${new Date().toLocaleTimeString()}`,
       colors,
       is_default: false,
     };
@@ -566,6 +618,38 @@ export default function App() {
     // Implementation would replace all pixels of fromColor with toColor
     historyRef.current.commit(before);
     syncHistoryFlags();
+  }
+
+  function handleCreateAnimationTag(tag: Omit<AnimationTag, "id" | "created_at">) {
+    const newTag: AnimationTag = {
+      ...tag,
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+    };
+    setAnimationTags((prev) => [...prev, newTag].sort((a, b) => a.start_frame - b.start_frame));
+    setActiveAnimationTagId(newTag.id);
+  }
+
+  function handleUpdateAnimationTag(tagId: string, updates: Partial<AnimationTag>) {
+    setAnimationTags((prev) =>
+      prev
+        .map((tag) => {
+          if (tag.id !== tagId) return tag;
+          const next = { ...tag, ...updates };
+          if (next.end_frame < next.start_frame) {
+            next.end_frame = next.start_frame;
+          }
+          return next;
+        })
+        .sort((a, b) => a.start_frame - b.start_frame)
+    );
+  }
+
+  function handleDeleteAnimationTag(tagId: string) {
+    setAnimationTags((prev) => prev.filter((tag) => tag.id !== tagId));
+    if (activeAnimationTagId === tagId) {
+      setActiveAnimationTagId(null);
+    }
   }
 
   function buildSelectionMaskFromBuffer(
@@ -993,6 +1077,14 @@ export default function App() {
         onDeleteFrame={handleDeleteFrame}
         onUpdateFrameDuration={handleUpdateFrameDuration}
         onTogglePlayback={handleTogglePlayback}
+        animationTags={animationTags}
+        activeTagId={activeAnimationTagId}
+        loopTagOnly={loopTagOnly}
+        onToggleLoopTagOnly={setLoopTagOnly}
+        onSelectTag={setActiveAnimationTagId}
+        onCreateTag={handleCreateAnimationTag}
+        onUpdateTag={handleUpdateAnimationTag}
+        onDeleteTag={handleDeleteAnimationTag}
         layers={layers}
         activeLayerId={activeLayerId}
         onLayerOperations={{
@@ -1008,6 +1100,7 @@ export default function App() {
           onRenameLayer: handleRenameLayer,
           onReorderLayers: handleReorderLayers,
           onMergeDown: handleMergeDown,
+          onFlatten: handleFlattenLayers,
         }}
         palettes={palettes}
         activePaletteId={activePaletteId}
@@ -1020,6 +1113,7 @@ export default function App() {
           onRemoveColorFromPalette: handleRemoveColorFromPalette,
           onSelectColor: handleSelectColor,
           onSwapColors: handleSwapColors,
+          onExtractPalette: handleExtractPaletteFromImage,
         }}
         onTransformOperations={{
           onFlipHorizontal: handleFlipHorizontal,
@@ -1140,6 +1234,7 @@ export default function App() {
         <ExportPanel
           frames={frames}
           canvasSpec={canvasSpec}
+          animationTags={animationTags}
           onClose={() => setShowExportPanel(false)}
         />
       )}

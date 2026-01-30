@@ -187,3 +187,45 @@ export function mergeLayerIntoBelow(
 
   return merged;
 }
+
+/**
+ * Merge the layer at `index` into the layer directly below it.
+ *
+ * We walk the pixel buffer as a flat RGBA byte array:
+ * - Each pixel takes 4 bytes (R, G, B, A) in sequence.
+ * - Pixel N starts at byte index `N * 4`.
+ * This byte-level layout is why you see `idx = p * 4` in the merge loop.
+ */
+export function mergeDown(
+  layers: LayerData[],
+  index: number,
+  width: number,
+  height: number
+): LayerData[] {
+  if (index < 0 || index >= layers.length - 1) return layers;
+  const above = layers[index];
+  const below = layers[index + 1];
+  if (!above || !below) return layers;
+  if (!above.pixels || !below.pixels) return layers;
+  if (!above.is_visible) return layers;
+
+  const mergedPixels = mergeLayerIntoBelow(below, above, width, height);
+  const updated = [...layers];
+  updated.splice(index, 1);
+  updated[index] = { ...below, pixels: mergedPixels };
+  return updated;
+}
+
+/**
+ * Flatten all visible layers into a single RGBA pixel buffer.
+ *
+ * Each layer's opacity and blend mode are applied while combining into the
+ * final Uint8ClampedArray, preserving the expected compositing results.
+ */
+export function flattenImage(
+  layers: LayerData[],
+  width: number,
+  height: number
+): Uint8ClampedArray {
+  return compositeLayers(layers, width, height);
+}

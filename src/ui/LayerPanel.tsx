@@ -15,6 +15,7 @@ type Props = {
   onRenameLayer: (id: string, name: string) => void;
   onReorderLayers: (fromIndex: number, toIndex: number) => void;
   onMergeDown: (id: string) => void;
+  onFlatten: () => void;
 };
 
 export default function LayerPanel({
@@ -31,6 +32,7 @@ export default function LayerPanel({
   onRenameLayer,
   onReorderLayers,
   onMergeDown,
+  onFlatten,
 }: Props) {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -184,6 +186,14 @@ export default function LayerPanel({
             title="Merge layer with layer below"
           >
             Merge Down
+          </button>
+
+          <button
+            onClick={onFlatten}
+            style={{ width: '100%', padding: '6px', fontSize: '12px', marginTop: '6px' }}
+            title="Flatten all layers into one"
+          >
+            Flatten Image
           </button>
         </div>
       )}

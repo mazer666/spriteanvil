@@ -1,4 +1,5 @@
 import { Frame } from "../../types";
+import { AnimationTag } from "../supabase/animation_tags";
 import { SpritesheetLayout } from "./spritesheet";
 
 export interface ExportMetadata {
@@ -48,7 +49,8 @@ export function generateMetadata(
   layout: SpritesheetLayout,
   padding: number,
   spacing: number,
-  imageName: string
+  imageName: string,
+  tags: AnimationTag[] = []
 ): ExportMetadata {
   const pivotX = Math.floor(canvasWidth / 2);
   const pivotY = canvasHeight - 1;
@@ -77,12 +79,17 @@ export function generateMetadata(
       index,
       rect: frameRects[index],
       durationMs: frame.durationMs,
-      pivot: { x: pivotX, y: pivotY },
+      pivot: frame.pivot ?? { x: pivotX, y: pivotY },
       trimmed: false,
       sourceRect: { x: 0, y: 0, w: canvasWidth, h: canvasHeight },
       offset: { x: 0, y: 0 }
     })),
-    tags: []
+    tags: tags.map((tag) => ({
+      name: tag.name,
+      from: tag.start_frame,
+      to: tag.end_frame,
+      direction: "forward",
+    }))
   };
 }
 
