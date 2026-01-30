@@ -27,6 +27,7 @@ import { createLassoSelection, smoothLassoPoints } from "../editor/tools/lasso";
 import { drawBrushLineWithSymmetry } from "../editor/tools/brush";
 import { smudgeLine } from "../editor/tools/smudge";
 import { PatternFill } from "../editor/tools/patterns";
+import { isInputFocused } from "../utils/dom";
 
 import { Frame } from "../types";
 
@@ -195,11 +196,6 @@ export default function CanvasStage(props: {
   }, []);
 
   useEffect(() => {
-    function isInputFocused(): boolean {
-      const active = document.activeElement;
-      return active?.tagName === "INPUT" || active?.tagName === "TEXTAREA" || (active?.hasAttribute("contenteditable") ?? false);
-    }
-
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === " " && !isInputFocused()) {
         isPanningRef.current = true;
@@ -313,7 +309,7 @@ export default function CanvasStage(props: {
 
   function resetPressure(e: React.PointerEvent) {
     const raw = e.pointerType === "pen" ? e.pressure : 1;
-    pressureRef.current.value = Math.max(0, Math.min(1, raw || 0)) || 1;
+    pressureRef.current.value = Math.max(0, Math.min(1, raw || 0));
   }
 
   function getDynamicBrushSize(pressure: number): number {
@@ -327,11 +323,11 @@ export default function CanvasStage(props: {
     return 0.15 + pressure * 0.85;
   }
 
-  function applyStabilizer(rawX: number, rawY: number): { x: number; y: number } {
+  function applyStabilizer(rawX: number, rawY: number, enabled: boolean): { x: number; y: number } {
     const alpha = 0.35;
 
     const st = strokeRef.current;
-    if (!settings.brushStabilizerEnabled || tool !== "pen") {
+    if (!enabled || tool !== "pen") {
       st.hasSmooth = false;
       return { x: rawX, y: rawY };
     }
@@ -574,14 +570,6 @@ export default function CanvasStage(props: {
     if (e.pointerType === "pen") {
       activePenPointerIdRef.current = e.pointerId;
     }
-    if (e.pointerType === "touch") {
-      if (handleGestureStart(e)) {
-        return;
-      }
-      if (isDrawingTool(tool)) {
-        return;
-      }
-    }
     if (handleGestureStart(e)) {
       return;
     }
@@ -797,7 +785,11 @@ export default function CanvasStage(props: {
     setHoverPos(p0);
 
     if (tool === "pen" || tool === "eraser") {
-      const stabilized = applyStabilizer(p0.x + 0.5, p0.y + 0.5);
+      const stabilized = applyStabilizer(
+        p0.x + 0.5,
+        p0.y + 0.5,
+        settings.brushStabilizerEnabled && e.pointerType !== "pen"
+      );
 
       const snapped = snapToEdge(Math.floor(stabilized.x), Math.floor(stabilized.y));
       const x = snapped.x;
@@ -1593,6 +1585,7 @@ export default function CanvasStage(props: {
           viewRect={viewRect}
           zoom={settings.zoom}
           onPanTo={(x, y) => setPanOffset({ x, y })}
+          onChangeZoom={onChangeZoom}
         />
       )}
     </div>

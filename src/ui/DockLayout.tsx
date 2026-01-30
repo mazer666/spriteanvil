@@ -8,6 +8,7 @@ import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode, FloatingSe
 import type { EasingCurve } from "../editor/animation";
 import { AnimationTag } from "../lib/supabase/animation_tags";
 import { PaletteData } from "../lib/projects/snapshot";
+import { isInputFocused } from "../utils/dom";
 
 type Props = {
   settings: UiSettings;
@@ -250,15 +251,6 @@ export default function DockLayout({
   }, []);
 
   useEffect(() => {
-    function isInputFocused(): boolean {
-      const active = document.activeElement;
-      return (
-        active?.tagName === "INPUT" ||
-        active?.tagName === "TEXTAREA" ||
-        (active?.hasAttribute("contenteditable") ?? false)
-      );
-    }
-
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Tab" && !isInputFocused()) {
         e.preventDefault();
@@ -335,7 +327,7 @@ export default function DockLayout({
       } as React.CSSProperties}
     >
       <div className="dock__top">
-        {topBar}
+        <div className="dock__topbar">{topBar}</div>
         {!isMobile && (
           <div className="dock__panelControls">
             <button
@@ -531,6 +523,16 @@ export default function DockLayout({
       <div className="dock__status">
         {statusBar}
       </div>
+
+      {isZenMode && (
+        <button
+          className="uiBtn dock__zenExit"
+          onClick={() => setIsZenMode(false)}
+          title="Exit Zen Mode (Tab)"
+        >
+          Exit Zen
+        </button>
+      )}
     </div>
   );
 }

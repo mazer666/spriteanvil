@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { ToolId } from "../types";
+import { isInputFocused } from "../utils/dom";
 
 export type ShortcutHandler = {
   onUndo?: () => void;
@@ -59,9 +60,13 @@ export function useKeyboardShortcuts(handlers: ShortcutHandler, enabled: boolean
       } else if (mod && e.key === 'v' && handlers.onPaste) {
         e.preventDefault();
         handlers.onPaste();
-      } else if ((e.key === 'Delete' || e.key === 'Backspace') && handlers.onDelete && !isInputFocused()) {
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && !isInputFocused()) {
         e.preventDefault();
-        handlers.onDelete();
+        if (handlers.onDeleteFrame) {
+          handlers.onDeleteFrame();
+        } else if (handlers.onDelete) {
+          handlers.onDelete();
+        }
       } else if (mod && e.key === 'a' && handlers.onSelectAll) {
         e.preventDefault();
         handlers.onSelectAll();
@@ -145,11 +150,6 @@ export function useKeyboardShortcuts(handlers: ShortcutHandler, enabled: boolean
         e.preventDefault();
         onChangeTool(toolMap[key]);
       }
-    }
-
-    function isInputFocused(): boolean {
-      const active = document.activeElement;
-      return active?.tagName === 'INPUT' || active?.tagName === 'TEXTAREA' || (active?.hasAttribute('contenteditable') ?? false);
     }
 
     window.addEventListener('keydown', handleKeyDown);

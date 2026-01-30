@@ -211,6 +211,11 @@ Example falloff rule:
 - Clicking a thumbnail sets active frame
 - Dragging across thumbnails can “scrub” active frame (optional)
 
+### 7.4 Playback + utility controls
+- Step buttons allow **frame-by-frame** navigation (previous/next).
+- A **FPS input** can normalize frame durations by setting a shared timing target.
+- Animation Tags + Tween Generator sections should be **collapsible** to preserve space.
+
 ---
 
 ## 8) Virtualization strategy (performance)

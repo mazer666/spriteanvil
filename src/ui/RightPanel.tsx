@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { UiSettings, ToolId, LayerData, BlendMode, CanvasSpec } from "../types";
 import LayerPanel from "./LayerPanel";
 import PalettePanel from "./PalettePanel";
@@ -113,99 +113,201 @@ export default function RightPanel({
   onImageToImage,
   collapsed = false,
 }: Props) {
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    art: true,
-    color: true,
-    transform: true,
+  const defaultOrder = ["tools", "layers", "colors", "transform", "selection", "ai"];
+  const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("spriteanvil:rightpanelOrder");
+      if (!raw) return defaultOrder;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return defaultOrder;
+      const normalized = parsed.filter((id) => defaultOrder.includes(id));
+      return normalized.length ? normalized : defaultOrder;
+    } catch {
+      return defaultOrder;
+    }
   });
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    tools: true,
+    layers: true,
+    colors: true,
+    transform: true,
+    selection: true,
+    ai: true,
+  });
+  const [compactSections, setCompactSections] = useState<Record<string, boolean>>({});
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("spriteanvil:rightpanelOrder", JSON.stringify(sectionOrder));
+  }, [sectionOrder]);
 
   const toggleSection = (key: string) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const toggleCompact = (key: string) => {
+    setCompactSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const sections = useMemo(
+    () => ({
+      tools: {
+        title: "Tools",
+        content: (
+          <>
+            <ToolOptionsPanel tool={tool} settings={settings} onChangeSettings={onChangeSettings} />
+            {canvasSpec && previewBuffer && (
+              <MipmapPreview canvasSpec={canvasSpec} pixels={previewBuffer} />
+            )}
+          </>
+        ),
+      },
+      layers: {
+        title: "Layers",
+        content:
+          layers && activeLayerId && onLayerOperations ? (
+            <LayerPanel layers={layers} activeLayerId={activeLayerId} {...onLayerOperations} />
+          ) : null,
+      },
+      colors: {
+        title: "Colors & Palettes",
+        content: (
+          <>
+            {palettes && activePaletteId && onPaletteOperations && (
+              <PalettePanel
+                palettes={palettes}
+                activePaletteId={activePaletteId}
+                primaryColor={settings.primaryColor}
+                secondaryColor={settings.secondaryColor}
+                recentColors={recentColors || []}
+                {...onPaletteOperations}
+              />
+            )}
+            {onColorAdjustOperations && <ColorAdjustPanel {...onColorAdjustOperations} />}
+          </>
+        ),
+      },
+      transform: {
+        title: "Transform",
+        content: onTransformOperations ? <TransformPanel {...onTransformOperations} /> : null,
+      },
+      selection: {
+        title: "Selection",
+        content: onSelectionOperations ? (
+          <SelectionPanel hasSelection={!!hasSelection} {...onSelectionOperations} />
+        ) : null,
+      },
+      ai: {
+        title: "AI Tools",
+        content: (
+          <AIPanel
+            enabled
+            canvasSpec={canvasSpec}
+            selectionMask={selectionMask}
+            layerPixels={layerPixels}
+            onInpaint={onInpaint}
+            onImageToImage={onImageToImage}
+          />
+        ),
+      },
+    }),
+    [
+      activeLayerId,
+      canvasSpec,
+      hasSelection,
+      layers,
+      onChangeSettings,
+      onColorAdjustOperations,
+      onImageToImage,
+      onInpaint,
+      onLayerOperations,
+      onPaletteOperations,
+      onSelectionOperations,
+      onTransformOperations,
+      palettes,
+      previewBuffer,
+      recentColors,
+      selectionMask,
+      settings,
+      tool,
+      layerPixels,
+    ]
+  );
+
+  const handleDragStart = (id: string) => (e: React.DragEvent) => {
+    e.dataTransfer.setData("text/plain", id);
+    e.dataTransfer.effectAllowed = "move";
+    setDraggingId(id);
+  };
+
+  const handleDrop = (targetId: string) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const sourceId = draggingId || e.dataTransfer.getData("text/plain");
+    if (!sourceId || sourceId === targetId) return;
+    setSectionOrder((prev) => {
+      const fromIndex = prev.indexOf(sourceId);
+      const toIndex = prev.indexOf(targetId);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+      const next = [...prev];
+      next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, sourceId);
+      return next;
+    });
+    setDraggingId(null);
+  };
+
+  const handleDragEnd = () => setDraggingId(null);
+
   return (
     <div className={"rightpanel" + (collapsed ? " rightpanel--collapsed" : "")}>
       <div className="rightpanel__content">
-        <section className="accordion-section">
-          <button
-            className="accordion-section__header"
-            onClick={() => toggleSection("art")}
-            aria-expanded={openSections.art}
-          >
-            <span>Art & Layers</span>
-            <span className="accordion-section__icon">{openSections.art ? "−" : "+"}</span>
-          </button>
-          {openSections.art && (
-            <div className="accordion-section__body">
-              <ToolOptionsPanel tool={tool} settings={settings} onChangeSettings={onChangeSettings} />
-              {canvasSpec && previewBuffer && (
-                <MipmapPreview canvasSpec={canvasSpec} pixels={previewBuffer} />
-              )}
-              {layers && activeLayerId && onLayerOperations && (
-                <LayerPanel
-                  layers={layers}
-                  activeLayerId={activeLayerId}
-                  {...onLayerOperations}
-                />
-              )}
-            </div>
-          )}
-        </section>
-
-        <section className="accordion-section">
-          <button
-            className="accordion-section__header"
-            onClick={() => toggleSection("color")}
-            aria-expanded={openSections.color}
-          >
-            <span>Colors & Palettes</span>
-            <span className="accordion-section__icon">{openSections.color ? "−" : "+"}</span>
-          </button>
-          {openSections.color && (
-            <div className="accordion-section__body">
-              {palettes && activePaletteId && onPaletteOperations && (
-                <PalettePanel
-                  palettes={palettes}
-                  activePaletteId={activePaletteId}
-                  primaryColor={settings.primaryColor}
-                  secondaryColor={settings.secondaryColor}
-                  recentColors={recentColors || []}
-                  {...onPaletteOperations}
-                />
-              )}
-              {onColorAdjustOperations && (
-                <ColorAdjustPanel {...onColorAdjustOperations} />
-              )}
-            </div>
-          )}
-        </section>
-
-        <section className="accordion-section">
-          <button
-            className="accordion-section__header"
-            onClick={() => toggleSection("transform")}
-            aria-expanded={openSections.transform}
-          >
-            <span>Transform & AI</span>
-            <span className="accordion-section__icon">{openSections.transform ? "−" : "+"}</span>
-          </button>
-          {openSections.transform && (
-            <div className="accordion-section__body">
-              {onTransformOperations && <TransformPanel {...onTransformOperations} />}
-              {onSelectionOperations && (
-                <SelectionPanel hasSelection={!!hasSelection} {...onSelectionOperations} />
-              )}
-              <AIPanel
-                enabled
-                canvasSpec={canvasSpec}
-                selectionMask={selectionMask}
-                layerPixels={layerPixels}
-                onInpaint={onInpaint}
-                onImageToImage={onImageToImage}
-              />
-            </div>
-          )}
-        </section>
+        {sectionOrder.map((sectionId) => {
+          const section = sections[sectionId as keyof typeof sections];
+          if (!section) return null;
+          const isOpen = openSections[sectionId];
+          const isCompact = compactSections[sectionId];
+          return (
+            <section
+              key={sectionId}
+              className={
+                "accordion-section" +
+                (isCompact ? " accordion-section--compact" : "") +
+                (draggingId === sectionId ? " accordion-section--dragging" : "")
+              }
+              draggable
+              onDragStart={handleDragStart(sectionId)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop(sectionId)}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="accordion-section__header">
+                <button
+                  className="accordion-section__toggle"
+                  onClick={() => toggleSection(sectionId)}
+                  aria-expanded={isOpen}
+                  type="button"
+                >
+                  <span>{section.title}</span>
+                  <span className="accordion-section__icon">{isOpen ? "−" : "+"}</span>
+                </button>
+                <div className="accordion-section__tools">
+                  <button
+                    className="uiBtn uiBtn--ghost"
+                    onClick={() => toggleCompact(sectionId)}
+                    title={isCompact ? "Expand section spacing" : "Compact section spacing"}
+                    type="button"
+                  >
+                    {isCompact ? "Expand" : "Compact"}
+                  </button>
+                  <span className="accordion-section__drag" title="Drag to reorder">
+                    ☰
+                  </span>
+                </div>
+              </div>
+              {isOpen && <div className="accordion-section__body">{section.content}</div>}
+            </section>
+          );
+        })}
       </div>
     </div>
   );

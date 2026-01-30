@@ -39,6 +39,7 @@ import {
   loadProjectSnapshot,
   saveProjectSnapshot,
   deleteProject,
+  updateProject,
   Project,
   ProjectSnapshotPayload,
 } from "./lib/supabase/projects";
@@ -50,6 +51,7 @@ import ProjectDashboard, { NewProjectRequest } from "./ui/ProjectDashboard";
 import ShortcutOverlay, { ShortcutGroup } from "./ui/ShortcutOverlay";
 import StatusBar from "./ui/StatusBar";
 import { hexToRgb } from "./utils/colors";
+import { isInputFocused } from "./utils/dom";
 import { buildInpaintPayload } from "./lib/ai/inpaint";
 import { deleteFrame as deleteFrameRecord } from "./lib/supabase/frames";
 
@@ -102,6 +104,7 @@ export default function App() {
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showTopbarMenu, setShowTopbarMenu] = useState(false);
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [animationTags, setAnimationTags] = useState<AnimationTag[]>([]);
@@ -419,6 +422,62 @@ export default function App() {
     [settings.primaryColor, colorRgbLabel, zoomLabel, memoryUsageLabel, cursorLabel]
   );
 
+  function QuickControls({ showCollaborators = false }: { showCollaborators?: boolean }) {
+    return (
+      <div className="topbar__group">
+        {showCollaborators && activeCollaborators.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontSize: "11px", color: "#aaa" }}>Active:</span>
+            <div style={{ display: "flex", gap: "4px" }}>
+              {activeCollaborators.slice(0, 5).map((user) => (
+                <span
+                  key={user.id}
+                  title={`User ${user.id}`}
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    borderRadius: "999px",
+                    background: user.color,
+                    color: "#111",
+                    fontSize: "9px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {user.id.slice(0, 2)}
+                </span>
+              ))}
+            </div>
+            {activeCollaborators.length > 5 && (
+              <span style={{ fontSize: "11px", color: "#aaa" }}>
+                +{activeCollaborators.length - 5}
+              </span>
+            )}
+          </div>
+        )}
+        <label className="ui-row">
+          <span>Color</span>
+          <input
+            className="color"
+            type="color"
+            value={settings.primaryColor}
+            onChange={(e) => handleSelectColor(e.target.value)}
+            title="Primary Color"
+          />
+        </label>
+        <label className="ui-row">
+          <input
+            type="checkbox"
+            checked={settings.showGrid}
+            onChange={(e) => setSettings((s) => ({ ...s, showGrid: e.target.checked }))}
+          />
+          <span>Grid</span>
+        </label>
+      </div>
+    );
+  }
+
   const shortcutGroups: ShortcutGroup[] = useMemo(
     () => [
       {
@@ -455,6 +514,7 @@ export default function App() {
         title: "Animation",
         items: [
           { label: "Play/Pause", shortcut: "Space" },
+          { label: "Delete Frame", shortcut: "Delete" },
           { label: "Next/Prev Frame", shortcut: "Alt+← / Alt+→" },
         ],
       },
@@ -1095,6 +1155,31 @@ export default function App() {
     await autoSaveStateRef.current.saveProjectSnapshot(currentProject.id, payload);
   }, []);
 
+  const handleReloadProject = useCallback(async () => {
+    if (!activeProject) return;
+    setProjectLoading(true);
+    setProjectError(null);
+    try {
+      if (hasSupabaseConfig) {
+        const cloudSnapshot = await loadProjectSnapshot(activeProject.id);
+        if (cloudSnapshot) {
+          const snapshot = deserializeSnapshot(cloudSnapshot);
+          applySnapshot(snapshot);
+          await cacheProjectSnapshot(activeProject.id, snapshot);
+        }
+      } else {
+        const cached = await getCachedProjectSnapshot(activeProject.id);
+        if (cached) {
+          applySnapshot(cached);
+        }
+      }
+    } catch (error) {
+      setProjectError(error instanceof Error ? error.message : "Failed to reload project.");
+    } finally {
+      setProjectLoading(false);
+    }
+  }, [activeProject, applySnapshot]);
+
   useEffect(() => {
     if (!activeProject) return;
     const id = window.setInterval(() => {
@@ -1157,6 +1242,82 @@ export default function App() {
         }
       },
     });
+  }
+
+  async function handleRenameProject(project: Project) {
+    const nextName = window.prompt("Rename project", project.name);
+    if (!nextName || !nextName.trim() || nextName.trim() === project.name) return;
+    try {
+      if (hasSupabaseConfig) {
+        const updated = await updateProject(project.id, { name: nextName.trim() });
+        if (!updated) throw new Error("Failed to rename project.");
+      } else {
+        const nextProjects = loadLocalProjects().map((p) =>
+          p.id === project.id ? { ...p, name: nextName.trim(), updated_at: new Date().toISOString() } : p
+        );
+        saveLocalProjects(nextProjects);
+      }
+      setProjects((prev) =>
+        prev.map((p) => (p.id === project.id ? { ...p, name: nextName.trim() } : p))
+      );
+      if (activeProject?.id === project.id) {
+        setActiveProject((prev) => (prev ? { ...prev, name: nextName.trim() } : prev));
+      }
+    } catch (error) {
+      setProjectError(error instanceof Error ? error.message : "Failed to rename project.");
+    }
+  }
+
+  async function handleDuplicateProject(project: Project) {
+    const nextName = window.prompt("Duplicate project as", `${project.name} Copy`);
+    if (!nextName || !nextName.trim()) return;
+    setProjectLoading(true);
+    setProjectError(null);
+    try {
+      let snapshot: ProjectSnapshot | null = null;
+      const cached = await getCachedProjectSnapshot(project.id);
+      if (cached) {
+        snapshot = cached;
+      } else if (hasSupabaseConfig) {
+        const cloudSnapshot = await loadProjectSnapshot(project.id);
+        snapshot = cloudSnapshot ? deserializeSnapshot(cloudSnapshot) : null;
+      }
+
+      if (!hasSupabaseConfig) {
+        const now = new Date().toISOString();
+        const localProject: Project = {
+          id: crypto.randomUUID(),
+          user_id: "local",
+          name: nextName.trim(),
+          description: project.description,
+          thumbnail_url: project.thumbnail_url,
+          metadata: null,
+          created_at: now,
+          updated_at: now,
+          is_archived: false,
+        };
+        const nextProjects = [localProject, ...loadLocalProjects()];
+        saveLocalProjects(nextProjects);
+        setProjects(nextProjects);
+        if (snapshot) {
+          await cacheProjectSnapshot(localProject.id, snapshot);
+        }
+        return;
+      }
+
+      const created = await createProject({
+        name: nextName.trim(),
+        description: project.description || undefined,
+        thumbnail_url: project.thumbnail_url || undefined,
+        metadata: snapshot ? serializeSnapshot(snapshot) : undefined,
+      });
+      if (!created) throw new Error("Failed to duplicate project.");
+      setProjects((prev) => [created, ...prev]);
+    } catch (error) {
+      setProjectError(error instanceof Error ? error.message : "Failed to duplicate project.");
+    } finally {
+      setProjectLoading(false);
+    }
   }
 
   function handleInsertFrame() {
@@ -1960,7 +2121,7 @@ export default function App() {
     { id: "deselect", name: "Deselect", shortcut: "Cmd+D", category: "Edit", action: handleDeselect },
     { id: "newFrame", name: "New Frame", category: "Animation", action: handleInsertFrame },
     { id: "duplicateFrame", name: "Duplicate Frame", category: "Animation", action: handleDuplicateFrame },
-    { id: "deleteFrame", name: "Delete Frame", category: "Animation", action: handleDeleteFrame },
+    { id: "deleteFrame", name: "Delete Frame", shortcut: "Delete", category: "Animation", action: handleDeleteFrame },
     { id: "playPause", name: "Play/Pause", shortcut: "Space", category: "Animation", action: handleTogglePlayback },
     { id: "export", name: "Export", shortcut: "Cmd+E", category: "File", action: () => setShowExportPanel(true) },
     { id: "saveProject", name: "Save Project Snapshot", shortcut: "Cmd+S", category: "File", action: handleAutoSave, keywords: ["autosave", "cloud"] },
@@ -2059,11 +2220,6 @@ export default function App() {
   }
 
   useEffect(() => {
-    function isInputFocused(): boolean {
-      const active = document.activeElement;
-      return active?.tagName === "INPUT" || active?.tagName === "TEXTAREA" || (active?.hasAttribute("contenteditable") ?? false);
-    }
-
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Enter" && isTransforming && !isInputFocused()) {
         e.preventDefault();
@@ -2083,6 +2239,8 @@ export default function App() {
           onSelect={handleSelectProject}
           onCreate={handleCreateProject}
           onDelete={handleDeleteProject}
+          onRename={handleRenameProject}
+          onDuplicate={handleDuplicateProject}
           onRefresh={refreshProjects}
           loading={projectLoading}
           error={projectError}
@@ -2221,106 +2379,8 @@ export default function App() {
                   >
                     Commands
                   </button>
-                  <button
-                    className="uiBtn"
-                    onClick={() => setProjectView("dashboard")}
-                    title="Project Dashboard"
-                  >
-                    Projects
-                  </button>
-                  <button
-                    className="uiBtn uiBtn--primary"
-                    onClick={() => setShowExportPanel(true)}
-                    title="Export Sprite (Cmd+E)"
-                  >
-                    Export
-                  </button>
                 </div>
-
-                <div className="topbar__group">
-                  {activeCollaborators.length > 0 && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ fontSize: "11px", color: "#aaa" }}>Active:</span>
-                      <div style={{ display: "flex", gap: "4px" }}>
-                        {activeCollaborators.slice(0, 5).map((user) => (
-                          <span
-                            key={user.id}
-                            title={`User ${user.id}`}
-                            style={{
-                              width: "18px",
-                              height: "18px",
-                              borderRadius: "999px",
-                              background: user.color,
-                              color: "#111",
-                              fontSize: "9px",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
-                            {user.id.slice(0, 2)}
-                          </span>
-                        ))}
-                      </div>
-                      {activeCollaborators.length > 5 && (
-                        <span style={{ fontSize: "11px", color: "#aaa" }}>
-                          +{activeCollaborators.length - 5}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <label className="ui-row">
-                    <span>Color</span>
-                    <input
-                      className="color"
-                      type="color"
-                      value={settings.primaryColor}
-                      onChange={(e) => handleSelectColor(e.target.value)}
-                      title="Primary Color"
-                    />
-                  </label>
-
-                  <label className="ui-row">
-                    <span>Zoom</span>
-                    <input
-                      className="zoom"
-                      type="range"
-                      min={1}
-                      max={32}
-                      step={0.25}
-                      value={settings.zoom}
-                      onChange={(e) => setSettings((s) => ({ ...s, zoom: Number(e.target.value) }))}
-                    />
-                    <span className="mono">{zoomLabel}</span>
-                  </label>
-                </div>
-
-                <div className="topbar__group">
-                  <label className="ui-row">
-                    <span>Background</span>
-                    <select
-                      value={settings.backgroundMode}
-                      onChange={(e) =>
-                        setSettings((s) => ({ ...s, backgroundMode: e.target.value as any }))
-                      }
-                    >
-                      <option value="checker">Checkerboard</option>
-                      <option value="solidDark">Solid (Dark)</option>
-                      <option value="solidLight">Solid (Light)</option>
-                      <option value="greenscreen">Greenscreen</option>
-                      <option value="bluescreen">Bluescreen</option>
-                    </select>
-                  </label>
-
-                  <label className="ui-row">
-                    <input
-                      type="checkbox"
-                      checked={settings.showGrid}
-                      onChange={(e) => setSettings((s) => ({ ...s, showGrid: e.target.checked }))}
-                    />
-                    <span>Grid</span>
-                  </label>
-                </div>
+                <QuickControls showCollaborators />
               </div>
 
               <button
@@ -2334,7 +2394,7 @@ export default function App() {
               {showTopbarMenu && (
                 <div className="topbar__menu">
                   <div className="topbar__menu-header">
-                    <span>Quick Controls</span>
+                    <span>Workspace</span>
                     <button
                       className="uiBtn uiBtn--ghost"
                       onClick={() => setShowTopbarMenu(false)}
@@ -2347,53 +2407,44 @@ export default function App() {
                     <div className="topbar__group">
                       <button
                         className="uiBtn"
-                        onClick={() => setShowCommandPalette(true)}
+                        onClick={() => {
+                          setShowCommandPalette(true);
+                          setShowTopbarMenu(false);
+                        }}
                         title="Command Palette (Cmd+K)"
                       >
                         Commands
                       </button>
                       <button
                         className="uiBtn"
-                        onClick={() => setProjectView("dashboard")}
+                        onClick={() => {
+                          setProjectView("dashboard");
+                          setShowTopbarMenu(false);
+                        }}
                         title="Project Dashboard"
                       >
                         Projects
                       </button>
                       <button
                         className="uiBtn uiBtn--primary"
-                        onClick={() => setShowExportPanel(true)}
+                        onClick={() => {
+                          setShowExportPanel(true);
+                          setShowTopbarMenu(false);
+                        }}
                         title="Export Sprite (Cmd+E)"
                       >
                         Export
                       </button>
-                    </div>
-
-                    <div className="topbar__group">
-                      <label className="ui-row">
-                        <span>Color</span>
-                        <input
-                          className="color"
-                          type="color"
-                          value={settings.primaryColor}
-                          onChange={(e) => handleSelectColor(e.target.value)}
-                          title="Primary Color"
-                        />
-                      </label>
-                      <label className="ui-row">
-                        <span>Zoom</span>
-                        <input
-                          className="zoom"
-                          type="range"
-                          min={1}
-                          max={32}
-                          step={0.25}
-                          value={settings.zoom}
-                          onChange={(e) =>
-                            setSettings((s) => ({ ...s, zoom: Number(e.target.value) }))
-                          }
-                        />
-                        <span className="mono">{zoomLabel}</span>
-                      </label>
+                      <button
+                        className="uiBtn"
+                        onClick={() => {
+                          setShowSettingsPanel(true);
+                          setShowTopbarMenu(false);
+                        }}
+                        title="Workspace Settings"
+                      >
+                        Settings
+                      </button>
                     </div>
 
                     <div className="topbar__group">
@@ -2412,17 +2463,9 @@ export default function App() {
                           <option value="bluescreen">Bluescreen</option>
                         </select>
                       </label>
-                      <label className="ui-row">
-                        <input
-                          type="checkbox"
-                          checked={settings.showGrid}
-                          onChange={(e) =>
-                            setSettings((s) => ({ ...s, showGrid: e.target.checked }))
-                          }
-                        />
-                        <span>Grid</span>
-                      </label>
                     </div>
+
+                    <QuickControls />
                   </div>
                 </div>
               )}
@@ -2480,6 +2523,86 @@ export default function App() {
               >
                 {confirmDialog.confirmLabel ?? "Confirm"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSettingsPanel && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowSettingsPanel(false)}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Workspace Settings</h2>
+              <button
+                className="modal-close"
+                onClick={() => setShowSettingsPanel(false)}
+                title="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body settings-panel">
+              <div className="settings-section">
+                <h3>Project</h3>
+                <div className="settings-actions">
+                  <button
+                    className="uiBtn"
+                    onClick={handleAutoSave}
+                    disabled={!activeProject}
+                  >
+                    Save Snapshot
+                  </button>
+                  <button
+                    className="uiBtn"
+                    onClick={handleReloadProject}
+                    disabled={!activeProject}
+                  >
+                    Reload Snapshot
+                  </button>
+                </div>
+              </div>
+
+              <div className="settings-section">
+                <h3>Display</h3>
+                <label className="ui-row">
+                  <input
+                    type="checkbox"
+                    checked={settings.showGrid}
+                    onChange={(e) =>
+                      setSettings((s) => ({ ...s, showGrid: e.target.checked }))
+                    }
+                  />
+                  <span>Show Grid</span>
+                </label>
+                <label className="ui-row">
+                  <input
+                    type="checkbox"
+                    checked={settings.showOnionSkin}
+                    onChange={(e) =>
+                      setSettings((s) => ({ ...s, showOnionSkin: e.target.checked }))
+                    }
+                  />
+                  <span>Onion Skin</span>
+                </label>
+                <label className="ui-row">
+                  <span>Background</span>
+                  <select
+                    value={settings.backgroundMode}
+                    onChange={(e) =>
+                      setSettings((s) => ({ ...s, backgroundMode: e.target.value as any }))
+                    }
+                  >
+                    <option value="checker">Checkerboard</option>
+                    <option value="solidDark">Solid (Dark)</option>
+                    <option value="solidLight">Solid (Light)</option>
+                    <option value="greenscreen">Greenscreen</option>
+                    <option value="bluescreen">Bluescreen</option>
+                  </select>
+                </label>
+              </div>
             </div>
           </div>
         </div>
