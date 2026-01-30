@@ -19,7 +19,7 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
       </div>
 
       <div className="panel__body">
-        {(tool === "pen" || tool === "eraser") && (
+        {(tool === "pen" || tool === "eraser" || tool === "smudge") && (
           <div className="option-group">
             <label className="option-row">
               <span>Brush Size</span>
@@ -33,14 +33,44 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
               <span className="mono">{settings.brushSize}px</span>
             </label>
 
-            <label className="option-row">
-              <input
-                type="checkbox"
-                checked={settings.brushStabilizerEnabled}
-                onChange={(e) => updateSetting("brushStabilizerEnabled", e.target.checked)}
-              />
-              <span>Brush Stabilizer</span>
-            </label>
+            {tool !== "smudge" && (
+              <label className="option-row">
+                <input
+                  type="checkbox"
+                  checked={settings.brushStabilizerEnabled}
+                  onChange={(e) => updateSetting("brushStabilizerEnabled", e.target.checked)}
+                />
+                <span>Brush Stabilizer</span>
+              </label>
+            )}
+
+            {tool === "pen" && (
+              <label className="option-row">
+                <span>Brush Texture</span>
+                <select
+                  value={settings.brushTexture}
+                  onChange={(e) => updateSetting("brushTexture", e.target.value as UiSettings["brushTexture"])}
+                >
+                  <option value="none">Solid</option>
+                  <option value="noise">Noise Mask</option>
+                  <option value="dither">Dither Mask</option>
+                </select>
+              </label>
+            )}
+
+            {tool === "smudge" && (
+              <label className="option-row">
+                <span>Smudge Strength</span>
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  value={settings.smudgeStrength}
+                  onChange={(e) => updateSetting("smudgeStrength", Number(e.target.value))}
+                />
+                <span className="mono">{settings.smudgeStrength}%</span>
+              </label>
+            )}
           </div>
         )}
 
@@ -56,6 +86,18 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
                 onChange={(e) => updateSetting("fillTolerance", Number(e.target.value))}
               />
               <span className="mono">{settings.fillTolerance}</span>
+            </label>
+            <label className="option-row">
+              <span>Pattern</span>
+              <select
+                value={settings.fillPattern}
+                onChange={(e) => updateSetting("fillPattern", e.target.value as UiSettings["fillPattern"])}
+              >
+                <option value="solid">Solid Color</option>
+                <option value="checker">Checker 8x8</option>
+                <option value="dither">Dither 8x8</option>
+                <option value="noise">Noise 8x8</option>
+              </select>
             </label>
             <div className="option-hint">
               Higher tolerance fills similar colors

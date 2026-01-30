@@ -127,6 +127,7 @@ export function useKeyboardShortcuts(handlers: ShortcutHandler, enabled: boolean
 
       const toolMap: Record<string, ToolId> = {
         'b': 'pen',
+        's': 'smudge',
         'e': shift ? 'ellipse' : 'eraser',
         'i': 'eyedropper',
         'f': 'fill',

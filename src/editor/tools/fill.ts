@@ -34,6 +34,7 @@
 
 import { RGBA, setPixel } from "../pixels"
 import { colorsEqual } from "../../utils/colors"
+import { getPatternColor, PatternFill } from "./patterns"
 
 /**
  * Gets the color of a pixel in the buffer
@@ -114,7 +115,8 @@ export function floodFill(
   height: number,
   startX: number,
   startY: number,
-  fillColor: RGBA
+  fillColor: RGBA,
+  patternFill?: PatternFill
 ): number {
   // Validate starting position
   if (startX < 0 || startY < 0 || startX >= width || startY >= height) {
@@ -127,8 +129,8 @@ export function floodFill(
     return 0
   }
 
-  // If target and fill colors are the same, nothing to do
-  if (colorsEqual(targetColor, fillColor)) {
+  // If target and fill colors are the same, nothing to do (solid fill only)
+  if (!patternFill && colorsEqual(targetColor, fillColor)) {
     return 0
   }
 
@@ -177,7 +179,8 @@ export function floodFill(
 
     // Fill the entire scanline
     for (let fillX = leftX; fillX <= rightX; fillX++) {
-      if (setPixel(buffer, width, height, fillX, y, fillColor)) {
+      const paint = patternFill ? getPatternColor(patternFill, fillX, y) : fillColor
+      if (setPixel(buffer, width, height, fillX, y, paint)) {
         pixelsChanged++
       }
     }
@@ -240,7 +243,8 @@ export function floodFillWithTolerance(
   startX: number,
   startY: number,
   fillColor: RGBA,
-  tolerance: number
+  tolerance: number,
+  patternFill?: PatternFill
 ): number {
   // Validate starting position
   if (startX < 0 || startY < 0 || startX >= width || startY >= height) {
@@ -264,8 +268,8 @@ export function floodFillWithTolerance(
     return dr + dg + db + da <= tolerance * 4
   }
 
-  // If fill color matches target (within tolerance), nothing to do
-  if (colorMatches(fillColor)) {
+  // If fill color matches target (within tolerance), nothing to do (solid fill only)
+  if (!patternFill && colorMatches(fillColor)) {
     return 0
   }
 
@@ -307,7 +311,8 @@ export function floodFillWithTolerance(
 
     // Fill scanline
     for (let fillX = leftX; fillX <= rightX; fillX++) {
-      if (setPixel(buffer, width, height, fillX, y, fillColor)) {
+      const paint = patternFill ? getPatternColor(patternFill, fillX, y) : fillColor
+      if (setPixel(buffer, width, height, fillX, y, paint)) {
         pixelsChanged++
       }
     }

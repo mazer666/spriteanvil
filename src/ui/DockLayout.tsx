@@ -1,5 +1,6 @@
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import ToolRail from "./ToolRail";
+import ToolBar from "./ToolBar";
 import RightPanel from "./RightPanel";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
@@ -18,6 +19,7 @@ type Props = {
   canvasSpec: CanvasSpec;
   buffer: Uint8ClampedArray;
   compositeBuffer: Uint8ClampedArray;
+  previewLayerPixels?: Uint8ClampedArray | null;
   onStrokeEnd: (before: Uint8ClampedArray, after: Uint8ClampedArray) => void;
 
   selection: Uint8Array | null;
@@ -106,6 +108,8 @@ type Props = {
     onAdjustHue: (hueShift: number) => void;
     onAdjustSaturation: (saturationDelta: number) => void;
     onAdjustBrightness: (brightnessDelta: number) => void;
+    onPreviewAdjust: (preview: { hueShift: number; saturationDelta: number; brightnessDelta: number }) => void;
+    onClearPreview: () => void;
     onInvert: () => void;
     onDesaturate: () => void;
     onPosterize: (levels: number) => void;
@@ -144,6 +148,7 @@ export default function DockLayout({
   canvasSpec,
   buffer,
   compositeBuffer,
+  previewLayerPixels,
   onStrokeEnd,
   selection,
   onChangeSelection,
@@ -200,9 +205,17 @@ export default function DockLayout({
   const [isToolRailOpen, setIsToolRailOpen] = useState(false);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
   const [isMinimapVisible, setIsMinimapVisible] = useState(true);
+  const [isToolRailCollapsed, setIsToolRailCollapsed] = useState(() =>
+    loadBoolean("dock:leftCollapsed", false)
+  );
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(() =>
+    loadBoolean("dock:rightCollapsed", false)
+  );
 
   useEffect(() => saveNumber("dock:rightWidth", rightWidth), [rightWidth]);
   useEffect(() => saveNumber("dock:timelineHeight", timelineHeight), [timelineHeight]);
+  useEffect(() => saveBoolean("dock:leftCollapsed", isToolRailCollapsed), [isToolRailCollapsed]);
+  useEffect(() => saveBoolean("dock:rightCollapsed", isRightPanelCollapsed), [isRightPanelCollapsed]);
 
   const sizes = useMemo(() => ({ rightWidth, timelineHeight }), [rightWidth, timelineHeight]);
 
@@ -269,13 +282,16 @@ export default function DockLayout({
         "dock" +
         (isMobile ? " dock--mobile" : "") +
         (isToolRailOpen ? " dock--left-open" : "") +
-        (isRightPanelOpen ? " dock--right-open" : "")
+        (isRightPanelOpen ? " dock--right-open" : "") +
+        (isToolRailCollapsed ? " dock--left-collapsed" : "") +
+        (isRightPanelCollapsed ? " dock--right-collapsed" : "")
       }
       onPointerMove={onDragMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       style={{
-        "--rightPanelWidth": `${sizes.rightWidth}px`,
+        "--leftPanelWidth": `${isToolRailCollapsed ? 48 : 72}px`,
+        "--rightPanelWidth": `${isRightPanelCollapsed ? 52 : sizes.rightWidth}px`,
         "--timelineHeight": `${sizes.timelineHeight}px`,
       } as React.CSSProperties}
     >
@@ -309,7 +325,16 @@ export default function DockLayout({
       </div>
 
       <div className="dock__body">
-        <div className="dock__left">
+        <div className={"dock__left" + (isToolRailCollapsed ? " dock__left--collapsed" : "")}>
+          {!isMobile && (
+            <button
+              className="panel-toggle panel-toggle--left"
+              onClick={() => setIsToolRailCollapsed((prev) => !prev)}
+              title={isToolRailCollapsed ? "Expand tools" : "Collapse tools"}
+            >
+              {isToolRailCollapsed ? "›" : "‹"}
+            </button>
+          )}
           <ToolRail tool={tool} onChangeTool={onChangeTool} />
         </div>
 
@@ -320,6 +345,7 @@ export default function DockLayout({
             canvasSpec={canvasSpec}
             buffer={buffer}
             compositeBuffer={compositeBuffer}
+            previewLayerPixels={previewLayerPixels}
             layers={layers}
             activeLayerId={activeLayerId}
             onStrokeEnd={onStrokeEnd}
@@ -344,7 +370,16 @@ export default function DockLayout({
           onPointerDown={(e) => beginDrag("right", e)}
         />
 
-        <div className="dock__right">
+        <div className={"dock__right" + (isRightPanelCollapsed ? " dock__right--collapsed" : "")}>
+          {!isMobile && (
+            <button
+              className="panel-toggle panel-toggle--right"
+              onClick={() => setIsRightPanelCollapsed((prev) => !prev)}
+              title={isRightPanelCollapsed ? "Expand panel" : "Collapse panel"}
+            >
+              {isRightPanelCollapsed ? "‹" : "›"}
+            </button>
+          )}
           <RightPanel
             tool={tool}
             settings={settings}
@@ -355,6 +390,7 @@ export default function DockLayout({
             layerPixels={layerPixels}
             onInpaint={onInpaint}
             onImageToImage={onImageToImage}
+            collapsed={isRightPanelCollapsed}
             layers={layers}
             activeLayerId={activeLayerId}
             onLayerOperations={onLayerOperations}
@@ -402,6 +438,12 @@ export default function DockLayout({
         />
       </div>
 
+      {isMobile && (
+        <div className="dock__toolbar">
+          <ToolBar tool={tool} onChangeTool={onChangeTool} />
+        </div>
+      )}
+
       <div className="dock__status">
         {statusBar}
       </div>
@@ -425,6 +467,24 @@ function loadNumber(key: string, fallback: number): number {
 }
 
 function saveNumber(key: string, value: number) {
+  try {
+    localStorage.setItem(key, String(value));
+  } catch {
+    // ignore
+  }
+}
+
+function loadBoolean(key: string, fallback: boolean): boolean {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    return raw === "true";
+  } catch {
+    return fallback;
+  }
+}
+
+function saveBoolean(key: string, value: boolean) {
   try {
     localStorage.setItem(key, String(value));
   } catch {

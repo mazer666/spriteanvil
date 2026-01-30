@@ -38,6 +38,7 @@ import {
   getProjects,
   loadProjectSnapshot,
   saveProjectSnapshot,
+  deleteProject,
   Project,
   ProjectSnapshotPayload,
 } from "./lib/supabase/projects";
@@ -50,6 +51,14 @@ import ShortcutOverlay, { ShortcutGroup } from "./ui/ShortcutOverlay";
 import StatusBar from "./ui/StatusBar";
 import { hexToRgb } from "./utils/colors";
 import { buildInpaintPayload } from "./lib/ai/inpaint";
+import { deleteFrame as deleteFrameRecord } from "./lib/supabase/frames";
+
+type ConfirmDialog = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  onConfirm: () => Promise<void> | void;
+};
 
 export default function App() {
   const LOCAL_PROJECTS_KEY = "spriteanvil:localProjects";
@@ -92,6 +101,8 @@ export default function App() {
 
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [animationTags, setAnimationTags] = useState<AnimationTag[]>([]);
   const [activeAnimationTagId, setActiveAnimationTagId] = useState<string | null>(null);
   const [loopTagOnly, setLoopTagOnly] = useState(false);
@@ -277,6 +288,59 @@ export default function App() {
   }, [canvasSpec.height, canvasSpec.width, currentFrame.pixels, layers]);
   const isActiveLayerLocked = activeLayer?.is_locked ?? false;
 
+  const [colorAdjustPreview, setColorAdjustPreview] = useState({
+    hueShift: 0,
+    saturationDelta: 0,
+    brightnessDelta: 0,
+  });
+
+  const previewLayerPixels = useMemo(() => {
+    if (
+      colorAdjustPreview.hueShift === 0 &&
+      colorAdjustPreview.saturationDelta === 0 &&
+      colorAdjustPreview.brightnessDelta === 0
+    ) {
+      return null;
+    }
+    let preview = buffer;
+    if (colorAdjustPreview.hueShift !== 0) {
+      preview = adjustHue(preview, canvasSpec.width, canvasSpec.height, colorAdjustPreview.hueShift);
+    }
+    if (colorAdjustPreview.saturationDelta !== 0) {
+      preview = adjustSaturation(
+        preview,
+        canvasSpec.width,
+        canvasSpec.height,
+        colorAdjustPreview.saturationDelta
+      );
+    }
+    if (colorAdjustPreview.brightnessDelta !== 0) {
+      preview = adjustBrightness(
+        preview,
+        canvasSpec.width,
+        canvasSpec.height,
+        colorAdjustPreview.brightnessDelta
+      );
+    }
+    return preview;
+  }, [
+    buffer,
+    canvasSpec.height,
+    canvasSpec.width,
+    colorAdjustPreview.brightnessDelta,
+    colorAdjustPreview.hueShift,
+    colorAdjustPreview.saturationDelta,
+  ]);
+
+  const compositePreviewBuffer = useMemo(() => {
+    if (!previewLayerPixels) return compositeBuffer;
+    if (!layers.length) return previewLayerPixels;
+    const previewLayers = layers.map((layer) =>
+      layer.id === activeLayerId ? { ...layer, pixels: previewLayerPixels } : layer
+    );
+    return compositeLayers(previewLayers, canvasSpec.width, canvasSpec.height);
+  }, [activeLayerId, canvasSpec.height, canvasSpec.width, compositeBuffer, layers, previewLayerPixels]);
+
   const [palettes, setPalettes] = useState<PaletteData[]>([
     {
       id: "default",
@@ -306,6 +370,7 @@ export default function App() {
     primaryColor: "#f2ead7",
     secondaryColor: "#000000",
     fillTolerance: 0,
+    fillPattern: "solid",
     gradientType: "linear",
     ditheringType: "none",
     symmetryMode: "none",
@@ -317,6 +382,8 @@ export default function App() {
     showGravityGuides: false,
     showMotionTrails: true,
     brushSize: 1,
+    brushTexture: "none",
+    smudgeStrength: 60,
     wandTolerance: 32,
   }));
 
@@ -1058,6 +1125,36 @@ export default function App() {
     }
   }
 
+  function handleDeleteProject(project: Project) {
+    setConfirmDialog({
+      title: "Delete Project",
+      message: `Are you sure you want to permanently delete "${project.name}"? This cannot be undone.`,
+      confirmLabel: "Delete Project",
+      onConfirm: async () => {
+        setConfirmBusy(true);
+        try {
+          if (hasSupabaseConfig) {
+            const ok = await deleteProject(project.id);
+            if (!ok) throw new Error("Failed to delete project.");
+          } else {
+            const nextProjects = loadLocalProjects().filter((p) => p.id !== project.id);
+            saveLocalProjects(nextProjects);
+          }
+          setProjects((prev) => prev.filter((p) => p.id !== project.id));
+          if (activeProject?.id === project.id) {
+            setActiveProject(null);
+            setProjectView("dashboard");
+          }
+        } catch (error) {
+          setProjectError(error instanceof Error ? error.message : "Failed to delete project.");
+        } finally {
+          setConfirmBusy(false);
+          setConfirmDialog(null);
+        }
+      },
+    });
+  }
+
   function handleInsertFrame() {
     const newLayer = createLayer("Layer 1");
     const composite = compositeLayers([newLayer], canvasSpec.width, canvasSpec.height);
@@ -1113,21 +1210,44 @@ export default function App() {
 
   function handleDeleteFrame() {
     if (frames.length <= 1) return;
-
-    setFrames((prev) => prev.filter((_, i) => i !== currentFrameIndex));
     const frameId = currentFrame.id;
-    setFrameLayers((prev) => {
-      const { [frameId]: _, ...rest } = prev;
-      return rest;
-    });
-    setFrameActiveLayerIds((prev) => {
-      const { [frameId]: _, ...rest } = prev;
-      return rest;
-    });
+    const frameIndex = currentFrameIndex;
 
-    if (currentFrameIndex >= frames.length - 1) {
-      setCurrentFrameIndex(Math.max(0, frames.length - 2));
-    }
+    setConfirmDialog({
+      title: "Delete Frame",
+      message: `Delete frame ${frameIndex + 1}? This cannot be undone.`,
+      confirmLabel: "Delete Frame",
+      onConfirm: async () => {
+        setConfirmBusy(true);
+        try {
+          if (hasSupabaseConfig) {
+            const ok = await deleteFrameRecord(frameId);
+            if (!ok) {
+              throw new Error("Failed to delete frame.");
+            }
+          }
+          setFrames((prev) => prev.filter((_, i) => i !== frameIndex));
+          setFrameLayers((prev) => {
+            const { [frameId]: _, ...rest } = prev;
+            return rest;
+          });
+          setFrameActiveLayerIds((prev) => {
+            const { [frameId]: _, ...rest } = prev;
+            return rest;
+          });
+
+          if (frameIndex >= frames.length - 1) {
+            setCurrentFrameIndex(Math.max(0, frames.length - 2));
+          }
+        } catch (error) {
+          console.error(error);
+          setProjectError(error instanceof Error ? error.message : "Failed to delete frame.");
+        } finally {
+          setConfirmBusy(false);
+          setConfirmDialog(null);
+        }
+      },
+    });
   }
 
   function handleSelectFrame(index: number) {
@@ -1671,6 +1791,7 @@ export default function App() {
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
+    setColorAdjustPreview((prev) => ({ ...prev, hueShift: 0 }));
   }
 
   function handleAdjustSaturation(saturationDelta: number) {
@@ -1680,6 +1801,7 @@ export default function App() {
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
+    setColorAdjustPreview((prev) => ({ ...prev, saturationDelta: 0 }));
   }
 
   function handleAdjustBrightness(brightnessDelta: number) {
@@ -1689,6 +1811,19 @@ export default function App() {
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
+    setColorAdjustPreview((prev) => ({ ...prev, brightnessDelta: 0 }));
+  }
+
+  function handlePreviewAdjustColor(preview: {
+    hueShift: number;
+    saturationDelta: number;
+    brightnessDelta: number;
+  }) {
+    setColorAdjustPreview(preview);
+  }
+
+  function handleClearAdjustPreview() {
+    setColorAdjustPreview({ hueShift: 0, saturationDelta: 0, brightnessDelta: 0 });
   }
 
   function handleInvert() {
@@ -1698,6 +1833,7 @@ export default function App() {
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
+    setColorAdjustPreview({ hueShift: 0, saturationDelta: 0, brightnessDelta: 0 });
   }
 
   function handleDesaturate() {
@@ -1707,6 +1843,7 @@ export default function App() {
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
+    setColorAdjustPreview({ hueShift: 0, saturationDelta: 0, brightnessDelta: 0 });
   }
 
   function handlePosterize(levels: number) {
@@ -1716,6 +1853,7 @@ export default function App() {
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
+    setColorAdjustPreview({ hueShift: 0, saturationDelta: 0, brightnessDelta: 0 });
   }
 
   function handleSmartOutline(mode: OutlineMode) {
@@ -1838,6 +1976,7 @@ export default function App() {
     { id: "desaturate", name: "Desaturate", category: "Color", action: handleDesaturate },
     { id: "newLayer", name: "New Layer", category: "Layer", action: handleCreateLayer },
     { id: "toolPen", name: "Pen Tool", shortcut: "B", category: "Tools", action: () => handleChangeTool("pen") },
+    { id: "toolSmudge", name: "Smudge Tool", shortcut: "S", category: "Tools", action: () => handleChangeTool("smudge") },
     { id: "toolEraser", name: "Eraser Tool", shortcut: "E", category: "Tools", action: () => handleChangeTool("eraser") },
     { id: "toolFill", name: "Fill Tool", shortcut: "F", category: "Tools", action: () => handleChangeTool("fill") },
     { id: "toolEyedropper", name: "Eyedropper Tool", shortcut: "I", category: "Tools", action: () => handleChangeTool("eyedropper") },
@@ -1939,6 +2078,7 @@ export default function App() {
           projects={projects}
           onSelect={handleSelectProject}
           onCreate={handleCreateProject}
+          onDelete={handleDeleteProject}
           onRefresh={refreshProjects}
           loading={projectLoading}
           error={projectError}
@@ -1951,7 +2091,8 @@ export default function App() {
           onChangeTool={handleChangeTool}
           canvasSpec={canvasSpec}
           buffer={buffer}
-          compositeBuffer={compositeBuffer}
+          compositeBuffer={compositePreviewBuffer}
+          previewLayerPixels={previewLayerPixels}
           onStrokeEnd={onStrokeEnd}
           selection={selection}
           onChangeSelection={handleChangeSelection}
@@ -2033,6 +2174,8 @@ export default function App() {
             onAdjustHue: handleAdjustHue,
             onAdjustSaturation: handleAdjustSaturation,
             onAdjustBrightness: handleAdjustBrightness,
+            onPreviewAdjust: handlePreviewAdjustColor,
+            onClearPreview: handleClearAdjustPreview,
             onInvert: handleInvert,
             onDesaturate: handleDesaturate,
             onPosterize: handlePosterize,
@@ -2188,6 +2331,47 @@ export default function App() {
           e.currentTarget.value = "";
         }}
       />
+
+      {confirmDialog && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            if (!confirmBusy) setConfirmDialog(null);
+          }}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{confirmDialog.title}</h2>
+              <button
+                className="modal-close"
+                onClick={() => !confirmBusy && setConfirmDialog(null)}
+                title="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>{confirmDialog.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="uiBtn"
+                onClick={() => setConfirmDialog(null)}
+                disabled={confirmBusy}
+              >
+                Cancel
+              </button>
+              <button
+                className="uiBtn uiBtn--primary"
+                onClick={confirmDialog.onConfirm}
+                disabled={confirmBusy}
+              >
+                {confirmDialog.confirmLabel ?? "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showExportPanel && projectView === "editor" && (
         <ExportPanel

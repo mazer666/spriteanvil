@@ -4,6 +4,8 @@ type Props = {
   onAdjustHue: (hueShift: number) => void;
   onAdjustSaturation: (saturationDelta: number) => void;
   onAdjustBrightness: (brightnessDelta: number) => void;
+  onPreviewAdjust: (preview: { hueShift: number; saturationDelta: number; brightnessDelta: number }) => void;
+  onClearPreview: () => void;
   onInvert: () => void;
   onDesaturate: () => void;
   onPosterize: (levels: number) => void;
@@ -13,6 +15,8 @@ export default function ColorAdjustPanel({
   onAdjustHue,
   onAdjustSaturation,
   onAdjustBrightness,
+  onPreviewAdjust,
+  onClearPreview,
   onInvert,
   onDesaturate,
   onPosterize,
@@ -21,6 +25,18 @@ export default function ColorAdjustPanel({
   const [saturation, setSaturation] = useState(0);
   const [brightness, setBrightness] = useState(0);
   const [posterizeLevels, setPosterizeLevels] = useState(4);
+
+  React.useEffect(() => {
+    onPreviewAdjust({
+      hueShift: hue,
+      saturationDelta: saturation,
+      brightnessDelta: brightness,
+    });
+  }, [hue, saturation, brightness, onPreviewAdjust]);
+
+  React.useEffect(() => {
+    return () => onClearPreview();
+  }, [onClearPreview]);
 
   return (
     <div style={{ padding: '8px' }}>

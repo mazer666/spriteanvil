@@ -65,22 +65,22 @@ export default function PalettePanel({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontSize: '13px' }}>
-      <div style={{ padding: '8px', borderBottom: '1px solid #333', fontWeight: 'bold' }}>
+    <div className="palette-panel">
+      <div className="palette-panel__header">
         Palettes
       </div>
 
-      <div style={{ padding: '8px', borderBottom: '1px solid #333' }}>
-        <div style={{ marginBottom: '8px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontSize: '11px', color: '#aaa' }}>
+      <div className="palette-panel__primary">
+        <div className="palette-panel__block">
+          <label className="palette-panel__label">
             Primary Color
           </label>
-          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <div className="palette-panel__row">
             <input
               type="color"
               value={primaryColor}
               onChange={(e) => onSelectColor(e.target.value)}
-              style={{ width: '40px', height: '40px', border: '1px solid #555', cursor: 'pointer' }}
+              className="palette-panel__color-input"
             />
             <input
               type="text"
@@ -92,7 +92,7 @@ export default function PalettePanel({
                   setColorPickerValue(val);
                 }
               }}
-              style={{ flex: 1, padding: '4px', background: '#1a1a1a', color: '#fff', border: '1px solid #444', fontFamily: 'monospace' }}
+              className="palette-panel__hex-input"
               placeholder="#RRGGBB"
             />
           </div>
@@ -100,21 +100,20 @@ export default function PalettePanel({
 
         {recentColors.length > 0 && (
           <div>
-            <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '4px' }}>Recent Colors</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: '2px' }}>
+            <div className="palette-panel__label">Recent Colors</div>
+            <div className="palette-panel__recent-grid">
               {recentColors.map((color, idx) => (
                 <div
                   key={idx}
                   onClick={() => handleColorClick(color)}
                   style={{
-                    width: '100%',
-                    aspectRatio: '1',
                     background: color,
                     border: color === primaryColor ? '2px solid #fff' : '1px solid #444',
                     cursor: 'pointer',
                     borderRadius: '2px',
                   }}
                   title={color}
+                  className="palette-panel__swatch"
                 />
               ))}
             </div>
@@ -122,12 +121,12 @@ export default function PalettePanel({
         )}
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '11px', color: '#aaa' }}>SAVED PALETTES</span>
+      <div className="palette-panel__list">
+        <div className="palette-panel__list-header">
+          <span className="palette-panel__label">Saved Palettes</span>
           <button
             onClick={() => setShowNewPalette(!showNewPalette)}
-            style={{ padding: '2px 8px', fontSize: '11px' }}
+            className="palette-panel__small-btn"
             title="Create new palette"
           >
             + New
@@ -135,7 +134,7 @@ export default function PalettePanel({
         </div>
 
         {showNewPalette && (
-          <div style={{ marginBottom: '8px', padding: '8px', background: '#2a2a2a', border: '1px solid #444', borderRadius: '3px' }}>
+          <div className="palette-panel__new">
             <input
               type="text"
               value={newPaletteName}
@@ -146,41 +145,38 @@ export default function PalettePanel({
               }}
               placeholder="Palette name..."
               autoFocus
-              style={{ width: '100%', padding: '4px', background: '#1a1a1a', color: '#fff', border: '1px solid #444', marginBottom: '4px' }}
+              className="palette-panel__text-input"
             />
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button onClick={createPalette} style={{ flex: 1, padding: '4px', fontSize: '11px' }}>Create</button>
-              <button onClick={() => setShowNewPalette(false)} style={{ flex: 1, padding: '4px', fontSize: '11px' }}>Cancel</button>
+            <div className="palette-panel__row">
+              <button onClick={createPalette} className="palette-panel__small-btn">Create</button>
+              <button onClick={() => setShowNewPalette(false)} className="palette-panel__small-btn">Cancel</button>
             </div>
           </div>
         )}
 
         {palettes.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: '#888' }}>
+          <div className="palette-panel__empty">
             No palettes yet. Click + New to create one.
           </div>
         ) : (
           palettes.map((palette) => (
             <div
               key={palette.id}
+              className="palette-panel__palette-card"
               style={{
-                marginBottom: '8px',
-                padding: '8px',
                 background: palette.id === activePaletteId ? '#3a3a3a' : '#2a2a2a',
                 border: '1px solid ' + (palette.id === activePaletteId ? '#555' : '#333'),
-                borderRadius: '3px',
-                cursor: 'pointer',
               }}
               onClick={() => onSelectPalette(palette.id)}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '12px' }}>
+              <div className="palette-panel__row palette-panel__row--space">
+                <span className="palette-panel__palette-title">
                   {palette.name} {palette.is_default && <span style={{ color: '#888', fontSize: '10px' }}>(default)</span>}
                 </span>
                 {!palette.is_default && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onDeletePalette(palette.id); }}
-                    style={{ padding: '2px 6px', fontSize: '11px' }}
+                    className="palette-panel__small-btn"
                     title="Delete palette"
                   >
                     🗑
@@ -188,7 +184,7 @@ export default function PalettePanel({
                 )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '2px' }}>
+              <div className="palette-panel__swatches">
                 {palette.colors.map((color, idx) => (
                   <div
                     key={idx}
@@ -201,31 +197,19 @@ export default function PalettePanel({
                       }
                     }}
                     style={{
-                      width: '100%',
-                      aspectRatio: '1',
                       background: color,
                       border: color === primaryColor ? '2px solid #fff' : '1px solid #444',
                       cursor: 'pointer',
                       borderRadius: '2px',
                     }}
                     title={`${color}\nRight-click to remove`}
+                    className="palette-panel__swatch"
                   />
                 ))}
                 {!palette.is_default && palette.id === activePaletteId && (
                   <div
                     onClick={(e) => { e.stopPropagation(); onAddColorToPalette(palette.id, primaryColor); }}
-                    style={{
-                      width: '100%',
-                      aspectRatio: '1',
-                      border: '1px dashed #666',
-                      cursor: 'pointer',
-                      borderRadius: '2px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '14px',
-                      color: '#666',
-                    }}
+                    className="palette-panel__swatch palette-panel__swatch--add"
                     title="Add current color to palette"
                   >
                     +
@@ -237,20 +221,20 @@ export default function PalettePanel({
         )}
       </div>
 
-      <div style={{ padding: '8px', borderTop: '1px solid #333', background: '#252525' }}>
-        <div style={{ display: "grid", gap: "6px", marginBottom: "8px" }}>
-          <div style={{ fontSize: "11px", color: "#aaa" }}>Palette Tools</div>
-          <div style={{ display: "flex", gap: "6px" }}>
+      <div className="palette-panel__footer">
+        <div className="palette-panel__tools">
+          <div className="palette-panel__label">Palette Tools</div>
+          <div className="palette-panel__row">
             <button
               onClick={() => fileInputRef.current?.click()}
-              style={{ flex: 1, padding: "6px", fontSize: "12px" }}
+              className="palette-panel__tool-btn"
               title="Import .gpl or .ase palette"
             >
               Import Palette
             </button>
             <button
               onClick={() => onExportPalette("gpl")}
-              style={{ flex: 1, padding: "6px", fontSize: "12px" }}
+              className="palette-panel__tool-btn"
               disabled={!activePalette}
               title="Export palette as .gpl"
             >
@@ -258,7 +242,7 @@ export default function PalettePanel({
             </button>
             <button
               onClick={() => onExportPalette("ase")}
-              style={{ flex: 1, padding: "6px", fontSize: "12px" }}
+              className="palette-panel__tool-btn"
               disabled={!activePalette}
               title="Export palette as .ase"
             >
@@ -280,25 +264,25 @@ export default function PalettePanel({
 
         <button
           onClick={onExtractPalette}
-          style={{ width: '100%', padding: '6px', fontSize: '12px', marginBottom: '6px' }}
+          className="palette-panel__full-btn"
           title="Extract colors from the current sprite"
         >
           Extract Palette from Image
         </button>
-        <div style={{ display: "grid", gap: "6px", marginBottom: "6px" }}>
-          <label style={{ fontSize: "11px", color: "#aaa" }}>Palette Ramp Builder</label>
-          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+        <div className="palette-panel__tools">
+          <label className="palette-panel__label">Palette Ramp Builder</label>
+          <div className="palette-panel__row">
             <input
               type="number"
               min={2}
               max={32}
               value={rampSteps}
               onChange={(e) => setRampSteps(Number(e.target.value))}
-              style={{ width: "70px", padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+              className="palette-panel__number-input"
             />
             <button
               onClick={() => onGenerateRamp(rampSteps)}
-              style={{ flex: 1, padding: "6px", fontSize: "12px" }}
+              className="palette-panel__tool-btn"
               title="Generate gradient colors between primary and secondary"
             >
               Add Ramp
@@ -307,12 +291,8 @@ export default function PalettePanel({
         </div>
         <button
           onClick={() => setSwapFromColor(swapFromColor ? null : primaryColor)}
-          style={{
-            width: '100%',
-            padding: '6px',
-            fontSize: '12px',
-            background: swapFromColor ? '#4a4a4a' : '#2a2a2a',
-          }}
+          className="palette-panel__full-btn"
+          style={{ background: swapFromColor ? '#4a4a4a' : '#2a2a2a' }}
           title="Click to start color swap, then click another color"
         >
           {swapFromColor ? `Swapping ${swapFromColor}... (click color)` : 'Color Swap Mode'}

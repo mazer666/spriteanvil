@@ -7,6 +7,7 @@ export type BackgroundMode =
 
 export type ToolId =
   | "pen"
+  | "smudge"
   | "eraser"
   | "eyedropper"
   | "fill"
@@ -81,6 +82,7 @@ export type UiSettings = {
 
   // Tool-specific settings
   fillTolerance: number;
+  fillPattern: "solid" | "checker" | "dither" | "noise";
   gradientType: GradientType;
   ditheringType: DitheringType;
   symmetryMode: SymmetryMode;
@@ -92,6 +94,8 @@ export type UiSettings = {
   showGravityGuides: boolean;
   showMotionTrails: boolean;
   brushSize: number;
+  brushTexture: "none" | "noise" | "dither";
+  smudgeStrength: number;
   wandTolerance: number;
 };
 

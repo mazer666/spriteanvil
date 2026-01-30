@@ -20,6 +20,7 @@ type Props = {
   layerPixels?: Uint8ClampedArray | null;
   onInpaint?: (payload: { prompt: string; denoiseStrength: number; promptInfluence: number }) => Promise<string>;
   onImageToImage?: (payload: { prompt: string; denoiseStrength: number; promptInfluence: number }) => Promise<string>;
+  collapsed?: boolean;
 
   layers?: LayerData[];
   activeLayerId?: string | null;
@@ -70,6 +71,8 @@ type Props = {
     onAdjustHue: (hueShift: number) => void;
     onAdjustSaturation: (saturationDelta: number) => void;
     onAdjustBrightness: (brightnessDelta: number) => void;
+    onPreviewAdjust: (preview: { hueShift: number; saturationDelta: number; brightnessDelta: number }) => void;
+    onClearPreview: () => void;
     onInvert: () => void;
     onDesaturate: () => void;
     onPosterize: (levels: number) => void;
@@ -108,15 +111,25 @@ export default function RightPanel({
   layerPixels,
   onInpaint,
   onImageToImage,
+  collapsed = false,
 }: Props) {
   const tabs = useMemo(
     () => ["Tool", "Layers", "Palette", "Transform", "Color", "Selection", "AI"] as const,
     []
   );
   const [active, setActive] = useState<(typeof tabs)[number]>("Tool");
+  const tabIcons: Record<(typeof tabs)[number], string> = {
+    Tool: "🛠",
+    Layers: "🗂",
+    Palette: "🎨",
+    Transform: "🧭",
+    Color: "🌈",
+    Selection: "🔲",
+    AI: "🤖",
+  };
 
   return (
-    <div className="rightpanel">
+    <div className={"rightpanel" + (collapsed ? " rightpanel--collapsed" : "")}>
       <div className="rightpanel__tabs">
         {tabs.map((t) => (
           <button
@@ -124,7 +137,8 @@ export default function RightPanel({
             className={"tab" + (active === t ? " tab--active" : "")}
             onClick={() => setActive(t)}
           >
-            {t}
+            <span className="tab__icon" aria-hidden="true">{tabIcons[t]}</span>
+            <span className="tab__label">{t}</span>
             {t === "Selection" && hasSelection && <span className="tab__badge">•</span>}
           </button>
         ))}
