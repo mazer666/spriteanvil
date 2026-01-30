@@ -6,7 +6,7 @@
  * (e.g. local Ollama servers) can be added with minimal changes.
  */
 
-export type AIProviderId = "openai-dalle3" | "stability-ai" | "hugging-face";
+export type AIProviderId = "openai-dalle3" | "stability-ai" | "hugging-face" | "openrouter";
 
 export type AIRequest = {
   prompt: string;
@@ -55,6 +55,13 @@ export const PROVIDERS: AIProvider[] = [
     supportsInpaint: false,
     supportsVariations: true,
     generate: async () => notImplemented("hugging-face"),
+  },
+  {
+    id: "openrouter",
+    label: "OpenRouter",
+    supportsInpaint: true,
+    supportsVariations: true,
+    generate: async () => notImplemented("openrouter"),
   },
 ];
 

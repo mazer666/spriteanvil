@@ -40,7 +40,7 @@ import { supabaseConfig } from "../../config"
  * This check helps catch configuration errors early in development.
  * If these aren't set, database operations will fail mysteriously.
  */
-const hasSupabaseConfig = Boolean(supabaseConfig.url && supabaseConfig.anonKey);
+export const hasSupabaseConfig = Boolean(supabaseConfig.url && supabaseConfig.anonKey);
 
 if (!hasSupabaseConfig) {
   console.error(

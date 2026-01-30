@@ -172,6 +172,50 @@ export function selectEllipse(
 }
 
 /**
+ * Selects a connected opaque region starting at (x, y).
+ *
+ * This is useful for lightweight object detection without ML dependencies.
+ * We treat any pixel with alpha > 0 as part of the object and flood-fill
+ * 4-directionally to avoid diagonal leaks between separate shapes.
+ */
+export function selectConnectedOpaque(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number,
+  x: number,
+  y: number
+): SelectionMask {
+  const mask = createEmptySelection(width, height)
+  if (x < 0 || y < 0 || x >= width || y >= height) return mask
+  const startIdx = (y * width + x) * 4
+  if (pixels[startIdx + 3] === 0) return mask
+
+  const queue: Array<{ x: number; y: number }> = [{ x, y }]
+  mask[y * width + x] = 1
+
+  while (queue.length) {
+    const { x: cx, y: cy } = queue.shift()!
+    const neighbors = [
+      { x: cx - 1, y: cy },
+      { x: cx + 1, y: cy },
+      { x: cx, y: cy - 1 },
+      { x: cx, y: cy + 1 }
+    ]
+    neighbors.forEach((n) => {
+      if (n.x < 0 || n.y < 0 || n.x >= width || n.y >= height) return
+      const idx = n.y * width + n.x
+      if (mask[idx]) return
+      const pixelIdx = idx * 4
+      if (pixels[pixelIdx + 3] === 0) return
+      mask[idx] = 1
+      queue.push(n)
+    })
+  }
+
+  return mask
+}
+
+/**
  * Creates a circular selection
  *
  * @param width - Canvas width

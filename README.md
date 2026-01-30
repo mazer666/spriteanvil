@@ -20,6 +20,9 @@ SpriteAnvil is an in-browser **pixel-art sprite + animation editor** focused on 
 - Early tool set (pen/eraser + more tools being integrated per plan)
 - Undo/redo foundation
 - Selection model foundation (mask-based), with UI wiring evolving
+- Realtime collaboration scaffolding (presence + live cursors + pixel patch sync)
+- AI inpainting/image-to-image payload prep with OpenRouter listed as a provider
+- Physics/animation guides (arc, gravity, motion trails) and edge snapping helpers
 
 For implementation details, see `/docs/FEATURE_INTEGRATION_PLAN.md`.
 
@@ -42,6 +45,7 @@ Start here:
 
 - Docs index: [`/docs/README.md`](./docs/README.md)
 - UI target vision: [`/docs/UI_SPEC.md`](./docs/UI_SPEC.md)
+- Improvements + asset checklist: [`/docs/IMPROVEMENTS_AND_ASSETS.md`](./docs/IMPROVEMENTS_AND_ASSETS.md)
 - Roadmap: [`/docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md)
 - Current integration notes: [`/docs/FEATURE_INTEGRATION_PLAN.md`](./docs/FEATURE_INTEGRATION_PLAN.md)
 - Current status update: [`/STATUS_UPDATE.md`](./STATUS_UPDATE.md)

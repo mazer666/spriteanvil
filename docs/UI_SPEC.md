@@ -131,19 +131,19 @@ This is already a good modular structure.
 
 ## 6) Theme tokens (current + target)
 
-Current global tokens in `src/styles/app.css`:
+Current global tokens in `src/styles/app.css` (updated to match the reference gold/bronze feel):
 
 ```css
 :root{
-  --bg0:#0f1116;
-  --bg1:#141824;
-  --panel:#171c2b;
-  --panel2:#111522;
-  --ink:#e9e3d6;
-  --muted:#b8b2a6;
-  --accent:#4bb8bf;
-  --border:rgba(255,255,255,0.10);
-  --shadow: rgba(0,0,0,0.35);
+  --bg0:#0b0a09;
+  --bg1:#14110d;
+  --panel:#1a1713;
+  --panel2:#141210;
+  --ink:#efe6d4;
+  --muted:#b9ab92;
+  --accent:#d6b26b;
+  --border:rgba(255,255,255,0.08);
+  --shadow: rgba(0,0,0,0.55);
 
   --rightPanelWidth: 300px;
   --timelineHeight: 180px;
@@ -152,8 +152,7 @@ Current global tokens in `src/styles/app.css`:
 
 **Target feel (reference):**
 - Dark panels + premium bevelled edges
-- Warm accent color (gold look) can be achieved via `--accent`  
-  → meaning `--accent` can later switch from teal to gold without touching CSS elsewhere.
+- Warm accent color (gold look) set via `--accent` and `--accent-strong`
 
 ---
 

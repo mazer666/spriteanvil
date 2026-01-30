@@ -1,5 +1,5 @@
 import React from "react";
-import { ToolId, UiSettings, GradientType, DitheringType, SymmetryMode } from "../types";
+import { ToolId, UiSettings, GradientType, DitheringType } from "../types";
 
 type Props = {
   tool: ToolId;
@@ -172,19 +172,91 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
             <input
               type="radio"
               name="symmetry"
-              checked={settings.symmetryMode === "radial4"}
-              onChange={() => updateSetting("symmetryMode", "radial4")}
+              checked={settings.symmetryMode === "radial"}
+              onChange={() => updateSetting("symmetryMode", "radial")}
             />
-            <span>Radial 4-way</span>
+            <span>Radial</span>
+          </label>
+
+          {settings.symmetryMode !== "none" && (
+            <label className="option-row" style={{ marginTop: "6px" }}>
+              <span>Axis angle</span>
+              <input
+                type="range"
+                min={-180}
+                max={180}
+                step={1}
+                value={settings.symmetryAngle}
+                onChange={(e) => updateSetting("symmetryAngle", Number(e.target.value))}
+              />
+              <span className="mono">{settings.symmetryAngle}°</span>
+            </label>
+          )}
+
+          {settings.symmetryMode === "radial" && (
+            <label className="option-row">
+              <span>Segments</span>
+              <input
+                type="number"
+                min={2}
+                max={32}
+                value={settings.symmetrySegments}
+                onChange={(e) => updateSetting("symmetrySegments", Number(e.target.value))}
+              />
+            </label>
+          )}
+        </div>
+
+        <div className="option-group">
+          <div className="option-label">Edge Snapping</div>
+          <label className="option-row">
+            <input
+              type="checkbox"
+              checked={settings.edgeSnapEnabled}
+              onChange={(e) => updateSetting("edgeSnapEnabled", e.target.checked)}
+            />
+            <span>Snap brush to edges</span>
+          </label>
+          {settings.edgeSnapEnabled && (
+            <label className="option-row">
+              <span>Snap Radius</span>
+              <input
+                type="range"
+                min={1}
+                max={12}
+                value={settings.edgeSnapRadius}
+                onChange={(e) => updateSetting("edgeSnapRadius", Number(e.target.value))}
+              />
+              <span className="mono">{settings.edgeSnapRadius}px</span>
+            </label>
+          )}
+        </div>
+
+        <div className="option-group">
+          <div className="option-label">Physics Guides</div>
+          <label className="option-row">
+            <input
+              type="checkbox"
+              checked={settings.showArcGuides}
+              onChange={(e) => updateSetting("showArcGuides", e.target.checked)}
+            />
+            <span>Show arc guides</span>
           </label>
           <label className="option-row">
             <input
-              type="radio"
-              name="symmetry"
-              checked={settings.symmetryMode === "radial8"}
-              onChange={() => updateSetting("symmetryMode", "radial8")}
+              type="checkbox"
+              checked={settings.showGravityGuides}
+              onChange={(e) => updateSetting("showGravityGuides", e.target.checked)}
             />
-            <span>Radial 8-way</span>
+            <span>Show gravity guides</span>
+          </label>
+          <label className="option-row">
+            <input
+              type="checkbox"
+              checked={settings.showMotionTrails}
+              onChange={(e) => updateSetting("showMotionTrails", e.target.checked)}
+            />
+            <span>Motion trails on onion skin</span>
           </label>
         </div>
 

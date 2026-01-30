@@ -4,6 +4,7 @@ import RightPanel from "./RightPanel";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
 import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode, FloatingSelection } from "../types";
+import type { EasingCurve } from "../editor/animation";
 import { AnimationTag } from "../lib/supabase/animation_tags";
 import { PaletteData } from "../lib/projects/snapshot";
 
@@ -26,6 +27,11 @@ type Props = {
   onUpdateTransform?: (next: FloatingSelection) => void;
   onColorPick?: (color: string) => void;
   onCursorMove?: (position: { x: number; y: number } | null) => void;
+  remoteCursors?: Record<string, { x: number; y: number; color: string }>;
+  selectionMask?: Uint8Array | null;
+  layerPixels?: Uint8ClampedArray | null;
+  onInpaint?: (payload: { prompt: string; denoiseStrength: number; promptInfluence: number }) => Promise<string>;
+  onImageToImage?: (payload: { prompt: string; denoiseStrength: number; promptInfluence: number }) => Promise<string>;
 
   onUndo: () => void;
   onRedo: () => void;
@@ -41,6 +47,7 @@ type Props = {
   onDeleteFrame: () => void;
   onUpdateFrameDuration: (index: number, durationMs: number) => void;
   onTogglePlayback: () => void;
+  onGenerateTweens: (startIndex: number, endIndex: number, count: number, easing: EasingCurve) => void;
   animationTags: AnimationTag[];
   activeTagId: string | null;
   loopTagOnly: boolean;
@@ -92,6 +99,7 @@ type Props = {
     onRotate180: () => void;
     onScale: (scaleX: number, scaleY: number) => void;
     onRotate: (degrees: number) => void;
+    onSmartOutline: (mode: import("../editor/outline").OutlineMode) => void;
   };
 
   onColorAdjustOperations?: {
@@ -110,6 +118,7 @@ type Props = {
     onGrow: () => void;
     onShrink: () => void;
     onFeather: (radius: number) => void;
+    onDetectObject: () => void;
   };
 
   topBar: ReactNode;
@@ -143,6 +152,11 @@ export default function DockLayout({
   onUpdateTransform,
   onColorPick,
   onCursorMove,
+  remoteCursors,
+  selectionMask,
+  layerPixels,
+  onInpaint,
+  onImageToImage,
   onUndo,
   onRedo,
   canUndo,
@@ -156,6 +170,7 @@ export default function DockLayout({
   onDeleteFrame,
   onUpdateFrameDuration,
   onTogglePlayback,
+  onGenerateTweens,
   animationTags,
   activeTagId,
   loopTagOnly,
@@ -305,6 +320,7 @@ export default function DockLayout({
             onChangeZoom={(zoom) => onChangeSettings({ ...settings, zoom })}
             onColorPick={onColorPick}
             onCursorMove={onCursorMove}
+            remoteCursors={remoteCursors}
             frames={frames}
             currentFrameIndex={currentFrameIndex}
           />
@@ -321,6 +337,12 @@ export default function DockLayout({
             tool={tool}
             settings={settings}
             onChangeSettings={onChangeSettings}
+            canvasSpec={canvasSpec}
+            previewBuffer={compositeBuffer}
+            selectionMask={selectionMask}
+            layerPixels={layerPixels}
+            onInpaint={onInpaint}
+            onImageToImage={onImageToImage}
             layers={layers}
             activeLayerId={activeLayerId}
             onLayerOperations={onLayerOperations}
@@ -356,6 +378,7 @@ export default function DockLayout({
           onDeleteFrame={onDeleteFrame}
           onUpdateFrameDuration={onUpdateFrameDuration}
           onTogglePlayback={onTogglePlayback}
+          onGenerateTweens={onGenerateTweens}
           animationTags={animationTags}
           activeTagId={activeTagId}
           loopTagOnly={loopTagOnly}
