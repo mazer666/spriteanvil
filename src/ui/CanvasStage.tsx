@@ -1161,7 +1161,7 @@ export default function CanvasStage(props: {
       if (maxTrailFrames > 0) {
         const trailPoints: Array<{ x: number; y: number }> = [];
         for (let offset = -settings.onionPrev; offset <= settings.onionNext; offset++) {
-          const idx = currentFrameIndex + offset;
+          const idx: number = currentFrameIndex + offset;
           if (idx < 0 || idx >= frames.length || idx === currentFrameIndex) continue;
           const centroid = getFrameCentroid(frames[idx].pixels, canvasSpec.width, canvasSpec.height);
           if (centroid) {

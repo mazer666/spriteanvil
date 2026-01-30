@@ -142,19 +142,22 @@ export default function TransformPanel({
         </button>
       </div>
 
-      <div style={{ marginTop: '16px' }}>
-        <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '4px' }}>Smart Outline</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '6px', alignItems: 'center' }}>
+      <div className="transform-panel__smart-outline">
+        <div className="transform-panel__section-label">Smart Outline</div>
+        <div className="transform-panel__smart-outline-controls">
           <select
             value={outlineMode}
             onChange={(e) => setOutlineMode(e.target.value as OutlineMode)}
-            style={{ padding: '4px', background: '#1a1a1a', color: '#fff', border: '1px solid #444' }}
+            className="transform-panel__select"
           >
             <option value="inside">Inside</option>
             <option value="outside">Outside</option>
             <option value="center">Centered</option>
           </select>
-          <button onClick={() => onSmartOutline(outlineMode)} style={{ padding: '6px', fontSize: '12px' }}>
+          <button
+            onClick={() => onSmartOutline(outlineMode)}
+            className="transform-panel__button"
+          >
             Apply
           </button>
         </div>
