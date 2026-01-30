@@ -1,5 +1,6 @@
 import React from "react";
 import { ToolId } from "../types";
+import { TOOL_GROUPS } from "./toolCatalog";
 
 type Props = {
   tool: ToolId;
@@ -27,45 +28,30 @@ export default function ToolRail({ tool, onChangeTool }: Props) {
 
   return (
     <div className="toolrail">
-      <div className="toolrail__sectionTitle">Tools</div>
-
-      {btn("pen", "✎", "Pen (B)")}
-      {btn("eraser", "⌫", "Eraser (E)")}
-      {btn("eyedropper", "💧", "Eyedropper (I)")}
-      {btn("fill", "⛶", "Fill (F)")}
-      {btn("gradient", "◐", "Gradient (G)")}
-      {btn("line", "╱", "Line (L)")}
-
-      <div className="toolrail__divider" />
-
-      <details className="toolgroup" open>
-        <summary>Shapes</summary>
-        <div className="toolgroup__body">
-          {btn("rectangle", "▭", "Rectangle (R)")}
-          {btn("rectangleFilled", "▮", "Filled Rectangle (Shift+R)")}
-          {btn("circle", "○", "Circle (C)")}
-          {btn("circleFilled", "●", "Filled Circle (Shift+C)")}
-          {btn("ellipse", "◯", "Ellipse (Shift+O)")}
-          {btn("ellipseFilled", "⬭", "Filled Ellipse (O)")}
-        </div>
-      </details>
-
-      <div className="toolrail__divider" />
-
-      <details className="toolgroup" open>
-        <summary>Selection</summary>
-        <div className="toolgroup__body">
-          {btn("selectRect", "⬚", "Select Rectangle (M)")}
-          {btn("selectEllipse", "⬭", "Select Ellipse (Shift+M)")}
-          {btn("selectLasso", "⚯", "Lasso Selection (W)")}
-          {btn("selectWand", "🪄", "Magic Wand")}
-        </div>
-      </details>
+      {TOOL_GROUPS.map((group, index) => (
+        <React.Fragment key={group.title}>
+          {group.collapsible ? (
+            <details className="toolgroup" open>
+              <summary>{group.title}</summary>
+              <div className="toolgroup__body">
+                {group.tools.map((toolDef) =>
+                  btn(toolDef.id, toolDef.label, toolDef.title)
+                )}
+              </div>
+            </details>
+          ) : (
+            <>
+              <div className="toolrail__sectionTitle">{group.title}</div>
+              {group.tools.map((toolDef) =>
+                btn(toolDef.id, toolDef.label, toolDef.title)
+              )}
+            </>
+          )}
+          {index < TOOL_GROUPS.length - 1 && <div className="toolrail__divider" />}
+        </React.Fragment>
+      ))}
 
       <div className="toolrail__spacer" />
-
-      <div className="toolrail__sectionTitle">View</div>
-      {btn("move", "✋", "Move Selection (V)")}
     </div>
   );
 }

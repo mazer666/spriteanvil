@@ -11,6 +11,7 @@ type Props = {
   projects: Project[];
   onSelect: (project: Project) => void;
   onCreate: (data: NewProjectRequest) => void;
+  onDelete: (project: Project) => void;
   onRefresh: () => void;
   loading?: boolean;
   error?: string | null;
@@ -20,6 +21,7 @@ export default function ProjectDashboard({
   projects,
   onSelect,
   onCreate,
+  onDelete,
   onRefresh,
   loading,
   error,
@@ -94,11 +96,29 @@ export default function ProjectDashboard({
         ) : (
           <div className="project-dashboard__grid">
             {projects.map((project) => (
-              <button
+              <div
                 key={project.id}
                 className="project-card"
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelect(project)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect(project);
+                  }
+                }}
               >
+                <button
+                  className="project-card__delete"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDelete(project);
+                  }}
+                  title="Delete project"
+                >
+                  🗑
+                </button>
                 <div className="project-card__thumb">
                   {project.thumbnail_url ? (
                     <img src={project.thumbnail_url} alt={project.name} />
@@ -112,7 +132,7 @@ export default function ProjectDashboard({
                     {new Date(project.updated_at).toLocaleDateString()}
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
