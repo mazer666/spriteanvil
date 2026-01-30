@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CanvasSpec, ToolId, UiSettings, LayerData, FloatingSelection } from "../types";
+import Minimap from "./Minimap";
 import { cloneBuffer, drawLine, hexToRgb, getPixel, setPixel } from "../editor/pixels";
 import { compositeLayers } from "../editor/layers";
 import { floodFill, floodFillWithTolerance } from "../editor/tools/fill";
@@ -40,6 +41,7 @@ export default function CanvasStage(props: {
   floatingBuffer?: FloatingSelection | null;
   onBeginTransform?: () => FloatingSelection | null;
   onUpdateTransform?: (next: FloatingSelection) => void;
+  onChangeZoom?: (zoom: number) => void;
   onColorPick?: (color: string) => void;
   frames?: Frame[];
   currentFrameIndex?: number;
@@ -58,6 +60,7 @@ export default function CanvasStage(props: {
     floatingBuffer,
     onBeginTransform,
     onUpdateTransform,
+    onChangeZoom,
     onColorPick,
     frames,
     currentFrameIndex
@@ -76,6 +79,9 @@ export default function CanvasStage(props: {
   } | null>(null);
   const [lassoPreview, setLassoPreview] = useState<{ x: number; y: number }[] | null>(null);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
+  const [viewRect, setViewRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const viewRectRef = useRef<typeof viewRect>(null);
 
   // Animation frame counter for marching ants
   const [animFrame, setAnimFrame] = useState(0);
@@ -93,6 +99,20 @@ export default function CanvasStage(props: {
   }, [selection]);
 
   const floatingRef = useRef<FloatingSelection | null>(floatingBuffer ?? null);
+  const touchPointsRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const gestureRef = useRef<{
+    active: boolean;
+    startDistance: number;
+    startZoom: number;
+    startCenter: { x: number; y: number };
+    startPan: { x: number; y: number };
+  }>({
+    active: false,
+    startDistance: 0,
+    startZoom: settings.zoom,
+    startCenter: { x: 0, y: 0 },
+    startPan: { x: 0, y: 0 },
+  });
 
   useEffect(() => {
     floatingRef.current = floatingBuffer ?? null;
@@ -376,8 +396,67 @@ export default function CanvasStage(props: {
     return compositeLayers(previewLayers, canvasSpec.width, canvasSpec.height);
   }
 
+  function handleGestureStart(e: React.PointerEvent): boolean {
+    if (e.pointerType !== "touch") return false;
+    touchPointsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (touchPointsRef.current.size >= 2) {
+      const points = Array.from(touchPointsRef.current.values());
+      const [p0, p1] = points;
+      const dx = p1.x - p0.x;
+      const dy = p1.y - p0.y;
+      gestureRef.current.active = true;
+      gestureRef.current.startDistance = Math.hypot(dx, dy);
+      gestureRef.current.startZoom = settings.zoom;
+      gestureRef.current.startCenter = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
+      gestureRef.current.startPan = { ...panOffset };
+      return true;
+    }
+    return false;
+  }
+
+  function handleGestureMove(e: React.PointerEvent): boolean {
+    if (e.pointerType !== "touch") return false;
+    if (!gestureRef.current.active) return false;
+    touchPointsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    const points = Array.from(touchPointsRef.current.values());
+    if (points.length < 2) return false;
+    const [p0, p1] = points;
+    const dx = p1.x - p0.x;
+    const dy = p1.y - p0.y;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    const scale = distance / gestureRef.current.startDistance;
+    const nextZoom = Math.max(1, Math.min(32, gestureRef.current.startZoom * scale));
+    onChangeZoom?.(nextZoom);
+
+    const center = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
+    const deltaX = center.x - gestureRef.current.startCenter.x;
+    const deltaY = center.y - gestureRef.current.startCenter.y;
+    setPanOffset({
+      x: gestureRef.current.startPan.x + deltaX,
+      y: gestureRef.current.startPan.y + deltaY,
+    });
+    return true;
+  }
+
+  function handleGestureEnd() {
+    if (gestureRef.current.active && touchPointsRef.current.size < 2) {
+      gestureRef.current.active = false;
+    }
+  }
+
+  function handlePointerUpCleanup(e: React.PointerEvent) {
+    if (e.pointerType !== "touch") return;
+    touchPointsRef.current.delete(e.pointerId);
+    handleGestureEnd();
+  }
+
   function beginStroke(e: React.PointerEvent) {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    if (handleGestureStart(e)) {
+      return;
+    }
 
     const st = strokeRef.current;
     st.active = true;
@@ -402,9 +481,10 @@ export default function CanvasStage(props: {
 
     const p = pointerToPixel(e);
     if (!p) {
-      endStroke();
+      endStroke(e);
       return;
     }
+    setHoverPos(p);
 
     st.lastX = p.x;
     st.lastY = p.y;
@@ -420,12 +500,12 @@ export default function CanvasStage(props: {
         const hex = `#${rgba.r.toString(16).padStart(2, "0")}${rgba.g.toString(16).padStart(2, "0")}${rgba.b.toString(16).padStart(2, "0")}`;
         onColorPick(hex);
       }
-      endStroke();
+      endStroke(e);
       return;
     }
 
     if (isDrawingTool(tool) && isActiveLayerLocked()) {
-      endStroke();
+      endStroke(e);
       return;
     }
 
@@ -453,18 +533,18 @@ export default function CanvasStage(props: {
       }
       if (pixelsChanged > 0) st.changed = true;
       draw();
-      endStroke();
+      endStroke(e);
       return;
     }
 
     if (tool === "move") {
       if (isActiveLayerLocked()) {
-        endStroke();
+        endStroke(e);
         return;
       }
       const floating = onBeginTransform?.();
       if (!floating || !selection) {
-        endStroke();
+        endStroke(e);
         return;
       }
       st.moveOriginX = floating.x;
@@ -484,7 +564,7 @@ export default function CanvasStage(props: {
       );
       const mergedSelection = mergeSelection(selection, newSelection, st.selectionMode);
       onChangeSelection(mergedSelection);
-      endStroke();
+      endStroke(e);
       return;
     }
 
@@ -520,6 +600,10 @@ export default function CanvasStage(props: {
     const st = strokeRef.current;
     if (!st.active) return;
 
+    if (handleGestureMove(e)) {
+      return;
+    }
+
     if (st.isPanning) {
       const dx = e.clientX - st.panStartX;
       const dy = e.clientY - st.panStartY;
@@ -529,6 +613,7 @@ export default function CanvasStage(props: {
 
     const p0 = pointerToPixel(e);
     if (!p0) return;
+    setHoverPos(p0);
 
     if (tool === "pen" || tool === "eraser") {
       const stabilized = applyStabilizer(p0.x + 0.5, p0.y + 0.5);
@@ -585,7 +670,7 @@ export default function CanvasStage(props: {
     }
   }
 
-  function endStroke() {
+  function endStroke(e?: React.PointerEvent) {
     const st = strokeRef.current;
     if (!st.active) return;
 
@@ -599,6 +684,10 @@ export default function CanvasStage(props: {
     if (st.isPanning) {
       st.isPanning = false;
       return;
+    }
+
+    if (e?.pointerType === "touch") {
+      handlePointerUpCleanup(e);
     }
 
     const c = getDrawColor();
@@ -805,6 +894,22 @@ export default function CanvasStage(props: {
 
     const originX = Math.floor((w - imgW) / 2 + panOffset.x);
     const originY = Math.floor((h - imgH) / 2 + panOffset.y);
+    const viewX = -originX / zoom;
+    const viewY = -originY / zoom;
+    const viewW = w / zoom;
+    const viewH = h / zoom;
+    const nextView = { x: viewX, y: viewY, width: viewW, height: viewH };
+    const prevView = viewRectRef.current;
+    if (
+      !prevView ||
+      Math.abs(prevView.x - nextView.x) > 0.5 ||
+      Math.abs(prevView.y - nextView.y) > 0.5 ||
+      Math.abs(prevView.width - nextView.width) > 0.5 ||
+      Math.abs(prevView.height - nextView.height) > 0.5
+    ) {
+      viewRectRef.current = nextView;
+      setViewRect(nextView);
+    }
 
     const off = getOffscreen(canvasSpec.width, canvasSpec.height);
     const offCtx = off.getContext("2d")!;
@@ -960,6 +1065,19 @@ export default function CanvasStage(props: {
       ctx.restore();
     }
 
+    if (hoverPos && (tool === "pen" || tool === "eraser")) {
+      const centerX = originX + (hoverPos.x + 0.5) * zoom;
+      const centerY = originY + (hoverPos.y + 0.5) * zoom;
+      const radius = Math.max(2, (settings.brushSize * zoom) / 2);
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.6)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     const renderSelection = selection;
 
     // Render selection with marching ants
@@ -1092,9 +1210,23 @@ export default function CanvasStage(props: {
         ref={canvasRef}
         className="stage__canvas"
         onPointerDown={beginStroke}
-        onPointerMove={moveStroke}
-        onPointerUp={endStroke}
-        onPointerCancel={endStroke}
+        onPointerMove={handlePointerMove}
+        onPointerUp={(e) => {
+          handlePointerUpCleanup(e);
+          endStroke(e);
+        }}
+        onPointerCancel={(e) => {
+          handlePointerUpCleanup(e);
+          endStroke(e);
+        }}
+        onPointerLeave={() => setHoverPos(null)}
+      />
+      <Minimap
+        buffer={getCompositePreview()}
+        canvasSpec={canvasSpec}
+        viewRect={viewRect}
+        zoom={settings.zoom}
+        onPanTo={(x, y) => setPanOffset({ x, y })}
       />
     </div>
   );
@@ -1424,6 +1556,14 @@ function applySelectionMask(
       after[idx + 1] = before[idx + 1];
       after[idx + 2] = before[idx + 2];
       after[idx + 3] = before[idx + 3];
+    }
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    const p0 = pointerToPixel(e);
+    if (p0) setHoverPos(p0);
+    if (strokeRef.current.active) {
+      moveStroke(e);
     }
   }
 }

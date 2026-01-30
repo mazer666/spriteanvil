@@ -147,7 +147,7 @@ export default function RightPanel({
           <SelectionPanel hasSelection={!!hasSelection} {...onSelectionOperations} />
         )}
 
-        {active === "AI" && <AIPanel enabled={false} />}
+        {active === "AI" && <AIPanel enabled />}
       </div>
     </div>
   );

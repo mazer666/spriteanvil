@@ -174,11 +174,28 @@ export default function DockLayout({
   const [timelineHeight, setTimelineHeight] = useState<number>(() =>
     loadNumber("dock:timelineHeight", 160)
   );
+  const [isMobile, setIsMobile] = useState(false);
+  const [isToolRailOpen, setIsToolRailOpen] = useState(false);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
 
   useEffect(() => saveNumber("dock:rightWidth", rightWidth), [rightWidth]);
   useEffect(() => saveNumber("dock:timelineHeight", timelineHeight), [timelineHeight]);
 
   const sizes = useMemo(() => ({ rightWidth, timelineHeight }), [rightWidth, timelineHeight]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const update = () => {
+      setIsMobile(media.matches);
+      if (!media.matches) {
+        setIsToolRailOpen(false);
+        setIsRightPanelOpen(false);
+      }
+    };
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   const dragStateRef = useRef<
     | null
@@ -222,7 +239,12 @@ export default function DockLayout({
 
   return (
     <div
-      className="dock"
+      className={
+        "dock" +
+        (isMobile ? " dock--mobile" : "") +
+        (isToolRailOpen ? " dock--left-open" : "") +
+        (isRightPanelOpen ? " dock--right-open" : "")
+      }
       onPointerMove={onDragMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
@@ -231,7 +253,27 @@ export default function DockLayout({
         "--timelineHeight": `${sizes.timelineHeight}px`,
       } as React.CSSProperties}
     >
-      <div className="dock__top">{topBar}</div>
+      <div className="dock__top">
+        {topBar}
+        {isMobile && (
+          <div className="dock__mobileControls">
+            <button
+              className="uiBtn"
+              onClick={() => setIsToolRailOpen((prev) => !prev)}
+              title="Toggle tools"
+            >
+              ☰ Tools
+            </button>
+            <button
+              className="uiBtn"
+              onClick={() => setIsRightPanelOpen((prev) => !prev)}
+              title="Toggle panel"
+            >
+              ☰ Panel
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="dock__body">
         <div className="dock__left">
@@ -253,6 +295,7 @@ export default function DockLayout({
             floatingBuffer={floatingBuffer}
             onBeginTransform={onBeginTransform}
             onUpdateTransform={onUpdateTransform}
+            onChangeZoom={(zoom) => onChangeSettings({ ...settings, zoom })}
             onColorPick={onColorPick}
             frames={frames}
             currentFrameIndex={currentFrameIndex}
