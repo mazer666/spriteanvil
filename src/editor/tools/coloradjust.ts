@@ -226,3 +226,228 @@ export function replaceColor(
 
   return result;
 }
+
+export function applyLevels(
+  buffer: Uint8ClampedArray,
+  width: number,
+  height: number,
+  inputBlack: number,
+  inputWhite: number,
+  gamma: number,
+  outputBlack: number,
+  outputWhite: number
+): Uint8ClampedArray {
+  const result = new Uint8ClampedArray(buffer);
+  const inBlack = Math.max(0, Math.min(255, inputBlack));
+  const inWhite = Math.max(inBlack + 1, Math.min(255, inputWhite));
+  const outBlack = Math.max(0, Math.min(255, outputBlack));
+  const outWhite = Math.max(outBlack, Math.min(255, outputWhite));
+  const invGamma = 1 / Math.max(0.01, gamma);
+  const scale = 1 / (inWhite - inBlack);
+
+  const lut = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) {
+    const normalized = Math.max(0, Math.min(1, (i - inBlack) * scale));
+    const corrected = Math.pow(normalized, invGamma);
+    lut[i] = Math.round(outBlack + (outWhite - outBlack) * corrected);
+  }
+
+  for (let i = 0; i < buffer.length; i += 4) {
+    const a = buffer[i + 3];
+    if (a === 0) continue;
+    result[i] = lut[buffer[i]];
+    result[i + 1] = lut[buffer[i + 1]];
+    result[i + 2] = lut[buffer[i + 2]];
+  }
+
+  return result;
+}
+
+export function applyCurves(
+  buffer: Uint8ClampedArray,
+  width: number,
+  height: number,
+  points: Array<{ x: number; y: number }>
+): Uint8ClampedArray {
+  const result = new Uint8ClampedArray(buffer);
+  const lut = buildCurveLUT(points);
+
+  for (let i = 0; i < buffer.length; i += 4) {
+    const a = buffer[i + 3];
+    if (a === 0) continue;
+    result[i] = lut[buffer[i]];
+    result[i + 1] = lut[buffer[i + 1]];
+    result[i + 2] = lut[buffer[i + 2]];
+  }
+
+  return result;
+}
+
+function buildCurveLUT(points: Array<{ x: number; y: number }>): Uint8Array {
+  const lut = new Uint8Array(256);
+  if (points.length === 0) {
+    for (let i = 0; i < 256; i++) lut[i] = i;
+    return lut;
+  }
+
+  const sorted = [...points]
+    .map((p) => ({ x: Math.max(0, Math.min(255, p.x)), y: Math.max(0, Math.min(255, p.y)) }))
+    .sort((a, b) => a.x - b.x);
+
+  let idx = 0;
+  for (let x = 0; x < 256; x++) {
+    while (idx < sorted.length - 1 && x > sorted[idx + 1].x) {
+      idx++;
+    }
+    const p0 = sorted[idx];
+    const p1 = sorted[Math.min(idx + 1, sorted.length - 1)];
+    if (p0.x === p1.x) {
+      lut[x] = p0.y;
+      continue;
+    }
+    const t = (x - p0.x) / (p1.x - p0.x);
+    lut[x] = Math.round(p0.y + (p1.y - p0.y) * t);
+  }
+  return lut;
+}
+
+export function applyAtkinsonDither(
+  buffer: Uint8ClampedArray,
+  width: number,
+  height: number,
+  palette: RGBA[]
+): Uint8ClampedArray {
+  const result = new Uint8ClampedArray(buffer);
+  const errorBuffer = new Float32Array(width * height * 3);
+
+  const findClosest = (r: number, g: number, b: number) => {
+    let minDist = Infinity;
+    let closest = palette[0];
+    for (const color of palette) {
+      const dr = r - color.r;
+      const dg = g - color.g;
+      const db = b - color.b;
+      const dist = dr * dr + dg * dg + db * db;
+      if (dist < minDist) {
+        minDist = dist;
+        closest = color;
+      }
+    }
+    return closest;
+  };
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const errIdx = (y * width + x) * 3;
+      const oldR = result[idx] + errorBuffer[errIdx];
+      const oldG = result[idx + 1] + errorBuffer[errIdx + 1];
+      const oldB = result[idx + 2] + errorBuffer[errIdx + 2];
+      const newColor = findClosest(oldR, oldG, oldB);
+
+      result[idx] = newColor.r;
+      result[idx + 1] = newColor.g;
+      result[idx + 2] = newColor.b;
+
+      const errR = (oldR - newColor.r) / 8;
+      const errG = (oldG - newColor.g) / 8;
+      const errB = (oldB - newColor.b) / 8;
+
+      spreadAtkinsonError(errorBuffer, width, height, x + 1, y, errR, errG, errB);
+      spreadAtkinsonError(errorBuffer, width, height, x + 2, y, errR, errG, errB);
+      spreadAtkinsonError(errorBuffer, width, height, x - 1, y + 1, errR, errG, errB);
+      spreadAtkinsonError(errorBuffer, width, height, x, y + 1, errR, errG, errB);
+      spreadAtkinsonError(errorBuffer, width, height, x + 1, y + 1, errR, errG, errB);
+      spreadAtkinsonError(errorBuffer, width, height, x, y + 2, errR, errG, errB);
+    }
+  }
+
+  return result;
+}
+
+export function applyFloydSteinbergDither(
+  buffer: Uint8ClampedArray,
+  width: number,
+  height: number,
+  palette: RGBA[]
+): Uint8ClampedArray {
+  const result = new Uint8ClampedArray(buffer);
+  const errorBuffer = new Float32Array(width * height * 3);
+
+  const findClosest = (r: number, g: number, b: number) => {
+    let minDist = Infinity;
+    let closest = palette[0];
+    for (const color of palette) {
+      const dr = r - color.r;
+      const dg = g - color.g;
+      const db = b - color.b;
+      const dist = dr * dr + dg * dg + db * db;
+      if (dist < minDist) {
+        minDist = dist;
+        closest = color;
+      }
+    }
+    return closest;
+  };
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const errIdx = (y * width + x) * 3;
+      const oldR = result[idx] + errorBuffer[errIdx];
+      const oldG = result[idx + 1] + errorBuffer[errIdx + 1];
+      const oldB = result[idx + 2] + errorBuffer[errIdx + 2];
+      const newColor = findClosest(oldR, oldG, oldB);
+
+      result[idx] = newColor.r;
+      result[idx + 1] = newColor.g;
+      result[idx + 2] = newColor.b;
+
+      const errR = oldR - newColor.r;
+      const errG = oldG - newColor.g;
+      const errB = oldB - newColor.b;
+
+      spreadError(errorBuffer, width, height, x + 1, y, errR, errG, errB, 7 / 16);
+      spreadError(errorBuffer, width, height, x - 1, y + 1, errR, errG, errB, 3 / 16);
+      spreadError(errorBuffer, width, height, x, y + 1, errR, errG, errB, 5 / 16);
+      spreadError(errorBuffer, width, height, x + 1, y + 1, errR, errG, errB, 1 / 16);
+    }
+  }
+
+  return result;
+}
+
+function spreadError(
+  buffer: Float32Array,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  errR: number,
+  errG: number,
+  errB: number,
+  factor: number
+) {
+  if (x < 0 || y < 0 || x >= width || y >= height) return;
+  const idx = (y * width + x) * 3;
+  buffer[idx] += errR * factor;
+  buffer[idx + 1] += errG * factor;
+  buffer[idx + 2] += errB * factor;
+}
+
+function spreadAtkinsonError(
+  buffer: Float32Array,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  errR: number,
+  errG: number,
+  errB: number
+) {
+  if (x < 0 || y < 0 || x >= width || y >= height) return;
+  const idx = (y * width + x) * 3;
+  buffer[idx] += errR;
+  buffer[idx + 1] += errG;
+  buffer[idx + 2] += errB;
+}

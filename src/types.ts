@@ -97,9 +97,18 @@ export type Frame = {
   id: string;
   pixels: Uint8ClampedArray;
   durationMs: number;
+  pivot?: { x: number; y: number };
 };
 
 export type AnimationData = {
   frames: Frame[];
   currentFrameIndex: number;
+};
+
+export type FloatingSelection = {
+  pixels: Uint8ClampedArray;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
 };

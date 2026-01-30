@@ -7,6 +7,7 @@ type Props = {
   onRotate90CCW: () => void;
   onRotate180: () => void;
   onScale: (scaleX: number, scaleY: number) => void;
+  onRotate: (degrees: number) => void;
 };
 
 export default function TransformPanel({
@@ -16,10 +17,12 @@ export default function TransformPanel({
   onRotate90CCW,
   onRotate180,
   onScale,
+  onRotate,
 }: Props) {
   const [scaleX, setScaleX] = React.useState(2);
   const [scaleY, setScaleY] = React.useState(2);
   const [lockAspect, setLockAspect] = React.useState(true);
+  const [rotateDegrees, setRotateDegrees] = React.useState(90);
 
   function handleScaleXChange(value: number) {
     setScaleX(value);
@@ -60,6 +63,23 @@ export default function TransformPanel({
           </button>
           <button onClick={onRotate180} style={{ padding: '6px', fontSize: '12px', gridColumn: 'span 2' }} title="Rotate 180°">
             ↻ 180°
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '6px', marginTop: '8px' }}>
+          <input
+            type="number"
+            value={rotateDegrees}
+            onChange={(e) => setRotateDegrees(parseFloat(e.target.value) || 0)}
+            step="90"
+            style={{ width: '100%', padding: '4px', background: '#1a1a1a', color: '#fff', border: '1px solid #444' }}
+          />
+          <button
+            onClick={() => onRotate(rotateDegrees)}
+            style={{ padding: '6px', fontSize: '12px' }}
+            title="Rotate selection (snaps to 90°)"
+          >
+            Apply
           </button>
         </div>
       </div>

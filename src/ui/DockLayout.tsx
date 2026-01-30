@@ -3,7 +3,8 @@ import ToolRail from "./ToolRail";
 import RightPanel from "./RightPanel";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
-import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode } from "../types";
+import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode, FloatingSelection } from "../types";
+import { AnimationTag } from "../lib/supabase/animation_tags";
 import { PaletteData } from "./PalettePanel";
 
 type Props = {
@@ -20,6 +21,9 @@ type Props = {
 
   selection: Uint8Array | null;
   onChangeSelection: (selection: Uint8Array | null) => void;
+  floatingBuffer?: FloatingSelection | null;
+  onBeginTransform?: () => FloatingSelection | null;
+  onUpdateTransform?: (next: FloatingSelection) => void;
   onColorPick?: (color: string) => void;
 
   onUndo: () => void;
@@ -36,6 +40,14 @@ type Props = {
   onDeleteFrame: () => void;
   onUpdateFrameDuration: (index: number, durationMs: number) => void;
   onTogglePlayback: () => void;
+  animationTags: AnimationTag[];
+  activeTagId: string | null;
+  loopTagOnly: boolean;
+  onToggleLoopTagOnly: (next: boolean) => void;
+  onSelectTag: (id: string | null) => void;
+  onCreateTag: (tag: Omit<AnimationTag, "id" | "created_at">) => void;
+  onUpdateTag: (id: string, updates: Partial<AnimationTag>) => void;
+  onDeleteTag: (id: string) => void;
 
   layers?: LayerData[];
   activeLayerId?: string | null;
@@ -51,6 +63,7 @@ type Props = {
     onRenameLayer: (id: string, name: string) => void;
     onReorderLayers: (fromIndex: number, toIndex: number) => void;
     onMergeDown: (id: string) => void;
+    onFlatten: () => void;
   };
 
   palettes?: PaletteData[];
@@ -64,6 +77,7 @@ type Props = {
     onRemoveColorFromPalette: (paletteId: string, colorIndex: number) => void;
     onSelectColor: (color: string) => void;
     onSwapColors: (fromColor: string, toColor: string) => void;
+    onExtractPalette: () => void;
   };
 
   onTransformOperations?: {
@@ -73,6 +87,7 @@ type Props = {
     onRotate90CCW: () => void;
     onRotate180: () => void;
     onScale: (scaleX: number, scaleY: number) => void;
+    onRotate: (degrees: number) => void;
   };
 
   onColorAdjustOperations?: {
@@ -118,6 +133,9 @@ export default function DockLayout({
   onStrokeEnd,
   selection,
   onChangeSelection,
+  floatingBuffer,
+  onBeginTransform,
+  onUpdateTransform,
   onColorPick,
   onUndo,
   onRedo,
@@ -132,6 +150,14 @@ export default function DockLayout({
   onDeleteFrame,
   onUpdateFrameDuration,
   onTogglePlayback,
+  animationTags,
+  activeTagId,
+  loopTagOnly,
+  onToggleLoopTagOnly,
+  onSelectTag,
+  onCreateTag,
+  onUpdateTag,
+  onDeleteTag,
   layers,
   activeLayerId,
   onLayerOperations,
@@ -148,11 +174,28 @@ export default function DockLayout({
   const [timelineHeight, setTimelineHeight] = useState<number>(() =>
     loadNumber("dock:timelineHeight", 160)
   );
+  const [isMobile, setIsMobile] = useState(false);
+  const [isToolRailOpen, setIsToolRailOpen] = useState(false);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
 
   useEffect(() => saveNumber("dock:rightWidth", rightWidth), [rightWidth]);
   useEffect(() => saveNumber("dock:timelineHeight", timelineHeight), [timelineHeight]);
 
   const sizes = useMemo(() => ({ rightWidth, timelineHeight }), [rightWidth, timelineHeight]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const update = () => {
+      setIsMobile(media.matches);
+      if (!media.matches) {
+        setIsToolRailOpen(false);
+        setIsRightPanelOpen(false);
+      }
+    };
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   const dragStateRef = useRef<
     | null
@@ -196,7 +239,12 @@ export default function DockLayout({
 
   return (
     <div
-      className="dock"
+      className={
+        "dock" +
+        (isMobile ? " dock--mobile" : "") +
+        (isToolRailOpen ? " dock--left-open" : "") +
+        (isRightPanelOpen ? " dock--right-open" : "")
+      }
       onPointerMove={onDragMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
@@ -205,7 +253,27 @@ export default function DockLayout({
         "--timelineHeight": `${sizes.timelineHeight}px`,
       } as React.CSSProperties}
     >
-      <div className="dock__top">{topBar}</div>
+      <div className="dock__top">
+        {topBar}
+        {isMobile && (
+          <div className="dock__mobileControls">
+            <button
+              className="uiBtn"
+              onClick={() => setIsToolRailOpen((prev) => !prev)}
+              title="Toggle tools"
+            >
+              ☰ Tools
+            </button>
+            <button
+              className="uiBtn"
+              onClick={() => setIsRightPanelOpen((prev) => !prev)}
+              title="Toggle panel"
+            >
+              ☰ Panel
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="dock__body">
         <div className="dock__left">
@@ -224,6 +292,10 @@ export default function DockLayout({
             onStrokeEnd={onStrokeEnd}
             selection={selection}
             onChangeSelection={onChangeSelection}
+            floatingBuffer={floatingBuffer}
+            onBeginTransform={onBeginTransform}
+            onUpdateTransform={onUpdateTransform}
+            onChangeZoom={(zoom) => onChangeSettings({ ...settings, zoom })}
             onColorPick={onColorPick}
             frames={frames}
             currentFrameIndex={currentFrameIndex}
@@ -263,20 +335,28 @@ export default function DockLayout({
       />
 
       <div className="dock__bottom">
-        <Timeline
-          settings={settings}
-          onChangeSettings={onChangeSettings}
-          canvasSpec={canvasSpec}
-          frames={frames}
-          currentFrameIndex={currentFrameIndex}
-          isPlaying={isPlaying}
-          onSelectFrame={onSelectFrame}
-          onInsertFrame={onInsertFrame}
-          onDuplicateFrame={onDuplicateFrame}
-          onDeleteFrame={onDeleteFrame}
-          onUpdateFrameDuration={onUpdateFrameDuration}
-          onTogglePlayback={onTogglePlayback}
-        />
+          <Timeline
+            settings={settings}
+            onChangeSettings={onChangeSettings}
+            canvasSpec={canvasSpec}
+            frames={frames}
+            currentFrameIndex={currentFrameIndex}
+            isPlaying={isPlaying}
+            onSelectFrame={onSelectFrame}
+            onInsertFrame={onInsertFrame}
+            onDuplicateFrame={onDuplicateFrame}
+            onDeleteFrame={onDeleteFrame}
+            onUpdateFrameDuration={onUpdateFrameDuration}
+            onTogglePlayback={onTogglePlayback}
+            animationTags={animationTags}
+            activeTagId={activeTagId}
+            loopTagOnly={loopTagOnly}
+            onToggleLoopTagOnly={onToggleLoopTagOnly}
+            onSelectTag={onSelectTag}
+            onCreateTag={onCreateTag}
+            onUpdateTag={onUpdateTag}
+            onDeleteTag={onDeleteTag}
+          />
       </div>
     </div>
   );

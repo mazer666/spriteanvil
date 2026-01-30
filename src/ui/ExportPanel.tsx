@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Frame, CanvasSpec } from "../types";
+import { AnimationTag } from "../lib/supabase/animation_tags";
 import { exportToGIF, downloadGIF } from "../lib/export/gif";
 import { generateMetadata, downloadJSON } from "../lib/export/metadata";
 import { generateSpritesheet, downloadCanvasAsPNG, SpritesheetLayout } from "../lib/export/spritesheet";
@@ -7,10 +8,11 @@ import { generateSpritesheet, downloadCanvasAsPNG, SpritesheetLayout } from "../
 type Props = {
   frames: Frame[];
   canvasSpec: CanvasSpec;
+  animationTags: AnimationTag[];
   onClose: () => void;
 };
 
-export default function ExportPanel({ frames, canvasSpec, onClose }: Props) {
+export default function ExportPanel({ frames, canvasSpec, animationTags, onClose }: Props) {
   const [projectName, setProjectName] = useState("sprite");
   const [exportFormat, setExportFormat] = useState<"png" | "gif" | "json">("png");
   const [includeMetadata, setIncludeMetadata] = useState(true);
@@ -20,6 +22,8 @@ export default function ExportPanel({ frames, canvasSpec, onClose }: Props) {
   const [scale, setScale] = useState(1);
   const [gifLoop, setGifLoop] = useState(true);
   const [gifQuality, setGifQuality] = useState(10);
+  const [gifPaletteSize, setGifPaletteSize] = useState(64);
+  const [gifDither, setGifDither] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -38,8 +42,31 @@ export default function ExportPanel({ frames, canvasSpec, onClose }: Props) {
           frames,
           loop: gifLoop,
           quality: gifQuality,
+          paletteSize: gifPaletteSize,
+          dither: gifDither,
         });
         downloadGIF(gifBlob, `${projectName}.gif`);
+        if (includeMetadata) {
+          const metadata = generateMetadata(
+            frames,
+            canvasSpec.width,
+            canvasSpec.height,
+            frames.map((_, index) => ({
+              x: index * canvasSpec.width,
+              y: 0,
+              w: canvasSpec.width,
+              h: canvasSpec.height,
+            })),
+            canvasSpec.width * frames.length,
+            canvasSpec.height,
+            "horizontal",
+            0,
+            0,
+            imageName,
+            animationTags
+          );
+          downloadJSON(metadata, metadataName);
+        }
       } else {
         const result = generateSpritesheet(
           frames,
@@ -58,7 +85,8 @@ export default function ExportPanel({ frames, canvasSpec, onClose }: Props) {
           layout,
           padding,
           spacing,
-          imageName
+          imageName,
+          animationTags
         );
 
         if (exportFormat === "png") {
@@ -122,6 +150,7 @@ export default function ExportPanel({ frames, canvasSpec, onClose }: Props) {
                 <label>Layout</label>
                 <select value={layout} onChange={(e) => setLayout(e.target.value as SpritesheetLayout)}>
                   <option value="grid">Grid</option>
+                  <option value="packed">Packed</option>
                   <option value="horizontal">Horizontal Strip</option>
                   <option value="vertical">Vertical Strip</option>
                 </select>
@@ -162,7 +191,7 @@ export default function ExportPanel({ frames, canvasSpec, onClose }: Props) {
             </>
           )}
 
-          {exportFormat === "png" && (
+          {(exportFormat === "png" || exportFormat === "gif") && (
             <label className="form-group" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <input
                 type="checkbox"
@@ -183,6 +212,27 @@ export default function ExportPanel({ frames, canvasSpec, onClose }: Props) {
                 />
                 Loop animation
               </label>
+              <label className="form-group" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <input
+                  type="checkbox"
+                  checked={gifDither}
+                  onChange={(e) => setGifDither(e.target.checked)}
+                />
+                Dither colors
+              </label>
+              <div className="form-group">
+                <label>Palette size</label>
+                <select
+                  value={gifPaletteSize}
+                  onChange={(e) => setGifPaletteSize(Number(e.target.value))}
+                >
+                  <option value="16">16 colors</option>
+                  <option value="32">32 colors</option>
+                  <option value="64">64 colors</option>
+                  <option value="128">128 colors</option>
+                  <option value="256">256 colors</option>
+                </select>
+              </div>
               <div className="form-group">
                 <label>Quality (lower is better)</label>
                 <input

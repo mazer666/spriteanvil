@@ -38,19 +38,29 @@ export default function ToolRail({ tool, onChangeTool }: Props) {
 
       <div className="toolrail__divider" />
 
-      {btn("rectangle", "▭", "Rectangle (R)")}
-      {btn("rectangleFilled", "▮", "Filled Rectangle (Shift+R)")}
-      {btn("circle", "○", "Circle (C)")}
-      {btn("circleFilled", "●", "Filled Circle (Shift+C)")}
-      {btn("ellipse", "◯", "Ellipse (Shift+O)")}
-      {btn("ellipseFilled", "⬭", "Filled Ellipse (O)")}
+      <details className="toolgroup" open>
+        <summary>Shapes</summary>
+        <div className="toolgroup__body">
+          {btn("rectangle", "▭", "Rectangle (R)")}
+          {btn("rectangleFilled", "▮", "Filled Rectangle (Shift+R)")}
+          {btn("circle", "○", "Circle (C)")}
+          {btn("circleFilled", "●", "Filled Circle (Shift+C)")}
+          {btn("ellipse", "◯", "Ellipse (Shift+O)")}
+          {btn("ellipseFilled", "⬭", "Filled Ellipse (O)")}
+        </div>
+      </details>
 
       <div className="toolrail__divider" />
 
-      {btn("selectRect", "⬚", "Select Rectangle (M)")}
-      {btn("selectEllipse", "⬭", "Select Ellipse (Shift+M)")}
-      {btn("selectLasso", "⚯", "Lasso Selection (W)")}
-      {btn("selectWand", "🪄", "Magic Wand")}
+      <details className="toolgroup" open>
+        <summary>Selection</summary>
+        <div className="toolgroup__body">
+          {btn("selectRect", "⬚", "Select Rectangle (M)")}
+          {btn("selectEllipse", "⬭", "Select Ellipse (Shift+M)")}
+          {btn("selectLasso", "⚯", "Lasso Selection (W)")}
+          {btn("selectWand", "🪄", "Magic Wand")}
+        </div>
+      </details>
 
       <div className="toolrail__spacer" />
 
