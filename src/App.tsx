@@ -421,10 +421,8 @@ export default function App() {
         updateActiveLayerPixels(next.snapshot);
       }
     } else {
-      setFrameLayers(() => {
-        rebuildFramesFromLayers(next.snapshot);
-        return next.snapshot;
-      });
+      setFrameLayers(next.snapshot);
+      rebuildFramesFromLayers(next.snapshot);
     }
     syncHistoryFlags();
   }
@@ -437,10 +435,8 @@ export default function App() {
         updateActiveLayerPixels(next.snapshot);
       }
     } else {
-      setFrameLayers(() => {
-        rebuildFramesFromLayers(next.snapshot);
-        return next.snapshot;
-      });
+      setFrameLayers(next.snapshot);
+      rebuildFramesFromLayers(next.snapshot);
     }
     syncHistoryFlags();
   }
@@ -1082,29 +1078,27 @@ export default function App() {
     if (!from || !to) return;
 
     historyRef.current.commitLayers(frameLayers);
-    setFrameLayers((prev) => {
-      const next: Record<string, LayerData[]> = {};
-      Object.entries(prev).forEach(([frameId, layers]) => {
-        next[frameId] = layers.map((layer) => {
-          if (!layer.pixels) return layer;
-          const updated = new Uint8ClampedArray(layer.pixels);
-          for (let i = 0; i < updated.length; i += 4) {
-            if (
-              updated[i] === from.r &&
-              updated[i + 1] === from.g &&
-              updated[i + 2] === from.b
-            ) {
-              updated[i] = to.r;
-              updated[i + 1] = to.g;
-              updated[i + 2] = to.b;
-            }
+    const next: Record<string, LayerData[]> = {};
+    Object.entries(frameLayers).forEach(([frameId, layers]) => {
+      next[frameId] = layers.map((layer) => {
+        if (!layer.pixels) return layer;
+        const updated = new Uint8ClampedArray(layer.pixels);
+        for (let i = 0; i < updated.length; i += 4) {
+          if (
+            updated[i] === from.r &&
+            updated[i + 1] === from.g &&
+            updated[i + 2] === from.b
+          ) {
+            updated[i] = to.r;
+            updated[i + 1] = to.g;
+            updated[i + 2] = to.b;
           }
-          return { ...layer, pixels: updated };
-        });
+        }
+        return { ...layer, pixels: updated };
       });
-      rebuildFramesFromLayers(next);
-      return next;
     });
+    setFrameLayers(next);
+    rebuildFramesFromLayers(next);
     syncHistoryFlags();
   }
 
