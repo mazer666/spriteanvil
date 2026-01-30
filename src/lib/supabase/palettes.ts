@@ -300,5 +300,5 @@ function rgbToHex(rgb: { r: number; g: number; b: number }): string {
   const clamp = (value: number) => Math.max(0, Math.min(255, Math.round(value)));
   return `#${clamp(rgb.r).toString(16).padStart(2, '0')}${clamp(rgb.g)
     .toString(16)
-    .padStart(2, '0')}${clamp(rgb.b).toString(16).padStart(2, '0')}`;
+    .padStart(2, '0')}${clamp(rgb.b).toString(16).padStart(2, '0')}`.toUpperCase();
 }

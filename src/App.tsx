@@ -411,19 +411,35 @@ export default function App() {
   }, [activeTag, currentFrameIndex, loopTagOnly]);
 
   function handleUndo() {
-    const next = historyRef.current.undo(buffer);
-    if (next !== buffer && activeLayerId) {
-      updateActiveLayerPixels(next);
-      syncHistoryFlags();
+    const next = historyRef.current.undo(buffer, frameLayers);
+    if (!next) return;
+    if (next.kind === "buffer") {
+      if (activeLayerId) {
+        updateActiveLayerPixels(next.snapshot);
+      }
+    } else {
+      setFrameLayers(() => {
+        rebuildFramesFromLayers(next.snapshot);
+        return next.snapshot;
+      });
     }
+    syncHistoryFlags();
   }
 
   function handleRedo() {
-    const next = historyRef.current.redo(buffer);
-    if (next !== buffer && activeLayerId) {
-      updateActiveLayerPixels(next);
-      syncHistoryFlags();
+    const next = historyRef.current.redo(buffer, frameLayers);
+    if (!next) return;
+    if (next.kind === "buffer") {
+      if (activeLayerId) {
+        updateActiveLayerPixels(next.snapshot);
+      }
+    } else {
+      setFrameLayers(() => {
+        rebuildFramesFromLayers(next.snapshot);
+        return next.snapshot;
+      });
     }
+    syncHistoryFlags();
   }
 
   function handleCopy() {
@@ -719,31 +735,36 @@ export default function App() {
     }
   }
 
-  async function handleAutoSave() {
-    if (!activeProject) return;
-    const snapshot = buildSnapshot();
-    await cacheProjectSnapshot(activeProject.id, snapshot);
-    const payload = serializeSnapshot(snapshot);
-    await saveProjectSnapshot(activeProject.id, payload);
-  }
+  const autoSaveStateRef = useRef({
+    buildSnapshot,
+    activeProject,
+    saveProjectSnapshot,
+    cacheProjectSnapshot,
+    serializeSnapshot,
+  });
+  autoSaveStateRef.current = {
+    buildSnapshot,
+    activeProject,
+    saveProjectSnapshot,
+    cacheProjectSnapshot,
+    serializeSnapshot,
+  };
 
   useEffect(() => {
     if (!activeProject) return;
+    const handleAutoSave = async () => {
+      const currentProject = autoSaveStateRef.current.activeProject;
+      if (!currentProject) return;
+      const snapshot = autoSaveStateRef.current.buildSnapshot();
+      await autoSaveStateRef.current.cacheProjectSnapshot(currentProject.id, snapshot);
+      const payload = autoSaveStateRef.current.serializeSnapshot(snapshot);
+      await autoSaveStateRef.current.saveProjectSnapshot(currentProject.id, payload);
+    };
     const id = window.setInterval(() => {
       handleAutoSave();
     }, 60000);
     return () => window.clearInterval(id);
-  }, [
-    activeProject,
-    frames,
-    frameLayers,
-    palettes,
-    settings,
-    currentFrameIndex,
-    activePaletteId,
-    recentColors,
-    frameActiveLayerIds,
-  ]);
+  }, [activeProject]);
 
   function onStrokeEnd(before: Uint8ClampedArray, after: Uint8ClampedArray) {
     historyRef.current.commit(before);
@@ -1049,7 +1070,7 @@ export default function App() {
     const to = hexToRgb(toColor);
     if (!from || !to) return;
 
-    const before = cloneBuffer(buffer);
+    historyRef.current.commitLayers(frameLayers);
     setFrameLayers((prev) => {
       const next: Record<string, LayerData[]> = {};
       Object.entries(prev).forEach(([frameId, layers]) => {
@@ -1073,7 +1094,6 @@ export default function App() {
       rebuildFramesFromLayers(next);
       return next;
     });
-    historyRef.current.commit(before);
     syncHistoryFlags();
   }
 
