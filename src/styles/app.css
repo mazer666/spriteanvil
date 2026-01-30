@@ -19,6 +19,8 @@
   /* Dynamic panel sizes (overwritten by React component) */
   --rightPanelWidth: 300px;
   --timelineHeight: 180px;
+  --topbarHeight: 52px;
+  --statusBarHeight: 32px;
 }
 
 body{
@@ -120,7 +122,7 @@ body{
     "hsplitter"
     "bottom"
     "status";
-  grid-template-rows: 52px 1fr 4px var(--timelineHeight) 32px;
+  grid-template-rows: var(--topbarHeight) 1fr 4px var(--timelineHeight) var(--statusBarHeight);
   grid-template-columns: 100%;
   overflow: hidden;
 }
@@ -550,7 +552,9 @@ body{
 @media (max-width: 767px){
   :root{
     --rightPanelWidth: 100vw;
-    --timelineHeight: 140px;
+    --timelineHeight: 120px;
+    --topbarHeight: 48px;
+    --statusBarHeight: 24px;
   }
 
   .dock__body{
@@ -565,8 +569,8 @@ body{
   .dock__left,
   .dock__right{
     position: absolute;
-    top: 52px;
-    bottom: var(--timelineHeight);
+    top: var(--topbarHeight);
+    bottom: calc(var(--timelineHeight) + var(--statusBarHeight));
     width: 260px;
     max-width: 90vw;
     transform: translateX(-110%);
@@ -596,6 +600,58 @@ body{
 
   .dock__bottom{
     border-top: 1px solid var(--border);
+  }
+
+  .dock__mobileControls{
+    top: 6px;
+    right: 8px;
+    gap: 6px;
+  }
+
+  .topbar{
+    height: var(--topbarHeight);
+    padding: 6px 8px;
+    gap: 10px;
+    padding-right: 124px;
+  }
+
+  .brand__name{
+    font-size: 14px;
+  }
+
+  .brand__tagline{
+    display: none;
+  }
+
+  .topbar__group{
+    gap: 6px;
+    padding: 4px 6px;
+  }
+
+  .uiBtn{
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .ui-row{
+    gap: 6px;
+  }
+
+  .zoom{
+    width: 110px;
+  }
+
+  .timeline__header{
+    padding: 8px 10px;
+  }
+
+  .timeline__controls{
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .timeline__info{
+    width: 100%;
   }
 }
 
