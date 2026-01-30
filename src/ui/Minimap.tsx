@@ -11,6 +11,7 @@ type Props = {
 
 export default function Minimap({ buffer, canvasSpec, viewRect, zoom, onPanTo }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isDraggingRef = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -31,7 +32,7 @@ export default function Minimap({ buffer, canvasSpec, viewRect, zoom, onPanTo }:
     }
   }, [buffer, canvasSpec.height, canvasSpec.width, viewRect, zoom]);
 
-  function handleClick(e: React.MouseEvent<HTMLCanvasElement>) {
+  function panToEvent(e: React.PointerEvent<HTMLCanvasElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) * (canvasSpec.width / rect.width);
     const y = (e.clientY - rect.top) * (canvasSpec.height / rect.height);
@@ -40,9 +41,31 @@ export default function Minimap({ buffer, canvasSpec, viewRect, zoom, onPanTo }:
     onPanTo(offsetX, offsetY);
   }
 
+  function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    isDraggingRef.current = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    panToEvent(e);
+  }
+
+  function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!isDraggingRef.current) return;
+    panToEvent(e);
+  }
+
+  function handlePointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    isDraggingRef.current = false;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  }
+
   return (
     <div className="minimap">
-      <canvas ref={canvasRef} onClick={handleClick} />
+      <canvas
+        ref={canvasRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      />
     </div>
   );
 }

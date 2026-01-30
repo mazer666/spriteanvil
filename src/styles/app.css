@@ -19,6 +19,8 @@
   /* Dynamic panel sizes (overwritten by React component) */
   --rightPanelWidth: 300px;
   --timelineHeight: 180px;
+  --topbarHeight: 52px;
+  --statusBarHeight: 32px;
 }
 
 body{
@@ -120,7 +122,7 @@ body{
     "hsplitter"
     "bottom"
     "status";
-  grid-template-rows: 52px 1fr 4px var(--timelineHeight) 32px;
+  grid-template-rows: var(--topbarHeight) 1fr 4px var(--timelineHeight) var(--statusBarHeight);
   grid-template-columns: 100%;
   overflow: hidden;
 }
@@ -550,7 +552,9 @@ body{
 @media (max-width: 767px){
   :root{
     --rightPanelWidth: 100vw;
-    --timelineHeight: 140px;
+    --timelineHeight: 120px;
+    --topbarHeight: 92px;
+    --statusBarHeight: 24px;
   }
 
   .dock__body{
@@ -565,9 +569,9 @@ body{
   .dock__left,
   .dock__right{
     position: absolute;
-    top: 52px;
-    bottom: var(--timelineHeight);
-    width: 260px;
+    top: var(--topbarHeight);
+    bottom: calc(var(--timelineHeight) + var(--statusBarHeight));
+    width: min(320px, 88vw);
     max-width: 90vw;
     transform: translateX(-110%);
     transition: transform 0.2s ease;
@@ -596,6 +600,83 @@ body{
 
   .dock__bottom{
     border-top: 1px solid var(--border);
+  }
+
+  .dock__mobileControls{
+    top: 8px;
+    right: 8px;
+    gap: 6px;
+  }
+
+  .topbar{
+    height: var(--topbarHeight);
+    padding: 8px 10px;
+    gap: 8px;
+    row-gap: 6px;
+    padding-right: 168px;
+    flex-wrap: wrap;
+    align-content: center;
+  }
+
+  .brand__name{
+    font-size: 14px;
+  }
+
+  .brand__tagline{
+    display: none;
+  }
+
+  .topbar__group{
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 6px;
+  }
+
+  .uiBtn{
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .ui-row{
+    gap: 6px;
+  }
+
+  .zoom{
+    width: 90px;
+  }
+
+  .timeline__header{
+    padding: 8px 10px;
+  }
+
+  .timeline__controls{
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .timeline__info{
+    width: 100%;
+  }
+
+  .stage__hud{
+    top: 8px;
+    left: 8px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .hudpill{
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .minimap{
+    width: 100px;
+    height: 100px;
+    right: 10px;
+    bottom: 10px;
+    padding: 4px;
   }
 }
 

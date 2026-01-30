@@ -47,6 +47,7 @@ export default function CanvasStage(props: {
   frames?: Frame[];
   currentFrameIndex?: number;
   remoteCursors?: Record<string, { x: number; y: number; color: string }>;
+  showMinimap?: boolean;
 }) {
   const {
     settings,
@@ -67,7 +68,8 @@ export default function CanvasStage(props: {
     onCursorMove,
     frames,
     currentFrameIndex,
-    remoteCursors
+    remoteCursors,
+    showMinimap = true
   } = props;
 
   const shapePreviewTools: ToolId[] = [
@@ -1423,13 +1425,15 @@ export default function CanvasStage(props: {
           onCursorMove?.(null);
         }}
       />
-      <Minimap
-        buffer={getCompositePreview()}
-        canvasSpec={canvasSpec}
-        viewRect={viewRect}
-        zoom={settings.zoom}
-        onPanTo={(x, y) => setPanOffset({ x, y })}
-      />
+      {showMinimap && (
+        <Minimap
+          buffer={getCompositePreview()}
+          canvasSpec={canvasSpec}
+          viewRect={viewRect}
+          zoom={settings.zoom}
+          onPanTo={(x, y) => setPanOffset({ x, y })}
+        />
+      )}
     </div>
   );
 }
