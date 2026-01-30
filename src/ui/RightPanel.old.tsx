@@ -2,7 +2,8 @@ import React, { useMemo, useState } from "react";
 import { UiSettings, CanvasSpec, Frame } from "../types";
 import LayerPanel from "./LayerPanel";
 import { LayerData, BlendMode } from "../types";
-import PalettePanel, { PaletteData } from "./PalettePanel";
+import PalettePanel from "./PalettePanel";
+import { PaletteData } from "../lib/projects/snapshot";
 import TransformPanel from "./TransformPanel";
 import ColorAdjustPanel from "./ColorAdjustPanel";
 
@@ -36,8 +37,12 @@ type Props = {
     onDeletePalette: (id: string) => void;
     onAddColorToPalette: (paletteId: string, color: string) => void;
     onRemoveColorFromPalette: (paletteId: string, colorIndex: number) => void;
+    onSelectColor: (color: string) => void;
     onSwapColors: (fromColor: string, toColor: string) => void;
     onExtractPalette: () => void;
+    onImportPalette: (file: File) => void;
+    onExportPalette: (format: "gpl" | "ase") => void;
+    onGenerateRamp: (steps: number) => void;
   };
 
   onTransformOperations?: {
@@ -178,8 +183,8 @@ export default function RightPanel({
             palettes={palettes}
             activePaletteId={activePaletteId || null}
             primaryColor={settings.primaryColor}
+            secondaryColor={settings.secondaryColor}
             recentColors={recentColors || []}
-            onSelectColor={(color) => onChangeSettings({ ...settings, primaryColor: color })}
             {...onPaletteOperations}
           />
         )}

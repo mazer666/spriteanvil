@@ -9,16 +9,29 @@
  * Later we could optimize using diffs, but for v0.1 this is perfect.
  */
 
+import type { LayerData } from "../types";
+
+type FrameLayersSnapshot = Record<string, LayerData[]>;
+
+type HistoryEntry =
+  | { kind: "buffer"; snapshot: Uint8ClampedArray }
+  | { kind: "layers"; snapshot: FrameLayersSnapshot };
+
 export class HistoryStack {
-  private undoStack: Uint8ClampedArray[] = [];
-  private redoStack: Uint8ClampedArray[] = [];
+  private undoStack: HistoryEntry[] = [];
+  private redoStack: HistoryEntry[] = [];
 
   /**
    * Commit a "before" snapshot to the undo stack.
    * Call this when a stroke completes (and actually changed pixels).
    */
   commit(before: Uint8ClampedArray) {
-    this.undoStack.push(cloneBuffer(before));
+    this.undoStack.push({ kind: "buffer", snapshot: cloneBuffer(before) });
+    this.redoStack = [];
+  }
+
+  commitLayers(before: FrameLayersSnapshot) {
+    this.undoStack.push({ kind: "layers", snapshot: cloneFrameLayers(before) });
     this.redoStack = [];
   }
 
@@ -30,19 +43,33 @@ export class HistoryStack {
     return this.redoStack.length > 0;
   }
 
-  undo(current: Uint8ClampedArray): Uint8ClampedArray {
-    if (!this.canUndo()) return current;
+  undo(
+    currentBuffer: Uint8ClampedArray,
+    currentLayers: FrameLayersSnapshot
+  ): HistoryEntry | null {
+    if (!this.canUndo()) return null;
 
     const previous = this.undoStack.pop()!;
-    this.redoStack.push(cloneBuffer(current));
+    if (previous.kind === "buffer") {
+      this.redoStack.push({ kind: "buffer", snapshot: cloneBuffer(currentBuffer) });
+    } else {
+      this.redoStack.push({ kind: "layers", snapshot: cloneFrameLayers(currentLayers) });
+    }
     return previous;
   }
 
-  redo(current: Uint8ClampedArray): Uint8ClampedArray {
-    if (!this.canRedo()) return current;
+  redo(
+    currentBuffer: Uint8ClampedArray,
+    currentLayers: FrameLayersSnapshot
+  ): HistoryEntry | null {
+    if (!this.canRedo()) return null;
 
     const next = this.redoStack.pop()!;
-    this.undoStack.push(cloneBuffer(current));
+    if (next.kind === "buffer") {
+      this.undoStack.push({ kind: "buffer", snapshot: cloneBuffer(currentBuffer) });
+    } else {
+      this.undoStack.push({ kind: "layers", snapshot: cloneFrameLayers(currentLayers) });
+    }
     return next;
   }
 
@@ -57,4 +84,15 @@ export class HistoryStack {
 
 function cloneBuffer(buf: Uint8ClampedArray): Uint8ClampedArray {
   return new Uint8ClampedArray(buf);
+}
+
+function cloneFrameLayers(source: FrameLayersSnapshot): FrameLayersSnapshot {
+  const next: FrameLayersSnapshot = {};
+  Object.entries(source).forEach(([frameId, layers]) => {
+    next[frameId] = layers.map((layer) => ({
+      ...layer,
+      pixels: layer.pixels ? new Uint8ClampedArray(layer.pixels) : layer.pixels,
+    }));
+  });
+  return next;
 }

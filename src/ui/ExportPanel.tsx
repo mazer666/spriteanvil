@@ -3,7 +3,7 @@ import { Frame, CanvasSpec } from "../types";
 import { AnimationTag } from "../lib/supabase/animation_tags";
 import { exportToGIF, downloadGIF } from "../lib/export/gif";
 import { generateMetadata, downloadJSON } from "../lib/export/metadata";
-import { generateSpritesheet, downloadCanvasAsPNG, SpritesheetLayout } from "../lib/export/spritesheet";
+import { generateSpritesheetAsync, downloadCanvasAsPNG, SpritesheetLayout } from "../lib/export/spritesheet";
 
 type Props = {
   frames: Frame[];
@@ -68,7 +68,7 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
           downloadJSON(metadata, metadataName);
         }
       } else {
-        const result = generateSpritesheet(
+        const result = await generateSpritesheetAsync(
           frames,
           canvasSpec.width,
           canvasSpec.height,
