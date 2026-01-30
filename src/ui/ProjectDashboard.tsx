@@ -12,6 +12,8 @@ type Props = {
   onSelect: (project: Project) => void;
   onCreate: (data: NewProjectRequest) => void;
   onDelete: (project: Project) => void;
+  onRename: (project: Project) => void;
+  onDuplicate: (project: Project) => void;
   onRefresh: () => void;
   loading?: boolean;
   error?: string | null;
@@ -22,6 +24,8 @@ export default function ProjectDashboard({
   onSelect,
   onCreate,
   onDelete,
+  onRename,
+  onDuplicate,
   onRefresh,
   loading,
   error,
@@ -47,6 +51,16 @@ export default function ProjectDashboard({
       <section className="project-dashboard__new">
         <h2>Create New Project</h2>
         <div className="project-dashboard__new-grid">
+          <div className="project-dashboard__preview">
+            <div
+              className="project-dashboard__preview-box"
+              style={{ aspectRatio: `${width} / ${height}` }}
+            >
+              <span>
+                {width}×{height}
+              </span>
+            </div>
+          </div>
           <label>
             Name
             <input
@@ -109,16 +123,38 @@ export default function ProjectDashboard({
                   }
                 }}
               >
-                <button
-                  className="project-card__delete"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onDelete(project);
-                  }}
-                  title="Delete project"
-                >
-                  🗑
-                </button>
+                <div className="project-card__actions">
+                  <button
+                    className="project-card__action"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onRename(project);
+                    }}
+                    title="Rename project"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    className="project-card__action"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onDuplicate(project);
+                    }}
+                    title="Duplicate project"
+                  >
+                    ⧉
+                  </button>
+                  <button
+                    className="project-card__action project-card__delete"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onDelete(project);
+                    }}
+                    title="Delete project"
+                  >
+                    🗑
+                  </button>
+                </div>
                 <div className="project-card__thumb">
                   {project.thumbnail_url ? (
                     <img src={project.thumbnail_url} alt={project.name} />

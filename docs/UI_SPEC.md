@@ -23,6 +23,11 @@ SpriteAnvil uses a dock layout with:
 - **Main Area** (center: Tool Rail + Canvas + Right Panel)
 - **Timeline** (bottom)
 
+**Top Bar UX notes:**
+- Primary actions (Projects, Export, Background, Settings) live in the **hamburger menu**.
+- Quick controls (Commands + color + grid) remain visible on desktop and are mirrored in the menu for compact layouts.
+- Zoom controls are anchored to the **minimap** instead of the top bar.
+
 **Important:** The Right Panel should feel continuous (as in the reference design) and **must not** be covered by the timeline.  
 The timeline sits **only under Tool Rail + Canvas**, not under the Right Panel.
 
@@ -126,6 +131,7 @@ This is already a good modular structure.
 **Target vision:** Tabs can later move to icon tabs, but:
 - The structure stays
 - Panels stay as framed sections/accordions
+- Sections should be **reorderable** by drag & drop and offer a compact density toggle.
 
 ---
 

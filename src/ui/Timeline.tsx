@@ -59,6 +59,8 @@ export default function Timeline({
   const [tweenEnd, setTweenEnd] = useState(1);
   const [tweenCount, setTweenCount] = useState(1);
   const [tweenEasing, setTweenEasing] = useState<EasingCurve>("linear");
+  const [showTags, setShowTags] = useState(false);
+  const [showTween, setShowTween] = useState(false);
 
   useEffect(() => {
     frames.forEach((frame, index) => {
@@ -117,7 +119,22 @@ export default function Timeline({
 
   const totalDuration = frames.reduce((sum, f) => sum + f.durationMs, 0);
   const fps = frames.length > 0 ? Math.round((1000 * frames.length) / totalDuration) : 0;
+  const [fpsInput, setFpsInput] = useState(fps || 12);
   const activeTag = animationTags.find((tag) => tag.id === activeTagId) || null;
+
+  useEffect(() => {
+    if (fps > 0) {
+      setFpsInput(fps);
+    }
+  }, [fps]);
+
+  function handleFpsChange(value: string) {
+    const next = Math.max(1, Math.min(60, Number(value)));
+    setFpsInput(next);
+    if (!Number.isFinite(next) || next <= 0) return;
+    const durationMs = Math.max(10, Math.round(1000 / next));
+    frames.forEach((_, index) => onUpdateFrameDuration(index, durationMs));
+  }
 
   function handleCreateTag() {
     if (!newTagName.trim() || frames.length === 0) return;
@@ -140,16 +157,53 @@ export default function Timeline({
 
         <div className="timeline__controls">
           <button
+            className="uiBtn"
+            onClick={() => onSelectFrame(Math.max(0, currentFrameIndex - 1))}
+            disabled={currentFrameIndex <= 0}
+            title="Previous frame (Alt+Left)"
+          >
+            ⟨
+          </button>
+          <button
             className={isPlaying ? "uiBtn uiBtn--active" : "uiBtn"}
             onClick={onTogglePlayback}
             title={isPlaying ? "Stop (Space)" : "Play (Space)"}
           >
             {isPlaying ? "⏸" : "▶"}
           </button>
+          <button
+            className="uiBtn"
+            onClick={() => onSelectFrame(Math.min(frames.length - 1, currentFrameIndex + 1))}
+            disabled={currentFrameIndex >= frames.length - 1}
+            title="Next frame (Alt+Right)"
+          >
+            ⟩
+          </button>
+          <button
+            className={showTags ? "uiBtn uiBtn--active" : "uiBtn"}
+            onClick={() => setShowTags((prev) => !prev)}
+            title="Toggle animation tags"
+          >
+            Tags
+          </button>
+          <button
+            className={showTween ? "uiBtn uiBtn--active" : "uiBtn"}
+            onClick={() => setShowTween((prev) => !prev)}
+            title="Toggle tween generator"
+          >
+            Tween
+          </button>
 
-          <span className="timeline__info">
-            {frames.length} frame{frames.length !== 1 ? "s" : ""} · {totalDuration}ms · ~{fps} FPS
-          </span>
+          <label className="timeline__fps">
+            <span>FPS</span>
+            <input
+              type="number"
+              min="1"
+              max="60"
+              value={fpsInput}
+              onChange={(e) => handleFpsChange(e.target.value)}
+            />
+          </label>
         </div>
 
         <div className="timeline__controls">
@@ -179,6 +233,11 @@ export default function Timeline({
       </div>
 
       <div className="timeline__body">
+        <span className="timeline__info">
+          {frames.length} frame{frames.length !== 1 ? "s" : ""} · {totalDuration}ms · ~{fps} FPS
+        </span>
+
+        {showTags && (
         <div className="timeline__tags" style={{ padding: "8px", borderBottom: "1px solid #333" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
             <strong style={{ fontSize: "12px" }}>Animation Tags</strong>
@@ -293,7 +352,9 @@ export default function Timeline({
             </div>
           )}
         </div>
+        )}
 
+        {showTween && (
         <div className="timeline__tween">
           <div className="timeline__tween-header">
             <strong className="timeline__tween-title">Tween Generator</strong>
@@ -358,6 +419,7 @@ export default function Timeline({
             </button>
           </div>
         </div>
+        )}
 
         <div className="timeline__frames">
           {frames.map((frame, index) => (

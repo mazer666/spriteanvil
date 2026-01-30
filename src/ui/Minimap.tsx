@@ -7,9 +7,10 @@ type Props = {
   viewRect: { x: number; y: number; width: number; height: number } | null;
   zoom: number;
   onPanTo: (x: number, y: number) => void;
+  onChangeZoom?: (zoom: number) => void;
 };
 
-export default function Minimap({ buffer, canvasSpec, viewRect, zoom, onPanTo }: Props) {
+export default function Minimap({ buffer, canvasSpec, viewRect, zoom, onPanTo, onChangeZoom }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDraggingRef = useRef(false);
 
@@ -66,6 +67,19 @@ export default function Minimap({ buffer, canvasSpec, viewRect, zoom, onPanTo }:
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
       />
+      <div className="minimap__controls">
+        <input
+          className="minimap__zoom"
+          type="range"
+          min={1}
+          max={32}
+          step={0.25}
+          value={zoom}
+          onChange={(e) => onChangeZoom?.(Number(e.target.value))}
+          aria-label="Zoom"
+        />
+        <span className="minimap__zoom-label">{Math.round(zoom * 100)}%</span>
+      </div>
     </div>
   );
 }
