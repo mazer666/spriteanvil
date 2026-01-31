@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DockLayout from "./ui/DockLayout";
 import ExportPanel from "./ui/ExportPanel";
+import SettingsPanel from "./ui/SettingsPanel";
 import CommandPalette, { Command } from "./ui/CommandPalette";
 import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode, FloatingSelection } from "./types";
 import { HistoryStack } from "./editor/history";
@@ -2406,6 +2407,7 @@ export default function App() {
             onDetectObject: handleDetectObjectSelection,
           }}
           onCursorMove={handleCursorMove}
+          onNavigateToDashboard={() => setProjectView("dashboard")}
           topBar={
             <div className="topbar">
               <div className="topbar__left">
@@ -2610,83 +2612,17 @@ export default function App() {
       )}
 
       {showSettingsPanel && (
-        <div
-          className="modal-overlay"
-          onClick={() => setShowSettingsPanel(false)}
-        >
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Workspace Settings</h2>
-              <button
-                className="modal-close"
-                onClick={() => setShowSettingsPanel(false)}
-                title="Close"
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body settings-panel">
-              <div className="settings-section">
-                <h3>Project</h3>
-                <div className="settings-actions">
-                  <button
-                    className="uiBtn"
-                    onClick={handleAutoSave}
-                    disabled={!activeProject}
-                  >
-                    Save Snapshot
-                  </button>
-                  <button
-                    className="uiBtn"
-                    onClick={handleReloadProject}
-                    disabled={!activeProject}
-                  >
-                    Reload Snapshot
-                  </button>
-                </div>
-              </div>
-
-              <div className="settings-section">
-                <h3>Display</h3>
-                <label className="ui-row">
-                  <input
-                    type="checkbox"
-                    checked={settings.showGrid}
-                    onChange={(e) =>
-                      setSettings((s) => ({ ...s, showGrid: e.target.checked }))
-                    }
-                  />
-                  <span>Show Grid</span>
-                </label>
-                <label className="ui-row">
-                  <input
-                    type="checkbox"
-                    checked={settings.showOnionSkin}
-                    onChange={(e) =>
-                      setSettings((s) => ({ ...s, showOnionSkin: e.target.checked }))
-                    }
-                  />
-                  <span>Onion Skin</span>
-                </label>
-                <label className="ui-row">
-                  <span>Background</span>
-                  <select
-                    value={settings.backgroundMode}
-                    onChange={(e) =>
-                      setSettings((s) => ({ ...s, backgroundMode: e.target.value as any }))
-                    }
-                  >
-                    <option value="checker">Checkerboard</option>
-                    <option value="solidDark">Solid (Dark)</option>
-                    <option value="solidLight">Solid (Light)</option>
-                    <option value="greenscreen">Greenscreen</option>
-                    <option value="bluescreen">Bluescreen</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
+        <SettingsPanel
+          settings={settings}
+          onChangeSettings={(next) => {
+            setSettings(next);
+            // Side effects for grid/onionskin if needed are handled by setSettings state
+          }}
+          onClose={() => setShowSettingsPanel(false)}
+          activeProject={activeProject}
+          onSaveSnapshot={handleAutoSave}
+          onReloadSnapshot={handleReloadProject}
+        />
       )}
 
       {showExportPanel && projectView === "editor" && (

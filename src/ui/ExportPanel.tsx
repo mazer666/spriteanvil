@@ -208,18 +208,18 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
         </div>
 
         <div className="modal-body">
-          <div className="form-group">
-            <label>Project Name</label>
+          <label className="ui-row">
+            <span>Project Name</span>
             <input
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               placeholder="sprite"
             />
-          </div>
+          </label>
 
-          <div className="form-group">
-            <label>Format</label>
+          <label className="ui-row">
+            <span>Format</span>
             <select
               value={exportFormat}
               onChange={(e) => setExportFormat(e.target.value as "png" | "gif" | "json")}
@@ -228,12 +228,12 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
               <option value="gif">GIF Animation</option>
               <option value="json">JSON Metadata</option>
             </select>
-          </div>
+          </label>
 
           {(exportFormat === "png" || exportFormat === "json") && (
             <>
-              <div className="form-group">
-                <label>Target Engine</label>
+              <label className="ui-row">
+                <span>Target Engine</span>
                 <select
                   value={targetEngine}
                   onChange={(e) => setTargetEngine(e.target.value as EngineTarget)}
@@ -243,11 +243,11 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
                   <option value="unity">Unity Spritesheet JSON</option>
                   <option value="phaser">Phaser Atlas JSON</option>
                 </select>
-              </div>
+              </label>
 
               {(targetEngine === "unity" || targetEngine === "phaser") && (
-                <div className="form-group">
-                  <label>JSON Format</label>
+                <label className="ui-row">
+                  <span>JSON Format</span>
                   <select
                     value={engineJsonFormat}
                     onChange={(e) => setEngineJsonFormat(e.target.value as EngineJsonFormat)}
@@ -255,21 +255,21 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
                     <option value="hash">Hash (frame name keys)</option>
                     <option value="array">Array (frame list)</option>
                   </select>
-                </div>
+                </label>
               )}
 
-              <div className="form-group">
-                <label>Layout</label>
+              <label className="ui-row">
+                <span>Layout</span>
                 <select value={layout} onChange={(e) => setLayout(e.target.value as SpritesheetLayout)}>
                   <option value="grid">Grid</option>
                   <option value="packed">Packed</option>
                   <option value="horizontal">Horizontal Strip</option>
                   <option value="vertical">Vertical Strip</option>
                 </select>
-              </div>
+              </label>
 
-              <div className="form-group">
-                <label>Scale</label>
+              <label className="ui-row">
+                <span>Scale</span>
                 <select value={scale} onChange={(e) => setScale(Number(e.target.value))}>
                   <option value="1">1x (Original)</option>
                   <option value="2">2x</option>
@@ -277,10 +277,10 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
                   <option value="4">4x</option>
                   <option value="8">8x</option>
                 </select>
-              </div>
+              </label>
 
-              <div className="form-group">
-                <label>Padding (px)</label>
+              <label className="ui-row">
+                <span>Padding (px)</span>
                 <input
                   type="number"
                   min="0"
@@ -288,10 +288,10 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
                   value={padding}
                   onChange={(e) => setPadding(Number(e.target.value))}
                 />
-              </div>
+              </label>
 
-              <div className="form-group">
-                <label>Spacing (px)</label>
+              <label className="ui-row">
+                <span>Spacing (px)</span>
                 <input
                   type="number"
                   min="0"
@@ -299,7 +299,7 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
                   value={spacing}
                   onChange={(e) => setSpacing(Number(e.target.value))}
                 />
-              </div>
+              </label>
             </>
           )}
 
