@@ -54,6 +54,18 @@ export type GradientType = "linear" | "radial" | "angle" | "reflected" | "diamon
 export type DitheringType = "none" | "bayer" | "floyd";
 export type SymmetryMode = "none" | "horizontal" | "vertical" | "both" | "radial";
 
+export type LayoutSettings = {
+  leftPanelVisible: boolean;
+  rightPanelVisible: boolean;
+  timelineVisible: boolean;
+  leftCollapsed: boolean;
+  rightCollapsed: boolean;
+  rightWidth: number;
+  timelineHeight: number;
+  toolRailPosition: { x: number; y: number };
+  rightPanelOrder: string[];
+};
+
 /**
  * UI/Editor Settings.
  */
@@ -99,6 +111,7 @@ export type UiSettings = {
   wandTolerance: number;
   pressureMode: "off" | "size" | "opacity";
   pressureEasing: number;
+  layout: LayoutSettings;
 };
 
 export type CanvasSpec = {

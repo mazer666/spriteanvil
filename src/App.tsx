@@ -359,6 +359,7 @@ export default function App() {
   const [activePaletteId, setActivePaletteId] = useState<string>("default");
   const [recentColors, setRecentColors] = useState<string[]>([]);
 
+  const defaultRightPanelOrder = ["tools", "layers", "colors", "transform", "selection", "ai"];
   const [settings, setSettings] = useState<UiSettings>(() => ({
     zoom: 8,
     brushStabilizerEnabled: true,
@@ -391,6 +392,17 @@ export default function App() {
     wandTolerance: 32,
     pressureMode: "size",
     pressureEasing: 0.25,
+    layout: {
+      leftPanelVisible: true,
+      rightPanelVisible: true,
+      timelineVisible: true,
+      leftCollapsed: false,
+      rightCollapsed: false,
+      rightWidth: 280,
+      timelineHeight: 160,
+      toolRailPosition: { x: 18, y: 84 },
+      rightPanelOrder: defaultRightPanelOrder,
+    },
   }));
 
   const zoomLabel = useMemo(() => `${Math.round(settings.zoom * 100)}%`, [settings.zoom]);
@@ -974,7 +986,17 @@ export default function App() {
     setActivePaletteId(snapshot.activePaletteId);
     setRecentColors(snapshot.recentColors);
     if (snapshot.settings) {
-      setSettings((prev) => ({ ...prev, ...snapshot.settings }));
+      setSettings((prev) => ({
+        ...prev,
+        ...snapshot.settings,
+        layout: {
+          ...prev.layout,
+          ...(snapshot.settings.layout ?? {}),
+          rightPanelOrder:
+            snapshot.settings.layout?.rightPanelOrder?.length ? snapshot.settings.layout.rightPanelOrder : prev.layout.rightPanelOrder,
+          toolRailPosition: snapshot.settings.layout?.toolRailPosition ?? prev.layout.toolRailPosition,
+        },
+      }));
     }
     historyRef.current = new HistoryStack();
     syncHistoryFlags();

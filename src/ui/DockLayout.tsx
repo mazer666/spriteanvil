@@ -4,7 +4,16 @@ import ToolBar from "./ToolBar";
 import RightPanel from "./RightPanel";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
-import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode, FloatingSelection } from "../types";
+import {
+  CanvasSpec,
+  ToolId,
+  UiSettings,
+  Frame,
+  LayerData,
+  BlendMode,
+  FloatingSelection,
+  LayoutSettings
+} from "../types";
 import type { EasingCurve } from "../editor/animation";
 import { AnimationTag } from "../lib/supabase/animation_tags";
 import { PaletteData } from "../lib/projects/snapshot";
@@ -139,7 +148,7 @@ type Props = {
  * - Right: RightPanel (resizable width)
  * - Bottom: Timeline (resizable height)
  *
- * We persist panel sizes in localStorage so the layout "sticks".
+ * We persist panel sizes in user settings so the layout "sticks".
  */
 export default function DockLayout({
   settings,
@@ -198,40 +207,71 @@ export default function DockLayout({
   topBar,
   statusBar
 }: Props) {
-  const [rightWidth, setRightWidth] = useState<number>(() => loadNumber("dock:rightWidth", 280));
-  const [timelineHeight, setTimelineHeight] = useState<number>(() =>
-    loadNumber("dock:timelineHeight", 160)
+  const defaultLayout = useMemo<LayoutSettings>(
+    () => ({
+      leftPanelVisible: true,
+      rightPanelVisible: true,
+      timelineVisible: true,
+      leftCollapsed: false,
+      rightCollapsed: false,
+      rightWidth: 280,
+      timelineHeight: 160,
+      toolRailPosition: { x: 18, y: 84 },
+      rightPanelOrder: ["tools", "layers", "colors", "transform", "selection", "ai"],
+    }),
+    []
   );
+  const layout = settings.layout ?? defaultLayout;
+  const [rightWidth, setRightWidth] = useState<number>(layout.rightWidth);
+  const [timelineHeight, setTimelineHeight] = useState<number>(layout.timelineHeight);
   const [isMobile, setIsMobile] = useState(false);
   const [isToolRailOpen, setIsToolRailOpen] = useState(false);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
   const [isMinimapVisible, setIsMinimapVisible] = useState(true);
-  const [isToolRailCollapsed, setIsToolRailCollapsed] = useState(() =>
-    loadBoolean("dock:leftCollapsed", false)
-  );
-  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(() =>
-    loadBoolean("dock:rightCollapsed", false)
-  );
-  const [showLeftPanel, setShowLeftPanel] = useState(() =>
-    loadBoolean("dock:leftVisible", true)
-  );
-  const [showRightPanel, setShowRightPanel] = useState(() =>
-    loadBoolean("dock:rightVisible", true)
-  );
-  const [showTimeline, setShowTimeline] = useState(() =>
-    loadBoolean("dock:timelineVisible", true)
-  );
+  const [isToolRailCollapsed, setIsToolRailCollapsed] = useState(layout.leftCollapsed);
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(layout.rightCollapsed);
+  const [showLeftPanel, setShowLeftPanel] = useState(layout.leftPanelVisible);
+  const [showRightPanel, setShowRightPanel] = useState(layout.rightPanelVisible);
+  const [showTimeline, setShowTimeline] = useState(layout.timelineVisible);
   const [isZenMode, setIsZenMode] = useState(false);
+  const [toolRailPosition, setToolRailPosition] = useState(layout.toolRailPosition);
 
-  useEffect(() => saveNumber("dock:rightWidth", rightWidth), [rightWidth]);
-  useEffect(() => saveNumber("dock:timelineHeight", timelineHeight), [timelineHeight]);
-  useEffect(() => saveBoolean("dock:leftCollapsed", isToolRailCollapsed), [isToolRailCollapsed]);
-  useEffect(() => saveBoolean("dock:rightCollapsed", isRightPanelCollapsed), [isRightPanelCollapsed]);
-  useEffect(() => saveBoolean("dock:leftVisible", showLeftPanel), [showLeftPanel]);
-  useEffect(() => saveBoolean("dock:rightVisible", showRightPanel), [showRightPanel]);
-  useEffect(() => saveBoolean("dock:timelineVisible", showTimeline), [showTimeline]);
+  useEffect(() => {
+    if (layout.rightWidth !== rightWidth) setRightWidth(layout.rightWidth);
+    if (layout.timelineHeight !== timelineHeight) setTimelineHeight(layout.timelineHeight);
+    if (layout.leftCollapsed !== isToolRailCollapsed) setIsToolRailCollapsed(layout.leftCollapsed);
+    if (layout.rightCollapsed !== isRightPanelCollapsed) setIsRightPanelCollapsed(layout.rightCollapsed);
+    if (layout.leftPanelVisible !== showLeftPanel) setShowLeftPanel(layout.leftPanelVisible);
+    if (layout.rightPanelVisible !== showRightPanel) setShowRightPanel(layout.rightPanelVisible);
+    if (layout.timelineVisible !== showTimeline) setShowTimeline(layout.timelineVisible);
+    if (
+      layout.toolRailPosition.x !== toolRailPosition.x ||
+      layout.toolRailPosition.y !== toolRailPosition.y
+    ) {
+      setToolRailPosition(layout.toolRailPosition);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout]);
 
   const sizes = useMemo(() => ({ rightWidth, timelineHeight }), [rightWidth, timelineHeight]);
+  const dockBodyRef = useRef<HTMLDivElement | null>(null);
+  const toolRailRef = useRef<HTMLDivElement | null>(null);
+  const rightPanelRef = useRef<HTMLDivElement | null>(null);
+
+  function updateLayout(patch: Partial<LayoutSettings>) {
+    const nextLayout: LayoutSettings = {
+      ...defaultLayout,
+      ...settings.layout,
+      ...patch,
+      toolRailPosition:
+        patch.toolRailPosition ?? settings.layout?.toolRailPosition ?? defaultLayout.toolRailPosition,
+      rightPanelOrder:
+        patch.rightPanelOrder ?? settings.layout?.rightPanelOrder ?? defaultLayout.rightPanelOrder,
+    };
+    const isSame = settings.layout && JSON.stringify(settings.layout) === JSON.stringify(nextLayout);
+    if (isSame) return;
+    onChangeSettings({ ...settings, layout: nextLayout });
+  }
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
@@ -272,6 +312,15 @@ export default function DockLayout({
         startTimelineHeight: number;
       }
   >(null);
+  const toolRailDragRef = useRef<
+    | null
+    | {
+        startX: number;
+        startY: number;
+        originX: number;
+        originY: number;
+      }
+  >(null);
 
   function beginDrag(kind: "right" | "timeline", e: React.PointerEvent) {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -291,15 +340,103 @@ export default function DockLayout({
 
     if (st.kind === "right") {
       const dx = st.startX - e.clientX; // drag left increases width
-      setRightWidth(clamp(st.startRightWidth + dx, 240, 500));
+      const next = clamp(st.startRightWidth + dx, 240, 500);
+      setRightWidth(next);
+      updateLayout({ rightWidth: next });
     } else {
       const dy = st.startY - e.clientY; // drag up increases height
-      setTimelineHeight(clamp(st.startTimelineHeight + dy, 120, 350));
+      const next = clamp(st.startTimelineHeight + dy, 120, 350);
+      setTimelineHeight(next);
+      updateLayout({ timelineHeight: next });
     }
   }
 
   function endDrag() {
     dragStateRef.current = null;
+  }
+
+  function beginToolRailDrag(e: React.PointerEvent) {
+    if (isMobile) return;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    toolRailDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: toolRailPosition.x,
+      originY: toolRailPosition.y,
+    };
+  }
+
+  function snapToolRailPosition(pos: { x: number; y: number }) {
+    const container = dockBodyRef.current;
+    const tool = toolRailRef.current;
+    if (!container || !tool) return pos;
+    const bounds = container.getBoundingClientRect();
+    const toolRect = tool.getBoundingClientRect();
+    const maxX = bounds.width - toolRect.width - 8;
+    const maxY = bounds.height - toolRect.height - 8;
+    const clamped = {
+      x: clamp(pos.x, 8, Math.max(8, maxX)),
+      y: clamp(pos.y, 8, Math.max(8, maxY)),
+    };
+    const snapTargetsX = [8, Math.max(8, maxX)];
+    if (showRightPanel && rightPanelRef.current) {
+      const rightRect = rightPanelRef.current.getBoundingClientRect();
+      const leftEdge = rightRect.left - bounds.left - toolRect.width - 12;
+      snapTargetsX.push(clamp(leftEdge, 8, Math.max(8, maxX)));
+    }
+    const snapTargetsY = [8, Math.max(8, maxY)];
+    const snapThreshold = 24;
+    const snapValue = (value: number, targets: number[]) => {
+      for (const target of targets) {
+        if (Math.abs(value - target) <= snapThreshold) return target;
+      }
+      return value;
+    };
+    return {
+      x: snapValue(clamped.x, snapTargetsX),
+      y: snapValue(clamped.y, snapTargetsY),
+    };
+  }
+
+  function moveToolRail(e: React.PointerEvent) {
+    if (!toolRailDragRef.current) return;
+    const drag = toolRailDragRef.current;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    setToolRailPosition({ x: drag.originX + dx, y: drag.originY + dy });
+  }
+
+  function endToolRailDrag() {
+    if (!toolRailDragRef.current) return;
+    toolRailDragRef.current = null;
+    const snapped = snapToolRailPosition(toolRailPosition);
+    setToolRailPosition(snapped);
+    updateLayout({ toolRailPosition: snapped });
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    onDragMove(e);
+    moveToolRail(e);
+  }
+
+  function handlePointerUp() {
+    endDrag();
+    endToolRailDrag();
+  }
+
+  function resetLayout() {
+    setRightWidth(defaultLayout.rightWidth);
+    setTimelineHeight(defaultLayout.timelineHeight);
+    setIsToolRailCollapsed(defaultLayout.leftCollapsed);
+    setIsRightPanelCollapsed(defaultLayout.rightCollapsed);
+    setShowLeftPanel(defaultLayout.leftPanelVisible);
+    setShowRightPanel(defaultLayout.rightPanelVisible);
+    setShowTimeline(defaultLayout.timelineVisible);
+    setToolRailPosition(defaultLayout.toolRailPosition);
+    setIsToolRailOpen(false);
+    setIsRightPanelOpen(false);
+    setIsMinimapVisible(true);
+    updateLayout(defaultLayout);
   }
 
   return (
@@ -316,11 +453,11 @@ export default function DockLayout({
         (!showTimeline ? " dock--timeline-collapsed" : "") +
         (isZenMode ? " dock--zen" : "")
       }
-      onPointerMove={onDragMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       style={{
-        "--leftPanelWidth": `${!showLeftPanel || isZenMode ? 0 : isToolRailCollapsed ? 48 : 72}px`,
+        "--leftPanelWidth": `${0}px`,
         "--rightPanelWidth": `${!showRightPanel || isZenMode ? 0 : isRightPanelCollapsed ? 52 : sizes.rightWidth}px`,
         "--timelineHeight": `${!showTimeline || isZenMode ? 0 : sizes.timelineHeight}px`,
         ...(isZenMode ? { "--topbarHeight": "0px", "--statusBarHeight": "0px" } : {}),
@@ -332,21 +469,39 @@ export default function DockLayout({
           <div className="dock__panelControls">
             <button
               className="uiBtn uiBtn--ghost"
-              onClick={() => setShowLeftPanel((prev) => !prev)}
+              onClick={() =>
+                setShowLeftPanel((prev) => {
+                  const next = !prev;
+                  updateLayout({ leftPanelVisible: next });
+                  return next;
+                })
+              }
               title={showLeftPanel ? "Hide left panel" : "Show left panel"}
             >
               {showLeftPanel ? "⟨" : "⟩"} Left
             </button>
             <button
               className="uiBtn uiBtn--ghost"
-              onClick={() => setShowTimeline((prev) => !prev)}
+              onClick={() =>
+                setShowTimeline((prev) => {
+                  const next = !prev;
+                  updateLayout({ timelineVisible: next });
+                  return next;
+                })
+              }
               title={showTimeline ? "Hide timeline" : "Show timeline"}
             >
               {showTimeline ? "⌄" : "⌃"} Timeline
             </button>
             <button
               className="uiBtn uiBtn--ghost"
-              onClick={() => setShowRightPanel((prev) => !prev)}
+              onClick={() =>
+                setShowRightPanel((prev) => {
+                  const next = !prev;
+                  updateLayout({ rightPanelVisible: next });
+                  return next;
+                })
+              }
               title={showRightPanel ? "Hide right panel" : "Show right panel"}
             >
               {showRightPanel ? "⟩" : "⟨"} Right
@@ -358,6 +513,9 @@ export default function DockLayout({
             >
               {isZenMode ? "◼" : "◻"} Zen
             </button>
+            <button className="uiBtn uiBtn--ghost" onClick={resetLayout} title="Reset layout">
+              ↺ Reset
+            </button>
           </div>
         )}
         {isMobile && (
@@ -365,7 +523,11 @@ export default function DockLayout({
             <button
               className="uiBtn"
               onClick={() => {
-                setShowLeftPanel(true);
+                setShowLeftPanel((prev) => {
+                  const next = !prev;
+                  updateLayout({ leftPanelVisible: next });
+                  return next;
+                });
                 setIsToolRailOpen((prev) => !prev);
               }}
               title="Toggle tools"
@@ -381,7 +543,13 @@ export default function DockLayout({
             </button>
             <button
               className="uiBtn"
-              onClick={() => setShowTimeline((prev) => !prev)}
+              onClick={() =>
+                setShowTimeline((prev) => {
+                  const next = !prev;
+                  updateLayout({ timelineVisible: next });
+                  return next;
+                })
+              }
               title={showTimeline ? "Hide timeline" : "Show timeline"}
             >
               ↕ Timeline
@@ -389,30 +557,63 @@ export default function DockLayout({
             <button
               className="uiBtn"
               onClick={() => {
-                setShowRightPanel(true);
+                setShowRightPanel((prev) => {
+                  const next = !prev;
+                  updateLayout({ rightPanelVisible: next });
+                  return next;
+                });
                 setIsRightPanelOpen((prev) => !prev);
               }}
               title="Toggle panel"
             >
               ☰ Panel
             </button>
+            <button className="uiBtn" onClick={resetLayout} title="Reset layout">
+              ↺ Reset
+            </button>
           </div>
         )}
       </div>
 
-      <div className="dock__body">
-        <div className={"dock__left" + (isToolRailCollapsed ? " dock__left--collapsed" : "")}>
-          {!isMobile && (
-            <button
-              className="panel-toggle panel-toggle--left"
-              onClick={() => setIsToolRailCollapsed((prev) => !prev)}
-              title={isToolRailCollapsed ? "Expand tools" : "Collapse tools"}
-            >
-              {isToolRailCollapsed ? "›" : "‹"}
-            </button>
-          )}
-          <ToolRail tool={tool} onChangeTool={onChangeTool} />
-        </div>
+      <div className="dock__body" ref={dockBodyRef}>
+        {showLeftPanel && (
+          <div
+            className={
+              "dock__floatingToolRail" +
+              (isToolRailCollapsed ? " dock__floatingToolRail--collapsed" : "") +
+              (isToolRailOpen ? " dock__floatingToolRail--open" : "")
+            }
+            ref={toolRailRef}
+            style={
+              isMobile
+                ? undefined
+                : {
+                    left: toolRailPosition.x,
+                    top: toolRailPosition.y,
+                  }
+            }
+          >
+            <div className="dock__floatingToolRailHeader" onPointerDown={beginToolRailDrag}>
+              <span className="dock__floatingToolRailGrip">⋮⋮</span>
+              <span className="dock__floatingToolRailTitle">Tools</span>
+              <button
+                className="uiBtn uiBtn--ghost"
+                onClick={() =>
+                  setIsToolRailCollapsed((prev) => {
+                    const next = !prev;
+                    updateLayout({ leftCollapsed: next });
+                    return next;
+                  })
+                }
+                title={isToolRailCollapsed ? "Expand tools" : "Collapse tools"}
+                type="button"
+              >
+                {isToolRailCollapsed ? "›" : "‹"}
+              </button>
+            </div>
+            <ToolRail tool={tool} onChangeTool={onChangeTool} />
+          </div>
+        )}
 
         <div className="dock__center">
           <CanvasStage
@@ -446,11 +647,20 @@ export default function DockLayout({
           onPointerDown={(e) => beginDrag("right", e)}
         />
 
-        <div className={"dock__right" + (isRightPanelCollapsed ? " dock__right--collapsed" : "")}>
+        <div
+          className={"dock__right" + (isRightPanelCollapsed ? " dock__right--collapsed" : "")}
+          ref={rightPanelRef}
+        >
           {!isMobile && (
             <button
               className="panel-toggle panel-toggle--right"
-              onClick={() => setIsRightPanelCollapsed((prev) => !prev)}
+              onClick={() =>
+                setIsRightPanelCollapsed((prev) => {
+                  const next = !prev;
+                  updateLayout({ rightCollapsed: next });
+                  return next;
+                })
+              }
               title={isRightPanelCollapsed ? "Expand panel" : "Collapse panel"}
             >
               {isRightPanelCollapsed ? "‹" : "›"}
@@ -539,41 +749,4 @@ export default function DockLayout({
 
 function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
-}
-
-function loadNumber(key: string, fallback: number): number {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    const n = Number(raw);
-    return Number.isFinite(n) ? n : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function saveNumber(key: string, value: number) {
-  try {
-    localStorage.setItem(key, String(value));
-  } catch {
-    // ignore
-  }
-}
-
-function loadBoolean(key: string, fallback: boolean): boolean {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw === null) return fallback;
-    return raw === "true";
-  } catch {
-    return fallback;
-  }
-}
-
-function saveBoolean(key: string, value: boolean) {
-  try {
-    localStorage.setItem(key, String(value));
-  } catch {
-    // ignore
-  }
 }
