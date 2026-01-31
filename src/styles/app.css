@@ -291,23 +291,38 @@ body {
 }
 
 /* Hover-reveal close button for narrow ToolRail */
+/* Hover-reveal close button for narrow ToolRail */
 .dock__floatingToolRailHeader--hoverable {
   position: relative;
 }
 
+.dock__floatingToolRailHeader--hoverable .dock__floatingToolRailTitle {
+  transition: opacity 0.15s;
+}
+
+.dock__floatingToolRailHeader--hoverable:hover .dock__floatingToolRailTitle {
+  opacity: 0;
+}
+
 .dock__panelClose--hoverReveal {
   position: absolute;
-  right: 4px;
+  left: 50%;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
   opacity: 0;
   pointer-events: none;
-  background: var(--panel);
+  background: transparent; /* Remove background so it doesn't block if opacity fails partially? User said 'overlay' */
+  /* Actually, user wants it TO BE visible on hover. */
   border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 14px;
+  padding: 4px;
+  font-size: 16px;
   z-index: 10;
   transition: opacity 0.15s;
+  color: var(--ink);
+}
+
+.dock__panelClose--hoverReveal:hover {
+  background: var(--bg-hover);
 }
 
 .dock__floatingToolRailHeader--hoverable:hover .dock__panelClose--hoverReveal {

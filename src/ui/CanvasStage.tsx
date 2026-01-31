@@ -1637,7 +1637,9 @@ function drawGrid(
 ) {
   const step = Math.max(1, gridSize) * zoom;
 
-  ctx.strokeStyle = "rgba(255,255,255,0.10)";
+  ctx.save();
+  ctx.globalCompositeOperation = "difference";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
   ctx.lineWidth = 1;
 
   for (let x = 0; x <= spriteW; x += gridSize) {
@@ -1675,6 +1677,7 @@ function drawGrid(
     }
   }
 
+  ctx.restore();
   void step;
 }
 
