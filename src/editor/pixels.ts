@@ -1,29 +1,25 @@
 /**
  * src/editor/pixels.ts
  * -----------------------------------------------------------------------------
- * Pixel buffer utilities (RGBA).
- *
- * ## How we store pixels (for beginners):
+ * ## PIXEL BUFFERS (Noob Guide)
+ * 
  * We use a "Uint8ClampedArray". Think of this as a giant list of numbers from 0 to 255.
  * Every pixel on the screen is made of 4 numbers in this list:
  * [Red, Green, Blue, Alpha (transparency)]
  *
- * So if your canvas is 2x2 pixels, your list looks like this:
- * [P1_R, P1_G, P1_B, P1_A,  P2_R, P2_G, P2_B, P2_A,  P3_R, P3_G, P3_B, P3_A,  P4_R, P4_G, P4_B, P4_A]
- *
- * ## The Math (Coordinates to Index):
- * To find a pixel at (x, y), we use this formula:
+ * ## THE MATH
  * index = (y * width + x) * 4
  *
- * - (y * width + x): This finds which pixel number we are at (counting from top-left, row by row).
- * - * 4: Because each pixel takes 4 slots in the array.
- *
- * This matches ImageData's internal format and avoids endianness issues.
+ * ## VAR TRACE
+ * - `buf`: (Origin: CanvasState) The current raw byte array of pixels.
+ * - `width/height`: (Origin: CanvasSpec) The fixed dimensions of our image.
+ * - `rgba`: (Origin: PalettePanel) The color we want to paint with.
  */
 
 export type RGBA = { r: number; g: number; b: number; a: number };
 
 export function createBuffer(width: number, height: number, fill: RGBA): Uint8ClampedArray {
+  // ORIGIN: CanvasSpec. USAGE: Sets array length (W * H * 4). PURPOSE: Allocates memory for the image.
   const buf = new Uint8ClampedArray(width * height * 4);
   for (let i = 0; i < width * height; i++) {
     const o = i * 4;
@@ -76,7 +72,7 @@ export function setPixel(
   rgba: RGBA
 ): boolean {
   if (x < 0 || y < 0 || x >= width || y >= height) return false;
-  // Find where this pixel starts in the flat array
+  // ORIGIN: Pointer events -> (x, y). USAGE: Multiplied to find start byte. PURPOSE: Bridges 2D space to 1D data.
   const i = (y * width + x) * 4;
 
   // Only mark changed if pixel actually differs (helps avoid false history commits).

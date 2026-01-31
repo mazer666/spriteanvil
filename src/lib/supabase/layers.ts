@@ -1,8 +1,26 @@
+/**
+ * src/lib/supabase/layers.ts
+ * -----------------------------------------------------------------------------
+ * ## LAYER STORAGE (Noob Guide)
+ * 
+ * This file handles saving individual "Transparent Sheets".
+ * 
+ * 1. ATTRIBUTES: We save things like opacity (how see-through) and 
+ *    blend mode (how colors mix).
+ * 2. INDEX: The `layer_index` tells us which sheet is on bottom and 
+ *    which is on top.
+ * 
+ * ## VAR TRACE
+ * - `opacity`: (Origin: LayerPanel) Number from 0.0 to 1.0.
+ * - `blend_mode`: (Origin: Dropdown) "normal", "multiply", etc.
+ * - `pixel_data`: (Origin: frames.ts) The Base64 string of the art.
+ */
 import { supabase } from './client';
 
 export type Layer = {
   id: string;
   frame_id: string;
+  // ORIGIN: Layer List. USAGE: Determines drawing order. PURPOSE: Z-index.
   layer_index: number;
   name: string;
   pixel_data: string;

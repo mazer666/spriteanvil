@@ -1,10 +1,22 @@
 /**
- * Project Database Operations
- *
- * Functions for managing projects in Supabase database.
- * Projects are the top-level containers for sprites and animations.
- *
- * @module lib/supabase/projects
+ * src/lib/supabase/projects.ts
+ * -----------------------------------------------------------------------------
+ * ## PROJECT DATABASE (Noob Guide)
+ * 
+ * This file is the "Librarian". It handles organizing, saving, and 
+ * loading your projects from the Supabase cloud.
+ * 
+ * 1. PERSISTENCE: Every 60 seconds (or when you click save), the 
+ *    app takes a "Metadata Snapshot" of your current work.
+ * 2. DATABASE: We use SQL-style tables to store project names, 
+ *    descriptions, and that big snapshot of pixels.
+ * 3. RETRY: If your internet is shaky, we use a "Retry" system to 
+ *    keep trying to save so you don't lose progress.
+ * 
+ * ## VAR TRACE
+ * - `metadata`: (Origin: Database Row) The JSON snapshot containing frames/layers.
+ * - `userId`: (Origin: Auth Session) Ensures you only see YOUR projects.
+ * - `snapshot`: (Origin: App State) The serialized version of the workspace.
  */
 
 import { supabase } from "./client"
@@ -87,6 +99,7 @@ export type ProjectSnapshotPayload = {
  */
 export async function saveProjectSnapshot(
   projectId: string,
+  // ORIGIN: App.tsx workspace state. USAGE: Updated in 'projects' table. PURPOSE: Persistent cloud save.
   snapshot: ProjectSnapshotPayload
 ): Promise<boolean> {
   try {

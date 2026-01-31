@@ -18,7 +18,9 @@ type HistoryEntry =
   | { kind: "layers"; snapshot: FrameLayersSnapshot };
 
 export class HistoryStack {
+  // ORIGIN: Internal state. USAGE: Stores past "Photos" of the canvas. PURPOSE: To go back in time.
   private undoStack: HistoryEntry[] = [];
+  // ORIGIN: Internal state. USAGE: Stores "Future" photos after an Undo. PURPOSE: To go forward again.
   private redoStack: HistoryEntry[] = [];
 
   /**
@@ -26,6 +28,7 @@ export class HistoryStack {
    * Call this when a stroke completes (and actually changed pixels).
    */
   commit(before: Uint8ClampedArray) {
+    // ORIGIN: App.tsx (the current pixel array). USAGE: Pushed onto the Undo stack.
     this.undoStack.push({ kind: "buffer", snapshot: cloneBuffer(before) });
     this.redoStack = [];
   }

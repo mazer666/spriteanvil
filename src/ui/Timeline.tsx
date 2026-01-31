@@ -14,6 +14,11 @@
  * 3. ONION SKINNING: This lets you see a "ghost" of the frame before/after 
  *    the one you are on. It's like tracing through paper to make sure 
  *    your character doesn't jump around!
+ * 
+ * ## VAR TRACE
+ * - `frames`: (Origin: App state) The ordered list of animation frames.
+ * - `animationTags`: (Origin: Supabase) Named ranges (e.g. "Run Cycle").
+ * - `canvasRefs`: (Origin: Internal refs) DOM elements for thumbnail rendering.
  */
 import React, { useEffect, useRef, useState } from "react";
 import { CanvasSpec, Frame, UiSettings } from "../types";

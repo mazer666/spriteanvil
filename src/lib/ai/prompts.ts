@@ -1,3 +1,20 @@
+/**
+ * src/lib/ai/prompts.ts
+ * -----------------------------------------------------------------------------
+ * ## AI PROMPT TEMPLATES (Noob Guide)
+ * 
+ * Think of this as the "AI's Cookbook". 
+ * 
+ * 1. TEMPLATES: Instead of typing long instructions every time, users 
+ *    can pick a "Recipe" (template) like "Idle Hero".
+ * 2. PROMPT: This is the actual text sent to the AI. We include 
+ *    details like "32x32" and "vibrant palette" to make sure the 
+ *    AI gives us a pixel-style result.
+ * 
+ * ## VAR TRACE
+ * - `PIXEL_ART_PROMPTS`: (Origin: Constant) The master list of all templates.
+ * - `label`: (Origin: UI display) The name shown in the dropdown menu.
+ */
 export type PromptTemplate = {
   label: string;
   prompt: string;

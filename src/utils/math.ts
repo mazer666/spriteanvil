@@ -1,9 +1,21 @@
 /**
- * Math Utilities
- *
- * Helper functions for common mathematical operations used in pixel art editing.
- *
- * @module utils/math
+ * src/utils/math.ts
+ * -----------------------------------------------------------------------------
+ * ## MATH UTILITIES (Noob Guide)
+ * 
+ * This is the "Geometry Teacher". It handles the calculations 
+ * for shapes, distances, and angles.
+ * 
+ * 1. CLAMPING: Keeps numbers within bounds (e.g., "Don't go past 100%").
+ * 2. LERP: Short for "Linear Interpolation". It finds the point 
+ *    exactly "between" two other points.
+ * 3. DISTANCE: Real-world geometry (A² + B² = C²) used to check 
+ *    if your mouse is inside a circle or near a line.
+ * 
+ * ## VAR TRACE
+ * - `t`: (Origin: Animation tweening) A value from 0 to 1 representing time.
+ * - `angleDegrees`: (Origin: Symmetry settings) How much to rotate a point.
+ * - `rect`: (Origin: Selection bounds) A box defined by X, Y, Width, Height.
  */
 
 /**

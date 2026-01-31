@@ -115,6 +115,7 @@ export default function CanvasStage(props: {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [stageSize, setStageSize] = useState<{ width: number; height: number } | null>(null);
 
+  // ORIGIN: buffer prop (App.tsx). USAGE: Direct pixel manipulation. PURPOSE: Avoids React re-render lag during strokes.
   const bufRef = useRef<Uint8ClampedArray>(buffer);
 
   const [shapePreview, setShapePreview] = useState<{
@@ -124,6 +125,7 @@ export default function CanvasStage(props: {
     endY: number;
   } | null>(null);
   const [lassoPreview, setLassoPreview] = useState<{ x: number; y: number }[] | null>(null);
+  // ORIGIN: Middle-mouse/Space drag. USAGE: Shifts the SVG/Canvas group. PURPOSE: Panning the camera.
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const [viewRect, setViewRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);

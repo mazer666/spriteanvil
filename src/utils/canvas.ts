@@ -1,11 +1,23 @@
 /**
- * Canvas Utilities
- *
- * Helper functions for working with HTML Canvas and ImageData.
- * These functions bridge the gap between our pixel buffer format
- * and browser canvas APIs.
- *
- * @module utils/canvas
+ * src/utils/canvas.ts
+ * -----------------------------------------------------------------------------
+ * ## CANVAS UTILITIES (Noob Guide)
+ * 
+ * This file is the "Art Studio Assistant". It helps translate the 
+ * raw numbers (bytes) into actual pictures on your screen using the 
+ * browser's "Canvas API".
+ * 
+ * 1. THE BRIDGE: Computers store images as long lists of numbers. 
+ *    These functions help "Draw" those numbers onto a Canvas element.
+ * 2. OFFSCREEN: Sometimes we draw things "in our head" (Offscreen) 
+ *    before showing them to the user to keep things smooth.
+ * 3. GRID & CHECKER: These helpers draw the patterns behind your art 
+ *    so you can see transparency and individual pixels.
+ * 
+ * ## VAR TRACE
+ * - `buffer`: (Origin: App.tsx -> CanvasStage) The raw RGBA byte array.
+ * - `ctx`: (Origin: Canvas element) The "Pen" used to draw on the canvas.
+ * - `scale`: (Origin: settings.zoom) How big to draw each pixel.
  */
 
 import { RGBA } from "../editor/pixels"

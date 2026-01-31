@@ -10,6 +10,11 @@
  * 3. LOCKING (🔒): Lock a layer to make sure you don't accidentally edit it.
  * 4. BLENDING: The "Blend Mode" dropdown lets you choose how the sheet 
  *    should mix with the ones below (like making it look like a shadow).
+ * 
+ * ## VAR TRACE
+ * - `layers`: (Origin: App state) The stack of visual sheets for the active frame.
+ * - `activeLayerId`: (Origin: User selection) Which sheet is currently being painted on.
+ * - `renamingId`: (Origin: Internal state) Tracks which layer's name is being edited.
  */
 import React, { useState } from "react";
 import { BlendMode, LayerData } from "../types";

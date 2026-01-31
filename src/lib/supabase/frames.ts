@@ -1,10 +1,20 @@
 /**
- * Frame Database Operations
- *
- * Functions for managing animation frames within sprites.
- * Each frame can have multiple layers.
- *
- * @module lib/supabase/frames
+ * src/lib/supabase/frames.ts
+ * -----------------------------------------------------------------------------
+ * ## ANIMATION FRAMES (Noob Guide)
+ * 
+ * Think of this as the "Flipbook Binder".
+ * 
+ * 1. FRAMES: Each frame is one page in your animation. 
+ * 2. LAYERS: Each frame can have multiple transparent sheets (layers) 
+ *    on top of it.
+ * 3. PIXELS: We store the actual art as a "Base64" string (a long 
+ *    code that represents the colors) so it can travel over the internet.
+ * 
+ * ## VAR TRACE
+ * - `pixel_data`: (Origin: pixels.ts) The Base64 encoded string of the layer art.
+ * - `frame_index`: (Origin: Timeline) The position of the frame (0, 1, 2...).
+ * - `duration_ms`: (Origin: Frame Settings) How long this frame stays on screen.
  */
 
 import { supabase } from "./client"
@@ -288,7 +298,7 @@ export async function deleteLayer(layerId: string): Promise<boolean> {
  * @returns Base64-encoded string
  */
 export function encodePixelData(buffer: Uint8ClampedArray): string {
-  // Convert buffer to base64
+  // ORIGIN: Memory buffer. USAGE: Converts bytes to Text. PURPOSE: Sending art to the database.
   let binary = ""
   for (let i = 0; i < buffer.length; i++) {
     binary += String.fromCharCode(buffer[i])

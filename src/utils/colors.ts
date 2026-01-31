@@ -1,14 +1,21 @@
 /**
- * Color Utilities
- *
- * This module provides functions for working with colors in different formats.
- * Pixel art editors need to convert between various color representations:
- * - Hex strings (#RRGGBB) - Used in HTML color inputs
- * - RGB objects {r, g, b} - Used for drawing operations
- * - RGBA objects {r, g, b, a} - Full color with transparency
- * - HSL/HSV - Used for color pickers and adjustments
- *
- * @module utils/colors
+ * src/utils/colors.ts
+ * -----------------------------------------------------------------------------
+ * ## COLOR UTILITIES (Noob Guide)
+ * 
+ * This file is the "Color Palette Decoder".
+ * 
+ * 1. FORMATS: Humans like #FF0000 (Hex), but computers often prefer 
+ *    {r:255, g:0, b:0} (RGB). This file converts between them.
+ * 2. HSL: This is "Hue, Saturation, Lightness". It's how artists think 
+ *    about color (e.g., "Make this color more blue and a bit darker").
+ * 3. BLENDING: When you put a semi-transparent color over another, 
+ *    this file calculates the "Math" of what the final color should be.
+ * 
+ * ## VAR TRACE
+ * - `hex`: (Origin: PalettePanel / ColorPicker) The string starting with '#'.
+ * - `rgba`: (Origin: pixels.ts / buffers) A storage-ready color object.
+ * - `l` (Lightness): (Origin: ColorAdjustPanel) Used to check if color is light/dark.
  */
 
 import { RGBA } from "../editor/pixels"

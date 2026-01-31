@@ -1,10 +1,16 @@
 /**
- * Sprite Database Operations
- *
- * Functions for managing sprites within projects.
- * Each sprite contains frames for animation.
- *
- * @module lib/supabase/sprites
+ * src/lib/supabase/sprites.ts
+ * -----------------------------------------------------------------------------
+ * ## SPRITE MANAGEMENT (Noob Guide)
+ * 
+ * Think of a Sprite as a "Drawing Canvas" inside a Project.
+ * 
+ * 1. DIMENSIONS: Unlike Projects, Sprites have fixed Width and Height.
+ * 2. HIERARCHY: Projects -> Sprites -> Frames -> Layers.
+ * 
+ * ## VAR TRACE
+ * - `project_id`: (Origin: App.tsx) Links this canvas to a specific project.
+ * - `width/height`: (Origin: New Sprite Dialog) Defines the pixel grid.
  */
 
 import { supabase } from "./client"

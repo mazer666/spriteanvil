@@ -1,3 +1,20 @@
+/**
+ * src/lib/ai/inpaint.ts
+ * -----------------------------------------------------------------------------
+ * ## AI INPAINTING (Noob Guide)
+ * 
+ * This is the "Magic Repair" tool. 
+ * 
+ * 1. SELECTION: You pick a part of the image you want the AI to change.
+ * 2. PROMPT: You tell the AI what you want (e.g., "Add a fireball").
+ * 3. MASKING: We hide the rest of the image so the AI only touches 
+ *    the part you selected.
+ * 
+ * ## VAR TRACE
+ * - `prompt`: (Origin: AIPanel) The text instruction for the AI.
+ * - `maskImage`: (Origin: selectionMask) Tells the AI "Only look here".
+ * - `denoiseStrength`: (Origin: AI Settings) How much the AI can change the original pixels.
+ */
 import type { CanvasSpec } from "../../types";
 
 export type InpaintPayload = {

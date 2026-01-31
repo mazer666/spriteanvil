@@ -1,10 +1,27 @@
+/**
+ * src/lib/supabase/animation_tags.ts
+ * -----------------------------------------------------------------------------
+ * ## ANIMATION TAGS (Noob Guide)
+ * 
+ * Tags are like "Bookmarks" for your animation.
+ * 
+ * 1. SEGMENTS: You can label a range (e.g., frames 0 to 5 as "Idle").
+ * 2. LOOPING: The app uses these to know which parts to play in a loop.
+ * 
+ * ## VAR TRACE
+ * - `start_frame`: (Origin: Timeline) The first frame of the labeled sequence.
+ * - `end_frame`: (Origin: Timeline) The last frame.
+ * - `color`: (Origin: Tag Editor) The color of the label in the UI.
+ */
 import { supabase } from './client';
 
 export type AnimationTag = {
   id: string;
   sprite_id: string;
   name: string;
+  // ORIGIN: Timeline selection. USAGE: Loop start. PURPOSE: Defines sequence.
   start_frame: number;
+  // ORIGIN: Timeline selection. USAGE: Loop end. PURPOSE: Defines sequence.
   end_frame: number;
   color: string;
   created_at: string;

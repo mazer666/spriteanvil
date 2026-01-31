@@ -89,14 +89,18 @@ type ConfirmDialog = {
 
 export default function App() {
   const LOCAL_PROJECTS_KEY = "spriteanvil:localProjects";
+  // ORIGIN: New Project Dialog. USAGE: Used to initialize buffers and scale UI. PURPOSE: The "Paper Size" of the art.
   const [canvasSpec, setCanvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
+  // ORIGIN: ToolRail 클릭. USAGE: Switches brush math (Pen vs Eraser). PURPOSE: Current active tool.
   const [tool, setTool] = useState<ToolId>("pen");
   const [projectView, setProjectView] = useState<"dashboard" | "editor">("dashboard");
+  // ORIGIN: Supabase / Dashboard. USAGE: Loads all frames and layers. PURPOSE: The current active project.
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectLoading, setProjectLoading] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [showShortcutOverlay, setShowShortcutOverlay] = useState(false);
+  // ORIGIN: CanvasStage Mouse Move. USAGE: Passed to StatusBar. PURPOSE: Shows current pixel coordinates.
   const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
 
   const initialFrameId = useMemo(() => crypto.randomUUID(), []);

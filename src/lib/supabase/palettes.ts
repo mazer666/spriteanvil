@@ -1,10 +1,30 @@
+/**
+ * src/lib/supabase/palettes.ts
+ * -----------------------------------------------------------------------------
+ * ## PALETTE DATABASE (Noob Guide)
+ * 
+ * This file handles your "Paint Sets".
+ * 
+ * 1. CUSTOM PALETTES: You can create and save your own lists of colors.
+ * 2. DEFAULT PALETTES: We also provide built-in palettes (like "Pico-8") 
+ *    that everyone can access.
+ * 3. IMPORT/EXPORT: You can turn these into files (.gpl or .ase) for 
+ *    other art software.
+ * 
+ * ## VAR TRACE
+ * - `colors`: (Origin: PalettePanel) The array of hex strings (e.g., ["#FF0000"]).
+ * - `is_default`: (Origin: Database Flag) If true, it shows for everyone.
+ * - `userId`: (Origin: Auth Session) Used to save private palettes.
+ */
 import { supabase } from './client';
 import { withRetry } from './retry';
 
 export type Palette = {
   id: string;
+  // ORIGIN: Internal state. USAGE: Used to filter private palettes. PURPOSE: Permission check.
   user_id: string | null;
   name: string;
+  // ORIGIN: Internal state. USAGE: The hex strings stored in Supabase. PURPOSE: Color storage.
   colors: string[];
   is_default: boolean;
   created_at: string;

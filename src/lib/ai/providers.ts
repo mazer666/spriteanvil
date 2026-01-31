@@ -1,9 +1,19 @@
 /**
- * AI provider abstraction layer.
- *
- * Add new providers by implementing AIProvider and registering in PROVIDERS.
- * This file intentionally keeps the interface small so alternative backends
- * (e.g. local Ollama servers) can be added with minimal changes.
+ * src/lib/ai/providers.ts
+ * -----------------------------------------------------------------------------
+ * ## AI PROVIDERS (Noob Guide)
+ * 
+ * Think of this as the "AI Translator".
+ * 
+ * 1. PLUGS: Different AI services (OpenAI, Stability, etc.) speak 
+ *    different languages. This file provides "Plugs" (interfaces) 
+ *    that let SpriteAnvil talk to any of them.
+ * 2. CAPABILITIES: It tracks which AI can do "Inpaint" (fix parts 
+ *    of art) and which can do "Variations" (remix art).
+ * 
+ * ## VAR TRACE
+ * - `PROVIDERS`: (Origin: Constant) The list of all supported AI plugins.
+ * - `AIProviderId`: (Origin: Type) The unique name for each AI service.
  */
 
 export type AIProviderId = "openai-dalle3" | "stability-ai" | "hugging-face" | "openrouter";

@@ -52,8 +52,10 @@ export function useKeyboardShortcuts(handlers: ShortcutHandler, enabled: boolean
     if (!enabled) return;
 
     function handleKeyDown(e: KeyboardEvent) {
+      // ORIGIN: Global Window event. USAGE: Prevents shortcuts when dragging. PURPOSE: Avoid conflicts.
       const isPanning = (window as { __spriteanvilIsPanning?: boolean }).__spriteanvilIsPanning;
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      // ORIGIN: OS detection. USAGE: Switches between Ctrl and Cmd. PURPOSE: Cross-platform support.
       const mod = isMac ? e.metaKey : e.ctrlKey;
 
       if (mod && e.key === 'z' && !e.shiftKey && handlers.onUndo) {
@@ -144,6 +146,7 @@ export function useKeyboardShortcuts(handlers: ShortcutHandler, enabled: boolean
       const key = e.key.toLowerCase();
       const shift = e.shiftKey;
 
+      // ORIGIN: UI Design choice. USAGE: Maps single characters to tools. PURPOSE: Workflow speed.
       const toolMap: Record<string, ToolId> = {
         'b': 'pen',
         's': 'smudge',

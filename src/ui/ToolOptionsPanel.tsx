@@ -29,6 +29,7 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
                         tool === "rectangle" || tool === "circle" || tool === "ellipse" || 
                         tool === "rectangleFilled" || tool === "circleFilled" || tool === "ellipseFilled";
   
+  // ORIGIN: ToolRail. USAGE: Switches between Rect/Wand/Lasso UI. PURPOSE: Conditional rendering.
   const isSelectionTool = tool === "selectRect" || tool === "selectEllipse" || tool === "selectLasso" || tool === "selectWand";
 
   return (

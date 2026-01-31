@@ -1,3 +1,21 @@
+/**
+ * src/lib/ai/keys.ts
+ * -----------------------------------------------------------------------------
+ * ## AI SECURITY (Noob Guide)
+ * 
+ * This file is the "Vault". It handles encrypting and decrypting 
+ * your private AI API keys.
+ * 
+ * 1. ENCRYPTION: We don't store your keys in plain text (where 
+ *    hackers could see them). We use "AES-GCM" encryption.
+ * 2. PASSPHRASE: Your browser uses a master password (passphrase) 
+ *    to "Unlock" (decrypt) the keys only when needed.
+ * 
+ * ## VAR TRACE
+ * - `encrypted`: (Origin: Supabase) The scrambled version of your key.
+ * - `passphrase`: (Origin: User Input) The secret word used to unlock the key.
+ * - `keyMaterial`: (Origin: Crypto API) The temporary "Key" generated from your passphrase.
+ */
 import { supabase } from "../supabase/client";
 import { AIProviderId } from "./providers";
 
