@@ -280,18 +280,21 @@ export default function RightPanel({
                 "accordion-section" +
                 (draggingId === sectionId ? " accordion-section--dragging" : "")
               }
-              draggable
-              onDragStart={handleDragStart(sectionId)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop(sectionId)}
-              onDragEnd={handleDragEnd}
             >
-              <div className="accordion-section__header">
+              <div 
+                className="accordion-section__header"
+                draggable
+                onDragStart={handleDragStart(sectionId)}
+                onDragEnd={handleDragEnd}
+              >
                 <button
                   className="accordion-section__toggle"
                   onClick={() => toggleSection(sectionId)}
                   aria-expanded={isOpen}
                   type="button"
+                  onPointerDown={(e) => e.stopPropagation()} 
                 >
                   <span>{section.title}</span>
                   <span className="accordion-section__icon">{isOpen ? "−" : "+"}</span>

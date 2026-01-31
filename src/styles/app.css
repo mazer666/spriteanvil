@@ -1793,12 +1793,34 @@ body {
 
 
 /* Fix Scrollbars on Mobile/Panel Lists */
-.toolrail, .tool-grid, .rightpanel, .mobile-popover__content {
+.toolrail, .tool-grid, .mobile-popover__content {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
 }
-.toolrail::-webkit-scrollbar, .tool-grid::-webkit-scrollbar, .rightpanel::-webkit-scrollbar, .mobile-popover__content::-webkit-scrollbar {
+.toolrail::-webkit-scrollbar, .tool-grid::-webkit-scrollbar, .mobile-popover__content::-webkit-scrollbar {
   display: none;
+}
+
+.rightpanel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.rightpanel::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+}
+.rightpanel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.rightpanel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Ensure Settings Panel is above everything */
