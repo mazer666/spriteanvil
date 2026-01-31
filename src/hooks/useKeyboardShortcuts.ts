@@ -79,10 +79,10 @@ export function useKeyboardShortcuts(handlers: ShortcutHandler, enabled: boolean
       } else if (mod && e.key === 'e' && handlers.onExport) {
         e.preventDefault();
         handlers.onExport();
-      } else if (mod && e.key === '=' && handlers.onZoomIn) {
+      } else if (mod && (e.key === '=' || e.key === '+') && handlers.onZoomIn) {
         e.preventDefault();
         handlers.onZoomIn();
-      } else if (mod && e.key === '-' && handlers.onZoomOut) {
+      } else if (mod && (e.key === '-' || e.key === '_') && handlers.onZoomOut) {
         e.preventDefault();
         handlers.onZoomOut();
       } else if (mod && e.key === '0' && handlers.onZoomReset) {
