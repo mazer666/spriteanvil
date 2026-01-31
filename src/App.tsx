@@ -36,6 +36,14 @@ import { copySelection, cutSelection, pasteClipboard, ClipboardData } from "./ed
 import { compositeLayers, mergeDown, flattenImage } from "./editor/layers";
 import { PaletteData, ProjectSnapshot } from "./lib/projects/snapshot";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import {
+  encodePixels,
+  decodePixels,
+  serializeSnapshot,
+  deserializeSnapshot,
+  loadLocalProjects,
+  saveLocalProjects,
+} from "./hooks/useProjectPersistence";
 import { AnimationTag } from "./lib/supabase/animation_tags";
 import {
   flipHorizontal,
@@ -97,7 +105,6 @@ type ConfirmDialog = {
 };
 
 export default function App() {
-  const LOCAL_PROJECTS_KEY = "spriteanvil:localProjects";
   // ORIGIN: New Project Dialog. USAGE: Used to initialize buffers and scale UI. PURPOSE: The "Paper Size" of the art.
   const [canvasSpec, setCanvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
   // ORIGIN: ToolRail 클릭. USAGE: Switches brush math (Pen vs Eraser). PURPOSE: Current active tool.
@@ -178,40 +185,8 @@ export default function App() {
     return next;
   }, []);
 
-  /**
-   * Load projects from localStorage with VALIDATION
-   * 
-   * SECURITY: This function now validates all data from localStorage
-   * to prevent injection attacks, prototype pollution, and data corruption.
-   * 
-   * WHAT CHANGED: Added Zod schema validation (Security Issue #2 fix)
-   * WHY: Untrusted localStorage data could crash app or enable attacks
-   * HOW: Use validateProjects to validate against ProjectArraySchema
-   */
-  function loadLocalProjects(): Project[] {
-    try {
-      const raw = localStorage.getItem(LOCAL_PROJECTS_KEY);
-      if (!raw) return [];
-      
-      // Parse and validate with schema
-      const parsed = JSON.parse(raw);
-      const validated = validateProjects(parsed);
-      
-      if (validated.length === 0 && Array.isArray(parsed) && parsed.length > 0) {
-        // All projects failed validation - notify user
-        console.error('All projects in localStorage failed validation. Data may be corrupted.');
-      }
-      
-      return validated;
-    } catch (error) {
-      console.warn("Failed to parse local projects:", error);
-      return [];
-    }
-  }
-
-  function saveLocalProjects(next: Project[]) {
-    localStorage.setItem(LOCAL_PROJECTS_KEY, JSON.stringify(next));
-  }
+  // Note: loadLocalProjects, saveLocalProjects, encodePixels, decodePixels, 
+  // serializeSnapshot, and deserializeSnapshot are now imported from useProjectPersistence
 
   function buildPixelPatch(before: Uint8ClampedArray, after: Uint8ClampedArray) {
     const changes: number[] = [];
@@ -255,78 +230,6 @@ export default function App() {
       is_visible: true,
       is_locked: false,
       pixels: pixels ?? createEmptyPixels(),
-    };
-  }
-
-  function encodePixels(buffer: Uint8ClampedArray): string {
-    let binary = "";
-    const chunkSize = 0x8000;
-    for (let i = 0; i < buffer.length; i += chunkSize) {
-      binary += String.fromCharCode(...buffer.subarray(i, i + chunkSize));
-    }
-    return btoa(binary);
-  }
-
-  function decodePixels(data: string): Uint8ClampedArray {
-    const binary = atob(data);
-    const bytes = new Uint8ClampedArray(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-  }
-
-  function serializeSnapshot(snapshot: ProjectSnapshot): ProjectSnapshotPayload {
-    return {
-      version: snapshot.version,
-      canvas: snapshot.canvas,
-      current_frame_index: snapshot.currentFrameIndex,
-      active_layer_ids: snapshot.activeLayerIds,
-      palettes: snapshot.palettes,
-      active_palette_id: snapshot.activePaletteId,
-      recent_colors: snapshot.recentColors,
-      settings: snapshot.settings ?? {},
-      frames: snapshot.frames.map((frame) => ({
-        id: frame.id,
-        duration_ms: frame.durationMs,
-        pivot: frame.pivot,
-        layers: frame.layers.map((layer) => ({
-          id: layer.id,
-          name: layer.name,
-          opacity: layer.opacity,
-          blend_mode: layer.blend_mode,
-          is_visible: layer.is_visible,
-          is_locked: layer.is_locked,
-          pixel_data: encodePixels(layer.pixels),
-        })),
-      })),
-    };
-  }
-
-  function deserializeSnapshot(payload: ProjectSnapshotPayload): ProjectSnapshot {
-    return {
-      version: payload.version,
-      canvas: payload.canvas,
-      currentFrameIndex: payload.current_frame_index,
-      activeLayerIds: payload.active_layer_ids,
-      palettes: payload.palettes,
-      activePaletteId: payload.active_palette_id,
-      recentColors: payload.recent_colors,
-      settings: payload.settings as Partial<UiSettings>,
-      frames: payload.frames.map((frame) => ({
-        id: frame.id,
-        durationMs: frame.duration_ms,
-        pivot: frame.pivot,
-        layers: frame.layers.map((layer) => ({
-          id: layer.id,
-          name: layer.name,
-          opacity: layer.opacity,
-          blend_mode: layer.blend_mode as BlendMode,
-          is_visible: layer.is_visible,
-          is_locked: layer.is_locked,
-          pixels: decodePixels(layer.pixel_data),
-        })),
-      })),
     };
   }
 
