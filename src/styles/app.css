@@ -1629,3 +1629,121 @@ body {
   box-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
+
+/* =========================================
+   FIXES ROUND 2: Visual Overhauls & Layouts
+   ========================================= */
+
+/* Fix Right Panel Rows overlapping */
+.ui-row {
+  display: flex;
+  flex-wrap: nowrap; /* Keep them single line if possible */
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.rightpanel .ui-row {
+  flex-wrap: wrap; /* allow wrapping in narrow panels */
+}
+
+/* Fix Labels taking too much space or shrinking too much */
+.ui-row label {
+  flex: 1;
+  white-space: nowrap;
+  min-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Fix Inputs */
+.ui-row input[type="range"] {
+  flex: 2;
+  min-width: 80px;
+}
+
+.ui-row input[type="number"] {
+  width: 50px; /* Reduced from 70px to fit better */
+  flex: 0 0 50px;
+}
+
+/* Fix Minimap Location & Zen Mode */
+.minimap {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  /* Make sure it sits on top of canvas but below panels if they slide over (z-index managed in .dock) */
+  z-index: 100; 
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.dock--zen .minimap {
+  /* In Zen mode, we might want to hide it OR keep it. 
+     User said "fails to hide in Zen mode, which is a distraction". 
+     So let's hide it. */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-20px);
+}
+
+/* Fix Layout Voids (Ensure invisible tracks don't take space/padding) */
+.dock--left-hidden .dock__left,
+.dock--right-hidden .dock__right,
+.dock--timeline-collapsed .dock__bottom {
+  display: none !important;
+  width: 0 !important; 
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+}
+
+/* Fix ToolRail visual glitch */
+.toolrail {
+  /* Ensure it doesn't have weird margins when collapsed */
+  margin: 0;
+}
+
+/* Refine Hamburger/header placement in ToolRail if it exists */
+/* (Assuming it was mentioned as floating/misplaced) */
+
+
+/* =========================================
+   FIXES ROUND 3: Final Polish
+   ========================================= */
+
+/* Better Right Panel Layout for Options */
+.option-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 4px 0;
+}
+
+.option-row span:first-child {
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+.option-row input[type="range"] {
+  width: 100%;
+}
+
+.option-row .mono {
+  align-self: flex-end;
+  margin-top: -24px; /* Pull value up to the same line as label if possible, or just below */
+  font-size: 11px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* Ensure canvas expands fully when panels are hidden */
+.dock--left-hidden .dock__left { display: none; }
+.dock--right-hidden .dock__right { display: none; }
+.dock--timeline-collapsed .dock__bottom { display: none; }
+

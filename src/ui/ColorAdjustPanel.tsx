@@ -26,13 +26,19 @@ export default function ColorAdjustPanel({
   const [brightness, setBrightness] = useState(0);
   const [posterizeLevels, setPosterizeLevels] = useState(4);
 
+  // Use a ref to store the latest callback to avoid effect dependencies triggering loops
+  const onPreviewAdjustRef = React.useRef(onPreviewAdjust);
   React.useEffect(() => {
-    onPreviewAdjust({
+    onPreviewAdjustRef.current = onPreviewAdjust;
+  }, [onPreviewAdjust]);
+
+  React.useEffect(() => {
+    onPreviewAdjustRef.current({
       hueShift: hue,
       saturationDelta: saturation,
       brightnessDelta: brightness,
     });
-  }, [hue, saturation, brightness, onPreviewAdjust]);
+  }, [hue, saturation, brightness]);
 
   React.useEffect(() => {
     return () => onClearPreview();
