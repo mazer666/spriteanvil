@@ -198,6 +198,7 @@ export default function DockLayout({
   onCreateTag,
   onUpdateTag,
   onDeleteTag,
+  onReorderFrames,
   layers,
   activeLayerId,
   onLayerOperations,
@@ -848,7 +849,6 @@ export default function DockLayout({
               onDeleteTag={onDeleteTag}
               onReorderFrames={onReorderFrames}
               dragDropEnabled
-              fps={1000 / (frames[currentFrameIndex]?.durationMs || 100)}
             />
           </div>
         </>
