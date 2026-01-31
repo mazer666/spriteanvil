@@ -107,9 +107,11 @@ export type UiSettings = {
   showGravityGuides: boolean;
   showMotionTrails: boolean;
   brushSize: number;
+  brushOpacity: number; // 0.0 to 1.0
   brushTexture: "none" | "noise" | "dither";
   smudgeStrength: number;
   wandTolerance: number;
+  selectionMode: "replace" | "add" | "subtract" | "intersect";
   pressureMode: "off" | "size" | "opacity";
   pressureEasing: number;
   layout: LayoutSettings;

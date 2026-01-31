@@ -1,6 +1,7 @@
 import React from "react";
 import { ToolId, UiSettings, GradientType, DitheringType } from "../types";
 
+
 type Props = {
   tool: ToolId;
   settings: UiSettings;
@@ -12,6 +13,12 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
     onChangeSettings({ ...settings, [key]: value });
   };
 
+  const isDrawingTool = tool === "pen" || tool === "eraser" || tool === "smudge" || tool === "line" || 
+                        tool === "rectangle" || tool === "circle" || tool === "ellipse" || 
+                        tool === "rectangleFilled" || tool === "circleFilled" || tool === "ellipseFilled";
+  
+  const isSelectionTool = tool === "selectRect" || tool === "selectEllipse" || tool === "selectLasso" || tool === "selectWand";
+
   return (
     <div className="panel">
       <div className="panel__header">
@@ -19,10 +26,10 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
       </div>
 
       <div className="panel__body">
-        {(tool === "pen" || tool === "eraser" || tool === "smudge") && (
+        {isDrawingTool && (
           <div className="option-group">
             <label className="option-row">
-              <span>Brush Size</span>
+              <span>Size</span>
               <input
                 type="range"
                 min={1}
@@ -33,47 +40,64 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
               <span className="mono">{settings.brushSize}px</span>
             </label>
 
-            <label className="option-row">
-              <span>Pressure</span>
-              <select
-                value={settings.pressureMode}
-                onChange={(e) => updateSetting("pressureMode", e.target.value as UiSettings["pressureMode"])}
-              >
-                <option value="off">Off</option>
-                <option value="size">Brush Size</option>
-                <option value="opacity">Opacity</option>
-              </select>
-            </label>
-
-            {settings.pressureMode !== "off" && (
+            {tool !== "eraser" && (
               <label className="option-row">
-                <span>Pressure Smoothing</span>
+                <span>Opacity</span>
                 <input
                   type="range"
-                  min={0.05}
-                  max={0.6}
-                  step={0.05}
-                  value={settings.pressureEasing}
-                  onChange={(e) => updateSetting("pressureEasing", Number(e.target.value))}
+                  min={0}
+                  max={100}
+                  value={Math.round((settings.brushOpacity ?? 1) * 100)}
+                  onChange={(e) => updateSetting("brushOpacity", Number(e.target.value) / 100)}
                 />
-                <span className="mono">{settings.pressureEasing.toFixed(2)}</span>
+                <span className="mono">{Math.round((settings.brushOpacity ?? 1) * 100)}%</span>
               </label>
             )}
 
-            {tool !== "smudge" && (
-              <label className="option-row">
-                <input
-                  type="checkbox"
-                  checked={settings.brushStabilizerEnabled}
-                  onChange={(e) => updateSetting("brushStabilizerEnabled", e.target.checked)}
-                />
-                <span>Brush Stabilizer</span>
-              </label>
+            {(tool === "pen" || tool === "eraser" || tool === "smudge") && (
+              <>
+                 <label className="option-row">
+                  <span>Pressure</span>
+                  <select
+                    value={settings.pressureMode}
+                    onChange={(e) => updateSetting("pressureMode", e.target.value as UiSettings["pressureMode"])}
+                  >
+                    <option value="off">Off</option>
+                    <option value="size">Brush Size</option>
+                    <option value="opacity">Opacity</option>
+                  </select>
+                </label>
+
+                {settings.pressureMode !== "off" && (
+                  <label className="option-row">
+                    <span>Smoothing</span>
+                    <input
+                      type="range"
+                      min={0.05}
+                      max={0.6}
+                      step={0.05}
+                      value={settings.pressureEasing}
+                      onChange={(e) => updateSetting("pressureEasing", Number(e.target.value))}
+                    />
+                    <span className="mono">{settings.pressureEasing.toFixed(2)}</span>
+                  </label>
+                )}
+                 {tool !== "smudge" && (
+                  <label className="option-row">
+                    <input
+                      type="checkbox"
+                      checked={settings.brushStabilizerEnabled}
+                      onChange={(e) => updateSetting("brushStabilizerEnabled", e.target.checked)}
+                    />
+                    <span>Stabilizer</span>
+                  </label>
+                )}
+              </>
             )}
 
             {tool === "pen" && (
               <label className="option-row">
-                <span>Brush Texture</span>
+                <span>Texture</span>
                 <select
                   value={settings.brushTexture}
                   onChange={(e) => updateSetting("brushTexture", e.target.value as UiSettings["brushTexture"])}
@@ -87,7 +111,7 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
 
             {tool === "smudge" && (
               <label className="option-row">
-                <span>Smudge Strength</span>
+                <span>Strength</span>
                 <input
                   type="range"
                   min={10}
@@ -99,6 +123,49 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
               </label>
             )}
           </div>
+        )}
+        
+        {isSelectionTool && (
+           <div className="option-group">
+              <div className="option-label">Selection Mode</div>
+              <div className="ui-row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+                 <button 
+                    className={`uiBtn uiBtn--small ${settings.selectionMode === "replace" ? "uiBtn--active" : "uiBtn--ghost"}`}
+                    onClick={() => updateSetting("selectionMode", "replace")}
+                    title="Replace Selection"
+                 >
+                   Replace
+                 </button>
+                 <button 
+                    className={`uiBtn uiBtn--small ${settings.selectionMode === "add" ? "uiBtn--active" : "uiBtn--ghost"}`}
+                    onClick={() => updateSetting("selectionMode", "add")}
+                    title="Add to Selection"
+                 >
+                   Add
+                 </button>
+                 <button 
+                    className={`uiBtn uiBtn--small ${settings.selectionMode === "subtract" ? "uiBtn--active" : "uiBtn--ghost"}`}
+                    onClick={() => updateSetting("selectionMode", "subtract")}
+                    title="Subtract from Selection"
+                 >
+                   Sub
+                 </button>
+              </div>
+
+              {tool === "selectWand" && (
+                 <label className="option-row">
+                  <span>Tolerance</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={255}
+                    value={settings.wandTolerance}
+                    onChange={(e) => updateSetting("wandTolerance", Number(e.target.value))}
+                  />
+                  <span className="mono">{settings.wandTolerance}</span>
+                </label>
+              )}
+           </div>
         )}
 
         {tool === "fill" && (
@@ -177,25 +244,6 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
                 <option value="floyd">Floyd-Steinberg</option>
               </select>
             </label>
-          </div>
-        )}
-
-        {tool === "selectWand" && (
-          <div className="option-group">
-            <label className="option-row">
-              <span>Tolerance</span>
-              <input
-                type="range"
-                min={0}
-                max={255}
-                value={settings.wandTolerance}
-                onChange={(e) => updateSetting("wandTolerance", Number(e.target.value))}
-              />
-              <span className="mono">{settings.wandTolerance}</span>
-            </label>
-            <div className="option-hint">
-              Select similar colors within tolerance
-            </div>
           </div>
         )}
 
@@ -397,28 +445,26 @@ export default function ToolOptionsPanel({ tool, settings, onChangeSettings }: P
           </label>
 
           {settings.showOnionSkin && (
-            <>
-              <label className="option-row">
-                <span>Previous Frames</span>
-                <input
+            <div className="ui-row">
+               <span className="muted" style={{fontSize: 10}}>Prev:</span>
+               <input
                   type="number"
                   min={0}
-                  max={15}
+                  max={5}
                   value={settings.onionPrev}
                   onChange={(e) => updateSetting("onionPrev", Number(e.target.value))}
+                  style={{width: 40}}
                 />
-              </label>
-              <label className="option-row">
-                <span>Next Frames</span>
-                <input
+               <span className="muted" style={{fontSize: 10}}>Next:</span>
+               <input
                   type="number"
                   min={0}
-                  max={15}
+                  max={5}
                   value={settings.onionNext}
                   onChange={(e) => updateSetting("onionNext", Number(e.target.value))}
+                  style={{width: 40}}
                 />
-              </label>
-            </>
+            </div>
           )}
         </div>
       </div>

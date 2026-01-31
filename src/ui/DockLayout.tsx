@@ -70,6 +70,7 @@ type Props = {
   onCreateTag: (tag: Omit<AnimationTag, "id" | "created_at">) => void;
   onUpdateTag: (id: string, updates: Partial<AnimationTag>) => void;
   onDeleteTag: (id: string) => void;
+  onReorderFrames?: (fromIndex: number, toIndex: number) => void;
 
   layers?: LayerData[];
   activeLayerId?: string | null;
@@ -845,10 +846,8 @@ export default function DockLayout({
               onCreateTag={onCreateTag}
               onUpdateTag={onUpdateTag}
               onDeleteTag={onDeleteTag}
-              dragDropEnabled={true}
-              onReorderFrames={(from, to) => {
-                // Placeholder for reorder
-              }}
+              onReorderFrames={onReorderFrames}
+              dragDropEnabled
               fps={1000 / (frames[currentFrameIndex]?.durationMs || 100)}
             />
           </div>

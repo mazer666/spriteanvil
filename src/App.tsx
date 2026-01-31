@@ -1370,54 +1370,61 @@ export default function App() {
     const currentLayers = frameLayers[currentFrame.id] || [];
     const duplicatedLayers = currentLayers.map((layer) => ({
       ...layer,
+    if (frames.length === 0) return;
+    const current = frames[currentFrameIndex];
+    const nextFrame: Frame = {
+      ...current,
       id: crypto.randomUUID(),
-      name: `${layer.name} copy`,
-      pixels: layer.pixels ? cloneBuffer(layer.pixels) : createEmptyPixels(),
-    }));
-    const composite = compositeLayers(duplicatedLayers, canvasSpec.width, canvasSpec.height);
-    const duplicate: Frame = {
-      id: crypto.randomUUID(),
-      pixels: composite,
-      durationMs: currentFrame.durationMs,
-      pivot: currentFrame.pivot ?? defaultPivot
+      pixels: cloneBuffer(current.pixels),
     };
+    const nextFrames = [...frames];
+    nextFrames.splice(currentFrameIndex + 1, 0, nextFrame);
 
-    setFrames((prev) => {
-      const updated = [...prev];
-      updated.splice(currentFrameIndex + 1, 0, duplicate);
-      return updated;
-    });
-    setFrameLayers((prev) => ({ ...prev, [duplicate.id]: duplicatedLayers }));
-    const activeIndex = currentLayers.findIndex((layer) => layer.id === activeLayerId);
-    const nextActive = duplicatedLayers[Math.max(0, activeIndex)]?.id || duplicatedLayers[0]?.id || "";
-    setFrameActiveLayerIds((prev) => ({
-      ...prev,
-      [duplicate.id]: nextActive,
+    // Also duplicate layers
+    const currentLayers = frameLayers[current.id] || [];
+    const nextLayers = currentLayers.map(l => ({
+      ...l,
+      id: crypto.randomUUID(),
+      pixels: cloneBuffer(l.pixels!)
     }));
 
+    setFrameLayers(prev => ({
+      ...prev,
+      [nextFrame.id]: nextLayers
+    }));
+    setFrameActiveLayerIds(prev => ({
+       ...prev,
+       [nextFrame.id]: nextLayers[0]?.id || activeLayerId || ""
+    }));
+
+    setFrames(nextFrames);
     setCurrentFrameIndex(currentFrameIndex + 1);
+  }
+
+  function handleReorderFrames(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    if (fromIndex < 0 || fromIndex >= frames.length) return;
+    if (toIndex < 0 || toIndex >= frames.length) return;
+
+    setFrames(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+
+    // Update current frame index if necessary to follow the selected frame
+    if (currentFrameIndex === fromIndex) {
+      setCurrentFrameIndex(toIndex);
+    } else if (currentFrameIndex > fromIndex && currentFrameIndex <= toIndex) {
+      setCurrentFrameIndex(currentFrameIndex - 1);
+    } else if (currentFrameIndex < fromIndex && currentFrameIndex >= toIndex) {
+      setCurrentFrameIndex(currentFrameIndex + 1);
+    }
   }
 
   function handleDeleteFrame() {
     if (frames.length <= 1) return;
-    const frameId = currentFrame.id;
-    const frameIndex = currentFrameIndex;
-
-    setConfirmDialog({
-      title: "Delete Frame",
-      message: `Delete frame ${frameIndex + 1}? This cannot be undone.`,
-      confirmLabel: "Delete Frame",
-      onConfirm: async () => {
-        setConfirmBusy(true);
-        try {
-          if (hasSupabaseConfig) {
-            const ok = await deleteFrameRecord(frameId);
-            if (!ok) {
-              throw new Error("Failed to delete frame.");
-            }
-          }
-          setFrames((prev) => prev.filter((_, i) => i !== frameIndex));
-          setFrameLayers((prev) => {
             const { [frameId]: _, ...rest } = prev;
             return rest;
           });
