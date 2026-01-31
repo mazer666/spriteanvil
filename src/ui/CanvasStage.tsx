@@ -746,7 +746,8 @@ export default function CanvasStage(props: {
         snapped.y,
         brushSize,
         strength,
-        selection ?? undefined
+        selection ?? undefined,
+        settings.brushTexture
       );
       if (did) st.changed = true;
       draw();
@@ -846,7 +847,8 @@ export default function CanvasStage(props: {
         y,
         brushSize,
         strength,
-        selection ?? undefined
+        selection ?? undefined,
+        settings.brushTexture
       );
       if (did) st.changed = true;
       st.lastX = x;
