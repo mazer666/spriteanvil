@@ -258,6 +258,10 @@ export default function DockLayout({
   // Force floating mode for desktop
   const isPanelFloating = true; 
 
+  // Panel focus management - clicked panel comes to front
+  const [focusedPanel, setFocusedPanel] = useState<'tools' | 'panel' | 'timeline'>('timeline');
+  const getZIndex = (panel: 'tools' | 'panel' | 'timeline') => focusedPanel === panel ? 350 : 240; 
+
   // --- Effects ---
 
   useEffect(() => {
@@ -818,6 +822,7 @@ export default function DockLayout({
                <span className="dock__floatingToolRailTitle">Tools</span>
                <button 
                  className="dock__panelClose" 
+                 onPointerDown={(e) => e.stopPropagation()}
                  onClick={(e) => { e.stopPropagation(); toggleLeftPanel(); }}
                  title="Close Tools"
                >×</button>
@@ -895,6 +900,7 @@ export default function DockLayout({
                <span className="dock__floatingPanelTitle">Panel</span>
                <button 
                  className="dock__panelClose" 
+                 onPointerDown={(e) => e.stopPropagation()}
                  onClick={(e) => { e.stopPropagation(); toggleRightPanel(); }}
                  title="Close Panel"
                >×</button>
@@ -964,6 +970,7 @@ export default function DockLayout({
                 <span className="dock__floatingPanelTitle" style={{ flex: 1, textAlign: 'center' }}>Timeline</span>
                 <button 
                   className="dock__panelClose" 
+                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => { e.stopPropagation(); toggleTimeline(); }}
                   title="Close Timeline"
                 >×</button>
@@ -994,6 +1001,7 @@ export default function DockLayout({
                 onDeleteTag={onDeleteTag}
                 onReorderFrames={onReorderFrames}
                 dragDropEnabled
+             />
           </div>
         )}
       </div>

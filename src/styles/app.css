@@ -246,7 +246,7 @@ body {
 .dock__floatingToolRail {
   position: absolute;
   z-index: 340;
-  width: 76px;
+  width: 90px;
   max-width: 90vw;
   max-height: calc(100vh - var(--topbarHeight) - var(--statusBarHeight) - 24px);
   background: var(--panel);
