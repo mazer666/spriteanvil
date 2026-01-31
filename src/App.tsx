@@ -2409,8 +2409,9 @@ export default function App() {
           canRedo={canRedo}
           frames={frames}
           currentFrameIndex={currentFrameIndex}
+          selectedFrameIndices={selectedFrameIndices}
           isPlaying={isPlaying}
-          onSelectFrame={handleSelectFrame}
+          onSelectFrame={(i, mod) => handleMultiSelectFrame(i, mod)}
           onInsertFrame={handleInsertFrame}
           onDuplicateFrame={handleDuplicateFrame}
           onDeleteFrame={handleDeleteFrame}
