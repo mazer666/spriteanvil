@@ -17,10 +17,14 @@ Welcome to SpriteAnvil! This guide will help you get started with creating pixel
 
 The desktop interface is divided into four main areas:
 
-- **Left**: Tool Rail (Tools, Shapes, Selection)
-- **Center**: Canvas Stage (Your workspace)
-- **Right**: Properties Panel (Layers, Palette, Transforms, Adjustments)
-- **Bottom**: Timeline (Animation frames)
+- **Left**: Tool Rail (Tools, Shapes, Selection) - *Collapsible & Draggable*
+- **Center**: Canvas Stage (Your workspace) - *Full Window*
+- **Right**: Properties Panel (Layers, Palette, Transforms, Adjustments) - *Draggable & Resizable*
+- **Bottom**: Timeline (Animation frames) - *Draggable*
+
+**Zen Mode**: Press **Tab** to hide all UI panels for distraction-free drawing. A small "Exit Zen Mode" button will remain visible at the bottom.
+
+**Floating Panels**: On desktop, you can drag panels by their headers ("Tools", "Panel", "Timeline") to rearrange your workspace.
 
 ## Mobile Interface
 

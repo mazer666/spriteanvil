@@ -49,9 +49,16 @@ C. **Timeline** (only under columns 1–2)
 
 ---
 
-## 2) Implementation in current code (aligned with project state)
+## 2) Implementation (Phase 9 Complete)
 
-The current project already has a dock system:
+**Implemented Architecture:**
+The project now uses a **Floating Dock** system (`DockLayout.tsx`) on desktop:
+
+- **Desktop**: `isPanelFloating = true`. Panels are absolute positioned over the canvas.
+- **Mobile**: Panels use a fixed layout or popovers.
+- **Canvas**: Expands to fill the entire window.
+
+This matches the reference vision of a "continuous" workspace where UI overlay elements float above the content.
 
 - `src/ui/DockLayout.tsx`
 - CSS classes in `src/styles/app.css`:

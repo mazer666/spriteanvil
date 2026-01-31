@@ -2491,6 +2491,9 @@ export default function App() {
               )}
             </div>
           }
+          statusBar={<StatusBar info={statusInfo} />}
+        />
+      )}
 
       <input
         ref={paletteImportRef}

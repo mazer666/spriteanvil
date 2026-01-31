@@ -1,5 +1,47 @@
 # SpriteAnvil - Status Update
 
+**Date**: 2026-01-31
+**Build Status**: ✅ **SUCCESS**
+**Phase**: Phase 9 (UI Overhaul) Complete
+
+---
+
+## ✅ Major Milestone: UI Overhaul & Floating Layout (Phase 9)
+
+We have successfully transformed the SpriteAnvil UI into a modern, professional-grade interface with a "BG3-like" premium aesthetic.
+
+### 1. Floating Dock Architecture
+- **Desktop**: Panels (Tools, Right Panel, Timeline) are now floating, draggable, and snappable.
+- **Canvas**: Takes up the full window space behind the UI.
+- **Responsiveness**: Mobile view uses a fixed docking system with optimized touch targets.
+
+### 2. Premium Visual Theme
+- **Aesthetic**: Deep dark backgrounds (`#050403`), gold accents (`#c8a45e`), and glassmorphism effects.
+- **Components**: Redesigned buttons, inputs, and panels to match the new design language.
+
+### 3. Top Bar Consolidation
+- **Integration**: "Commands", "Projects", "Export", "Settings" are now top-level buttons.
+- **Color Picker**: Integrated directly into the top bar for quick access.
+- **Branding**: App name and projects visible on the left.
+
+### 4. New Features
+- **Zen Mode**: Press `Tab` to hide all UI. Added a visible "Exit Zen Mode" button.
+- **Zoom Controls**: Floating +/- buttons on the canvas.
+- **Settings Panel**: Dedicated modal for workspace settings (Grid, Background, etc.).
+- **Export Panel**: Refactored for better UX.
+
+### 5. Technical Fixes
+- **Build**: Resolved all JSX syntax errors in `App.tsx`.
+- **Mobile**: Fixed canvas cutting off on mobile devices; hidden ugly scrollbars.
+- **Timeline**: Made draggable via header.
+- **ToolRail**: Added collapsible groups.
+
+---
+
+# Previous Updates
+
+# SpriteAnvil - Status Update
+
 **Date**: 2026-01-27
 **Build Status**: ✅ **SUCCESS** (214.21 KB / 64.57 KB gzipped)
 **TypeScript Errors**: ✅ **0 Errors**

@@ -250,11 +250,12 @@
 
 **Other Settings:**
 
-- Zoom (1x - 32x)
+- Zoom (1x - 64x) with floating controls
 - Brush stabilizer
 - Checker size & colors
+- Grid visibility (moved to Settings Panel)
 
-**Access**: Right Panel → Tool tab
+**Access**: Top Bar → Settings button
 
 ### 💾 History System
 
@@ -430,10 +431,11 @@ src/
 | **Phase 4** | Layers & Color  | 45%    | UI + compositing working               |
 | **Phase 5** | AI Features     | 5%     | Database ready                         |
 | **Phase 6** | Professional UX | 70%    | Shortcuts + command palette done       |
-| **Phase 7** | Export          | 80%    | PNG/GIF/JSON UI available              |
+| **Phase 7** | Export          | 90%    | Export Panel implemented               |
 | **Phase 8** | Collaboration   | 10%    | Infrastructure only                    |
+| **Phase 9** | UI Overhaul     | 100%   | Floating Panels, BG3 Theme, Zen Mode   |
 
-**Overall: ~68% Complete**
+**Overall: ~75% Complete**
 
 ---
 
@@ -452,8 +454,13 @@ src/
 - ⏳ Layer compositing
 - ⏳ JSON/GIF export wiring
 
-### User Experience (70%)
+### User Experience (90%)
 
+- ✅ **Floating Dock UI**: Draggable/resizable panels on desktop
+- ✅ **Zen Mode**: Press Tab to hide all UI (with visible exit button)
+- ✅ **Theme**: Premium "BG3-like" dark/gold aesthetic
+- ✅ **Top Bar**: Consolidated Controls (Project, Commands, Export, Settings, Color)
+- ✅ **Mobile**: Haptic-friendly toolbar and mobile-specific header
 - ✅ Keyboard navigation
 - ✅ Command palette
 - ✅ Contextual help (shortcuts)
