@@ -7,6 +7,20 @@ SpriteAnvil is an in-browser **pixel-art sprite + animation editor** focused on 
 
 ---
 
+## Why SpriteAnvil?
+
+The world doesn't need another generic image editor. It needs a **sanctuary for the craft.**
+
+SpriteAnvil exists to preserve the art of the pixel by providing a tool that is:
+
+- **Transparent**: No black-box algorithms. Every pixel mutation is explainable.
+- **Accessible**: Runs in any modern browser, anywhere, for free.
+- **Hackable**: A beginner-friendly codebase designed to be taken apart and rebuilt.
+
+Our mission is to make pixel-art creation as tactile and rewarding as working at a physical anvil.
+
+---
+
 ## Live demo
 
 - GitHub Pages: `https://mazer666.github.io/spriteanvil/`

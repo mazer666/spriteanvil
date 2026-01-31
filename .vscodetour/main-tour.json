@@ -1,0 +1,31 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "SpriteAnvil: The Golden Path",
+  "steps": [
+    {
+      "file": "src/editor/pixels.ts",
+      "description": "Welcome to the heart of the engine! This file defines how we store and manipulate pixels. Everything from simple lines to complex shapes starts here. Read it to understand our RGBA buffer format.",
+      "line": 1
+    },
+    {
+      "file": "src/editor/history.ts",
+      "description": "The Time Machine. This file manages Undo and Redo. It shows you how we take 'snapshots' of the canvas so users never lose their work.",
+      "line": 1
+    },
+    {
+      "file": "src/ui/CanvasStage.tsx",
+      "description": "The Bridge. This React component connects user mouse events to the pixel logic. It also handles zooming, panning, and rendering the final image onto the screen.",
+      "line": 1
+    },
+    {
+      "file": "src/ui/App.tsx",
+      "description": "The Brain. This top-level component orchestrates the entire application, wiring tools, panels, and global state together.",
+      "line": 1
+    },
+    {
+      "file": "src/editor/tools/brush.ts",
+      "description": "The Artisan. This is a practical example of a tool algorithm. It uses Bresenham's algorithm to draw crisp, pixel-perfect lines. Use this as a template for your own tools!",
+      "line": 1
+    }
+  ]
+}
