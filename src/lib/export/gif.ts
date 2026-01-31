@@ -1,3 +1,29 @@
+/**
+ * src/lib/export/gif.ts
+ * -----------------------------------------------------------------------------
+ * ## GIF EXPORT (Noob Guide)
+ * 
+ * A GIF is like a "Flipbook". We take each frame of your animation and stick
+ * them together into one file that plays on a loop.
+ * 
+ * ## JARGON GLOSSARY
+ * 1. QUANTIZATION: The process of shrinking a photo with millions of colors down
+ *    to only 256 colors (or fewer).
+ * 2. DITHERING: Mixing pixels of two colors to "Trick" the eye into seeing
+ *    a third color.
+ * 3. DELAY: How long (in milliseconds) a frame stays on screen.
+ * 
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph TD
+ *   Start[Start Export] --> Loop[For Each Frame]
+ *   Loop --> Quant[Quantize Palette]
+ *   Quant --> Dither[Apply Dithering]
+ *   Dither --> Add[Add to GIF Stack]
+ *   Add --> Loop
+ *   Loop -- Done --> Final[Render & Download]
+ * ```
+ */
 import { Frame } from "../../types";
 import { reducePaletteInWorker } from "./workerClient";
 

@@ -31,6 +31,18 @@ export type BrushTexture = "none" | PatternId;
 
 type RGBA = { r: number; g: number; b: number; a: number };
 
+/**
+ * WHAT: Draws a single "Stamp" (a circle of pixels) at a specific coordinate.
+ * WHY: This is the basic unit of drawing. When you move the mouse, we draw many of these stamps in a row to make a line.
+ * HOW: It loops through a square box of pixels, checks if they fall inside the circle radius (using A² + B² = C²), and then calls `setPixel`.
+ * USE: Call this if you want to place a single dot or a custom shape at a specific point.
+ * RATIONALE: Using a loop with a radius check is much more flexible than drawing a hard-coded square of pixels.
+ * 
+ * ASCII VISUAL (Radius 1):
+ * [ ][X][ ]
+ * [X][X][X]
+ * [ ][X][ ]
+ */
 export function drawBrushStamp(
   buf: Uint8ClampedArray,
   width: number,
@@ -61,6 +73,15 @@ export function drawBrushStamp(
   return changedAny;
 }
 
+/**
+ * WHAT: Connects two points with a continuous stroke of "Stamps".
+ * WHY: When you move the mouse fast, the browser only sends points occasionally. We "fill the gaps" to make a smooth line.
+ * HOW: It uses the Bresenham line algorithm to find every coordinate between Start and End, and draws a `brushStamp` at each one.
+ * USE: This is the main function called by the engine during a "Mouse Drag" event.
+ * RATIONALE: Reusing the Bresenham math ensures our lines are perfectly straight and consistent with the basic `drawLine`.
+ * 
+ * 🛠️ NOOB CHALLENGE: Try changing `drawBrushStamp` to `setPixel` here. What happens to the "thickness" of your brush?
+ */
 export function drawBrushLine(
   buf: Uint8ClampedArray,
   width: number,
@@ -102,6 +123,14 @@ export function drawBrushLine(
   return changedAny;
 }
 
+/**
+ * WHAT: Draws a line while automatically mirroring or rotating it.
+ * WHY: Used for "Symmetry Mode" (e.g., drawing one side of a face while the app draws the other).
+ * HOW: It calculates "Mirrored" versions of your mouse coordinates and draws multiple `drawBrushLine` calls at once.
+ * USE: Call this instead of `drawBrushLine` if symmetry is enabled in the UI settings.
+ * 
+ * ⚠️ WATCH OUT: Symmetry can draw many lines at once, which uses more CPU. Keep the `brushSize` small for best performance!
+ */
 export function drawBrushLineWithSymmetry(
   buf: Uint8ClampedArray,
   width: number,

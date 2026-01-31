@@ -41,10 +41,20 @@ export default function ToolRail({ tool, onChangeTool }: Props) {
     return defaults;
   });
 
+/**
+ * WHAT: Toggles the "Open/Closed" state of a tool group folder.
+ * 
+ * 🛠️ NOOB CHALLENGE: Can you change this so only one group can be open at a time? 
+ * (Hint: Set all others to false when a new one is opened.)
+ */
   function toggleGroup(title: string) {
     setOpenGroups(prev => ({ ...prev, [title]: !prev[title] }));
   }
 
+/**
+ * WHAT: A helper that creates a single Tool Button (e.g., the Pen icon).
+ * WHY: To avoid repeating the same complex HTML/CSS classes for every tool.
+ */
   function btn(id: ToolId, label: string, title: string) {
     const active = tool === id;
     return (

@@ -753,6 +753,12 @@ export default function App() {
     }
   }, [activeTag, currentFrameIndex, loopTagOnly]);
 
+/**
+ * WHAT: Goes back in time by one step.
+ * WHY: Because everyone makes mistakes! 
+ * HOW: It pops the "Last State" off the `HistoryStack` and swaps it with the "Current State".
+ * USE: CMD+Z or the "Undo" button in the Topbar.
+ */
   function handleUndo() {
     const next = historyRef.current.undo(buffer, frameLayers);
     if (!next) return;
@@ -767,6 +773,10 @@ export default function App() {
     syncHistoryFlags();
   }
 
+/**
+ * WHAT: Goes forward in time by one step (if you undo-ed).
+ * WHY: If you changed your mind about an undo!
+ */
   function handleRedo() {
     const next = historyRef.current.redo(buffer, frameLayers);
     if (!next) return;
@@ -1388,6 +1398,9 @@ export default function App() {
     }
   }
 
+/**
+ * WHAT: Inserts a brand new, empty Frame after the current one.
+ */
   function handleInsertFrame() {
     const newLayer = createLayer("Layer 1");
     const composite = compositeLayers([newLayer], canvasSpec.width, canvasSpec.height);
@@ -1409,6 +1422,11 @@ export default function App() {
     setCurrentFrameIndex(currentFrameIndex + 1);
   }
 
+/**
+ * WHAT: Duplicates the CURRENT Frame (pixels, layers, and all).
+ * WHY: When you want to make a small change to the previous drawing for animation.
+ * HOW: It "Clones" every buffer so they don't share memory.
+ */
   function handleDuplicateFrame() {
     if (frames.length === 0) return;
     const current = frames[currentFrameIndex];
@@ -1593,6 +1611,9 @@ export default function App() {
     });
   }
 
+/**
+ * WHAT: Switches the active "Page" of your animation.
+ */
   function handleSelectFrame(index: number) {
     if (isPlaying) setIsPlaying(false);
     setCurrentFrameIndex(index);
@@ -1604,6 +1625,10 @@ export default function App() {
     );
   }
 
+/**
+ * WHAT: Starts or Stops the animation playback.
+ * USE: Spacebar or the Play button.
+ */
   function handleTogglePlayback() {
     setIsPlaying(!isPlaying);
   }
@@ -1718,6 +1743,10 @@ export default function App() {
     updateCurrentFrameComposite(currentFrame.id, updated);
   }
 
+/**
+ * WHAT: Merges the selected layer with the one directly below it.
+ * WHY: To keep your layer list clean and manageable once a part of the art is finished.
+ */
   function handleMergeDown(id: string) {
     const index = layers.findIndex((l) => l.id === id);
     const updated = mergeDown(layers, index, canvasSpec.width, canvasSpec.height);
@@ -1726,6 +1755,11 @@ export default function App() {
     updateCurrentFrameComposite(currentFrame.id, updated);
   }
 
+/**
+ * WHAT: Squashes ALL layers into one single sheet of pixels.
+ * WHY: Useful when you're finished drawing and want to simplify the file.
+ * CAUTION: Once flattened, you can't easily edit individual layers again!
+ */
   function handleFlattenLayers() {
     if (!layers.length) return;
     const flattenedPixels = flattenImage(layers, canvasSpec.width, canvasSpec.height);
@@ -1776,6 +1810,10 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
+/**
+ * WHAT: Scans your image and builds a Palette from the colors it finds.
+ * WHY: So you can save the colors you used for later!
+ */
   function handleExtractPaletteFromImage() {
     const colors = extractPaletteFromPixels(
       compositeBuffer,
@@ -1831,6 +1869,10 @@ export default function App() {
     );
   }
 
+/**
+ * WHAT: Replaces EVERY pixel of "Color A" with "Color B" across the WHOLE project.
+ * WHY: If you decide a character's "Red Hat" should actually be "Blue", this saves you from repainting every frame!
+ */
   function handleSwapColors(fromColor: string, toColor: string) {
     if (isActiveLayerLocked) return;
     const from = hexToRgb(fromColor);
@@ -2666,7 +2708,7 @@ export default function App() {
       {showSettingsPanel && (
         <SettingsPanel
           settings={settings}
-          onChangeSettings={(next) => {
+          onChangeSettings={(next: UiSettings) => {
             setSettings(next);
             // Side effects for grid/onionskin if needed are handled by setSettings state
           }}

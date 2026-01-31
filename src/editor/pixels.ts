@@ -15,12 +15,24 @@
  * 4. CLAMPED: If you try to save 300, it "clamps" it to 255. 
  *    If you try -50, it clamps to 0. It stays within the 0-255 range.
  * 
+ * ## TECHNICAL SPECS
+ * - Format: Uint8ClampedArray [R,G,B,A, R,G,B,A, ...]
+ * - Matches ImageData's internal format to avoid endianness issues.
+ * - Optimized for direct browser canvas manipulation.
+ * 
  * ## VAR TRACE
  * ...
  */
 
 export type RGBA = { r: number; g: number; b: number; a: number };
 
+/**
+ * WHAT: Creates a new, blank pixel buffer (a chunk of memory).
+ * WHY: We need a fresh "canvas" whenever we start a new project or create a new layer.
+ * HOW: It calculates W * H * 4 (Bytes) and loops through every 4-byte chunk to set the initial color.
+ * USE: Call this when initializing the app or adding a layer.
+ * RATIONALE: We use Uint8ClampedArray because it's the fastest way for the browser to handle image data.
+ */
 export function createBuffer(width: number, height: number, fill: RGBA): Uint8ClampedArray {
   // ORIGIN: CanvasSpec. USAGE: Sets array length (W * H * 4). PURPOSE: Allocates memory for the image.
   const buf = new Uint8ClampedArray(width * height * 4);
@@ -34,10 +46,26 @@ export function createBuffer(width: number, height: number, fill: RGBA): Uint8Cl
   return buf;
 }
 
+/**
+ * WHAT: Makes an exact copy of an existing pixel buffer.
+ * WHY: When we "Undo," we need to keep the old version of the image before we change it.
+ * HOW: It simply creates a new array and copies every number from the old one into it.
+ * USE: Call this before starting a new drawing stroke to save the current state.
+ * RATIONALE: Direct copying is memory-intensive but necessary for instant Undo/Redo.
+ */
 export function cloneBuffer(buf: Uint8ClampedArray): Uint8ClampedArray {
   return new Uint8ClampedArray(buf);
 }
 
+/**
+ * WHAT: Converts a CSS Hex string (#FF0000) into 3 numbers (255, 0, 0).
+ * WHY: Humans like Hex, but our pixel buffer only understands single numbers (Bytes).
+ * HOW: It slices the string and uses "parseInt" with "base 16" to convert letters to numbers.
+ * USE: Use this when the user picks a color from the UI Palette.
+ * RATIONALE: Regex validation ensures we don't crash if the user somehow provides a broken color string.
+ * 
+ * 🛠️ NOOB CHALLENGE: Try extending this to support 3-digit hex codes (like #F00).
+ */
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
   // Accepts "#RRGGBB" only (we keep it simple and predictable).
   const h = hex.trim();
@@ -48,6 +76,14 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } {
   return { r, g, b };
 }
 
+/**
+ * WHAT: Grabs the RGBA color of specified coordinates (X, Y).
+ * WHY: Needed for things like the "Eye Dropper" tool or checking a pixel's color before filling.
+ * HOW: It uses the index formula (Y * Width + X) * 4 to find the exact 4 numbers in the big list.
+ * USE: Call this whenever you need to know "What color is here?".
+ * 
+ * ⚠️ WATCH OUT: If X or Y are outside the canvas, this returns `null`. Always check for null!
+ */
 export function getPixel(
   buf: Uint8ClampedArray,
   width: number,
@@ -66,6 +102,15 @@ export function getPixel(
   };
 }
 
+/**
+ * WHAT: Changes the color of a single pixel at (X, Y).
+ * WHY: This is the fundamental building block of EVERY drawing tool.
+ * HOW: It finds the index and overwrites the 4 numbers (Red, Green, Blue, Alpha).
+ * USE: Use this in brushes, fills, and shape tools.
+ * RATIONALE: Returns a `boolean`. This tells the history system "Hey, something actually changed!" so we don't save useless Undo steps.
+ * 
+ * @returns true if at least one pixel changed.
+ */
 export function setPixel(
   buf: Uint8ClampedArray,
   width: number,
@@ -91,19 +136,16 @@ export function setPixel(
 }
 
 /**
- * Draw a line using Bresenham (pixel-perfect, no blur).
+ * WHAT: Draws a straight line between two points.
+ * WHY: Necessary for drawing lines with a Pen or creating the borders of shapes.
+ * HOW: Uses the Bresenham algorithm (integer math) to decide which pixels to light up.
+ * USE: Call this in the Pen/Brush tool as the mouse moves.
+ * RATIONALE: We avoid floating-point math (decimals) because it's slow and makes blurry lines.
  * 
- * --- NOOB GUIDE: WHY BRESENHAM? ---
- * In pixel art, we don't want "blurry" lines. If you use standard math,
- * you get half-pixels which looks bad. Bresenham is a classic "integer only"
- * algorithm that decides exactly which pixel to color to make the straightest
- * line possible with zero blur.
- * 
- * It's like walking on a grid: "Do I go right, or right AND up?"
- * We keep track of an "error" (how far we are from the 'real' line) 
- * to decide when to jump.
- * 
- * Returns true if at least one pixel changed.
+ * ASCII VISUAL:
+ * [ ][ ][X]  <-- The 'error' value tells us
+ * [ ][X][ ]      when to move up a row.
+ * [X][ ][ ]
  */
 export function drawLine(
   buf: Uint8ClampedArray,
@@ -145,6 +187,15 @@ export function drawLine(
   return changedAny;
 }
 
+/**
+ * WHAT: Changes the size of the whole image (Nearest Neighbor).
+ * WHY: When you resize your project, we need to map the old pixels to the new space.
+ * HOW: "Nearest Neighbor" logic. If the new image is 2x bigger, we just repeat every pixel twice.
+ * USE: Call this in the Project Settings when changing dimensions.
+ * RATIONALE: We use Nearest Neighbor instead of Bilinear because it keeps pixel art "crisp" and "crunchy" instead of blurry.
+ * 
+ * 🛠️ NOOB CHALLENGE: Look at `src/utils/math.ts`. Could you rewrite this to use a matrix transform?
+ */
 export function resizeBuffer(
   src: Uint8ClampedArray,
   srcW: number,

@@ -36,6 +36,12 @@ export default function AIPanel({
 
   const providerOptions = useMemo(() => PROVIDERS, []);
 
+/**
+ * WHAT: Decrypts your saved API keys using a local passphrase.
+ * WHY: We never want to store your private keys (OpenAI, Stability) in plain text.
+ * HOW: It loads the "Encrypted" blob from Supabase and runs the decryption algorithm.
+ * USE: The "Unlock API Keys" button.
+ */
   async function handleUnlockKeys() {
     if (!userId || !passphrase) {
       setStatus("Enter user ID and passphrase.");
@@ -57,6 +63,14 @@ export default function AIPanel({
 
   const resolvedPrompt = customPrompt.trim() ? customPrompt : selectedPrompt;
 
+/**
+ * WHAT: Sends a "Hole" in your image to the AI to be filled.
+ * WHY: For removing mistakes or generating new parts of a character based on a text description.
+ * HOW: It converts your "Selection" into a mask, sends the image + mask to the AI, and waits for a response.
+ * 
+ * 🛠️ NOOB CHALLENGE: Can you find the `PIXEL_ART_PROMPTS` file? 
+ * How would you add a new "Steampunk" prompt template?
+ */
   async function handleInpaint() {
     if (!onInpaint) return;
     setStatus("Preparing inpainting request...");

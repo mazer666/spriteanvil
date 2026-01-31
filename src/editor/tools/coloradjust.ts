@@ -227,6 +227,15 @@ export function replaceColor(
   return result;
 }
 
+/**
+ * WHAT: Adjusts the brightness, contrast, and midtones (Gamma) of an image.
+ * WHY: To make shadows darker, highlights brighter, or fix a "Washed out" look.
+ * HOW: It creates a "LUT" (Look-Up Table). It calculates the result for every possible input (0-255) first, then just "looks up" the answer for every pixel.
+ * USE: Call this for professional color grading.
+ * RATIONALE: Using a LUT is thousands of times faster than running the full Math.pow(gamma) calculation for every single pixel.
+ * 
+ * 🛠️ NOOB CHALLENGE: Can you explain why we use `1 / gamma` instead of just `gamma`?
+ */
 export function applyLevels(
   buffer: Uint8ClampedArray,
   width: number,

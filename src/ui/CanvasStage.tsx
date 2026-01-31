@@ -796,6 +796,12 @@ export default function CanvasStage(props: {
     }
   }
 
+/**
+ * WHAT: Handles the mouse "Drag" or "Draw" action.
+ * WHY: This is where 99% of the drawing happens. It continuously updates the pixels between the last point and the current point.
+ * HOW: It calls the tools (like `drawBrushLineWithSymmetry`) and then calls `draw()` to refresh the screen.
+ * USE: Internal helper called by `handlePointerMove`.
+ */
   function moveStroke(e: React.PointerEvent) {
     const st = strokeRef.current;
     if (!st.active) return;
@@ -963,6 +969,12 @@ export default function CanvasStage(props: {
     return best ? { x: best.x, y: best.y } : { x, y };
   }
 
+/**
+ * WHAT: Fires when you release the mouse button.
+ * WHY: To finish the drawing, clear any "Previews" (like the rectangle skeleton), and commit the changes to the UNDO stack.
+ * HOW: It checks what changed, calls `onStrokeEnd` to save the state, and resets the stroke trackers.
+ * USE: Internal helper called by `handlePointerUp`.
+ */
   function endStroke(e?: React.PointerEvent) {
     const st = strokeRef.current;
     if (!st.active) return;
@@ -970,11 +982,6 @@ export default function CanvasStage(props: {
     st.active = false;
     if (e?.pointerType === "pen" && activePenPointerIdRef.current === e.pointerId) {
       activePenPointerIdRef.current = null;
-    }
-
-    if (st.isPanning) {
-      st.isPanning = false;
-      return;
     }
 
     if (st.isPanning) {

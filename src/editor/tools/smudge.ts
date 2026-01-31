@@ -25,6 +25,11 @@ import { getPatternMask, PatternId } from "./patterns";
 
 type RGBA = { r: number; g: number; b: number; a: number };
 
+/**
+ * WHAT: Mathematically mixes two colors based on a "Strength" percentage.
+ * WHY: This is the secret sauce of the smudge tool. It makes the "Finger" pick up paint and smear it.
+ * HOW: Color = (Dest * (1 - strength)) + (Src * strength).
+ */
 function blendColor(src: RGBA, dest: RGBA, strength: number): RGBA {
   const inv = 1 - strength;
   return {
@@ -35,6 +40,12 @@ function blendColor(src: RGBA, dest: RGBA, strength: number): RGBA {
   };
 }
 
+/**
+ * WHAT: Performs a single "Rub" of the smudge tool at a specific coordinate.
+ * WHY: To move color from one pixel to its neighbor.
+ * HOW: It grabs the color from the "Old" position (Where your finger was) and mixes it into the "New" position (Where your finger is now).
+ * USE: Call this as the user moves the mouse.
+ */
 function smudgeStamp(
   buf: Uint8ClampedArray,
   width: number,
@@ -74,6 +85,13 @@ function smudgeStamp(
   return changed;
 }
 
+/**
+ * WHAT: Smoothes out the smudge "Flick" by connecting gaps between points.
+ * WHY: Just like the brush tool, if you move the mouse fast, we need to fill in the path.
+ * HOW: It uses the Bresenham line algorithm to find every step and calls `smudgeStamp` for each one.
+ * 
+ * 🛠️ NOOB CHALLENGE: Can you change `blendColor` so it only smudges color if the source alpha (Transparency) is greater than 0?
+ */
 export function smudgeLine(
   buf: Uint8ClampedArray,
   width: number,

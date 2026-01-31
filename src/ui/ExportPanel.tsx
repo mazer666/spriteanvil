@@ -48,6 +48,19 @@ export default function ExportPanel({ frames, canvasSpec, animationTags, onClose
     URL.revokeObjectURL(url);
   }
 
+/**
+ * WHAT: The "Master Switchboard" for converting your art into files.
+ * WHY: This is the most important step for game devs! 
+ * HOW: It orchestrates several specialized libraries:
+ *      1. `exportToGIF` for animations.
+ *      2. `generateSpritesheetAsync` for PNG strips/grids.
+ *      3. JSON generators for Unity/Phaser/Godot.
+ * 
+ * USE: The "Export" button in the modal.
+ * 
+ * 🛠️ NOOB CHALLENGE: Look at the `targetEngine` switch. 
+ * How would you add support for a new engine like "Cocos2d"?
+ */
   async function handleExport() {
     setExporting(true);
     setErrorMessage(null);

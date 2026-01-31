@@ -34,12 +34,29 @@ const bayer8x8 = [
   [63, 31, 55, 23, 61, 29, 53, 21],
 ];
 
+/**
+ * WHAT: A simple "Hashing" function that turns coordinates into a random number (0.0 to 1.0).
+ * WHY: Computers are "Deterministic" (they don't do random things naturally). We use a formula to make it look random.
+ * HOW: It takes X, Y, and a seed, does some bitwise math (XOR, Bit-Shift), and returns a decimal.
+ * USE: Internal helper for the Noise pattern.
+ */
 function noiseHash(x: number, y: number, seed = 0) {
   const n = x * 374761393 + y * 668265263 + seed * 1446647;
   const hashed = (n ^ (n >> 13)) * 1274126177;
   return ((hashed ^ (hashed >> 16)) >>> 0) / 0xffffffff;
 }
 
+/**
+ * WHAT: Decides if a pixel at (X, Y) should be the "Primary" or "Secondary" color.
+ * WHY: This is the logic behind every repeating pattern in the app.
+ * HOW: It uses the Modulo operator (%) to create repeating 8x8 grids.
+ * USE: Pattern fills and dithering logic.
+ * 
+ * ASCII VISUAL (Checker):
+ * [P][S][P][S]
+ * [S][P][S][P]
+ * [P][S][P][S]
+ */
 export function getPatternMask(pattern: PatternId, x: number, y: number, seed = 0): boolean {
   const px = ((x % 8) + 8) % 8;
   const py = ((y % 8) + 8) % 8;
@@ -55,6 +72,11 @@ export function getPatternMask(pattern: PatternId, x: number, y: number, seed = 
   }
 }
 
+/**
+ * WHAT: Returns the final RGBA color for a pixel based on the current pattern.
+ * 
+ * 🛠️ NOOB CHALLENGE: Can you add a "Stripe" pattern that returns `px % 2 === 0`?
+ */
 export function getPatternColor(patternFill: PatternFill, x: number, y: number): RGBA {
   const { pattern, primary, secondary, seed = 0 } = patternFill;
   return getPatternMask(pattern, x, y, seed) ? primary : secondary;

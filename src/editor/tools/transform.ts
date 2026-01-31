@@ -31,6 +31,12 @@ import { cloneBuffer } from "../pixels";
 import { getSelectionBounds } from "../selection";
 import { FloatingSelection } from "../../types";
 
+/**
+ * WHAT: Flips the image like a mirror (Left becomes Right).
+ * WHY: Useful for making a character face the opposite direction.
+ * HOW: It loops through the pixels and swaps the X-coordinates: `newX = width - 1 - oldX`.
+ * USE: Call this when the user clicks the "Mirror Horizontal" button.
+ */
 export function flipHorizontal(
   buffer: Uint8ClampedArray,
   width: number,
@@ -52,6 +58,11 @@ export function flipHorizontal(
   return result;
 }
 
+/**
+ * WHAT: Flips the image upside down (Top becomes Bottom).
+ * WHY: Useful for reflections or symmetry.
+ * HOW: It loops through the pixels and swaps the Y-coordinates: `newY = height - 1 - oldY`.
+ */
 export function flipVertical(
   buffer: Uint8ClampedArray,
   width: number,
@@ -73,6 +84,13 @@ export function flipVertical(
   return result;
 }
 
+/**
+ * WHAT: Rotates the image 90 degrees Clockwise.
+ * WHY: To re-orient a sprite.
+ * HOW: It swaps the Width and Height, then maps `newX = height - 1 - oldY` and `newY = oldX`.
+ * USE: Call this when the user clicks "Rotate 90 CW".
+ * RATIONALE: This function returns a NEW width and height because 90-degree rotations change the shape of the canvas!
+ */
 export function rotate90CW(
   buffer: Uint8ClampedArray,
   width: number,
@@ -98,6 +116,10 @@ export function rotate90CW(
   return { buffer: result, width: newWidth, height: newHeight };
 }
 
+/**
+ * WHAT: Rotates the image 90 degrees Counter-Clockwise.
+ * HOW: Maps `newX = oldY` and `newY = width - 1 - oldX`.
+ */
 export function rotate90CCW(
   buffer: Uint8ClampedArray,
   width: number,
@@ -123,6 +145,10 @@ export function rotate90CCW(
   return { buffer: result, width: newWidth, height: newHeight };
 }
 
+/**
+ * WHAT: Rotates the image 180 degrees (Upside down and Backward).
+ * WHY: Same as flipping Horizontal + Vertical.
+ */
 export function rotate180(
   buffer: Uint8ClampedArray,
   width: number,
@@ -171,6 +197,15 @@ export function scaleNearest(
   return { buffer: result, width: newWidth, height: newHeight };
 }
 
+/**
+ * WHAT: Slides the pixels by (dx, dy).
+ * WHY: Useful for "Panning" a layer or creating seamless textures.
+ * HOW: It calculates the source pixel by subtracting the offset: `srcX = x - dx`.
+ * USE: Call this when the user drags a layer with the Move Tool.
+ * 
+ * 🛠️ NOOB CHALLENGE: Can you modify this to "Wrap" around the edges? 
+ * (Hint: use `% width` on the `srcX` and `srcY`).
+ */
 export function translatePixels(
   buffer: Uint8ClampedArray,
   width: number,
@@ -264,6 +299,15 @@ export function liftSelection(
   };
 }
 
+/**
+ * WHAT: The "Master function" that applies any combination of Move, Rotate, and Scale.
+ * WHY: To allow users to free-transform a selection (like in Photoshop).
+ * HOW: It takes an "Affine Matrix", INVERTS it, and pulls pixels from the source to the destination.
+ * USE: Call this during a "Free Transform" session.
+ * RATIONALE: We use the "Inverse Matrix" trick. Instead of pushing source pixels (which leaves gaps), we loop through every destination pixel and ask "Where did you come from in the source?". This guarantees no gaps!
+ * 
+ * 🛠️ NOOB CHALLENGE: Look at `invA, invB, invC, invD`. This is the math for inverting a 2x2 matrix. Can you find the formula online and verify it?
+ */
 export function applyTransform(
   floating: FloatingSelection,
   matrix: TransformMatrix,

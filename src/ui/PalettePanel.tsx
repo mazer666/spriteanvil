@@ -72,6 +72,11 @@ export default function PalettePanel({
   const defaultPalettes = palettes.filter((palette) => palette.is_default);
   const savedPalettes = palettes.filter((palette) => !palette.is_default);
 
+/**
+ * WHAT: Creates a brand new Palette from scratch.
+ * WHY: Artists need to organize colors for specific projects (e.g., "Sky Palette", "Lava Palette").
+ * USE: The "+ New" button.
+ */
   function createPalette() {
     if (newPaletteName.trim()) {
       onCreatePalette(newPaletteName.trim(), [primaryColor]);
@@ -80,6 +85,15 @@ export default function PalettePanel({
     }
   }
 
+/**
+ * WHAT: Picks a color to start painting.
+ * WHY: This is the core interaction for drawing.
+ * HOW: It checks if you are in "Swap Mode" first. 
+ *      If not, it just sets the Primary Color.
+ * 
+ * 🛠️ NOOB CHALLENGE: How would you store the "Last 10 Colors" used by the user? 
+ * (Hint: Look at the `recentColors` prop.)
+ */
   function handleColorClick(color: string) {
     if (swapFromColor) {
       onSwapColors(swapFromColor, color);

@@ -11,6 +11,19 @@ type Props = {
   onReloadSnapshot: () => void;
 };
 
+/**
+ * src/ui/SettingsPanel.tsx
+ * -----------------------------------------------------------------------------
+ * ## SETTINGS PANEL (Noob Guide)
+ * 
+ * This is the "Engine Room" where you tweak how the app looks and feels.
+ * 
+ * ## JARGON GLOSSARY
+ * 1. CHECKERBOARD: The classic gray-and-white pattern that represents "Transparency".
+ * 2. GRID SIZE: How many pixels are in one "Block".
+ * 3. GREENSCREEN: Setting the background to a bright color to make it easier to
+ *    remove later (common in video editing).
+ */
 export default function SettingsPanel({
   settings,
   onChangeSettings,

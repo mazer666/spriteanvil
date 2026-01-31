@@ -68,11 +68,18 @@ export default function LayerPanel({
 
   const activeLayer = layers.find(l => l.id === activeLayerId);
 
+/**
+ * WHAT: Starts the "Rename" mode for a layer.
+ * WHY: So users can organize their art (e.g., "Outline", "Color", "Shadows").
+ */
   function startRename(layer: LayerData) {
     setRenamingId(layer.id);
     setRenameValue(layer.name);
   }
 
+/**
+ * WHAT: Saves the new name and exits "Rename" mode.
+ */
   function finishRename() {
     if (renamingId && renameValue.trim()) {
       onRenameLayer(renamingId, renameValue.trim());

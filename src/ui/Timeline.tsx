@@ -143,6 +143,15 @@ export default function Timeline({
     setTweenEnd((prev) => Math.min(Math.max(prev, 1), frames.length - 1));
   }, [frames.length]);
 
+/**
+ * WHAT: Generates "In-Between" frames (Tweens) between two keyframes.
+ * WHY: So you don't have to draw every single frame for a simple movement.
+ * HOW: It looks at the Pixels in Frame A and Frame B and calculates a mathematical mix for every frame in between.
+ * USE: The "∿" button in the Timeline.
+ * 
+ * ASCII VISUAL:
+ * [Frame 1] --> [Tween 1] --> [Tween 2] --> [Frame 2]
+ */
   function handleGenerateTweens() {
     if (frames.length < 2) return;
     const start = Math.min(tweenStart, tweenEnd);
@@ -169,6 +178,15 @@ export default function Timeline({
     }
   }, [fps]);
 
+/**
+ * WHAT: Changes the speed of the animation.
+ * WHY: Different animations need different speeds (e.g., a "Run" is faster than a "Walk").
+ * HOW: It converts "Frames Per Second" into "Milliseconds per Frame" (Duration = 1000 / FPS).
+ * USE: The FPS input box.
+ * 
+ * 🛠️ NOOB CHALLENGE: Can you explain why we use `Math.round(1000 / next)`? 
+ * What happens if the division isn't a whole number?
+ */
   function handleFpsChange(value: string) {
     const next = Math.max(1, Math.min(60, Number(value)));
     setFpsInput(next);

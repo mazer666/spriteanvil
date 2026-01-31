@@ -24,10 +24,27 @@ import { BlendMode, LayerData } from "../types";
 
 type LayerCompositeInput = Pick<LayerData, "opacity" | "blend_mode" | "is_visible" | "pixels">;
 
+/**
+ * WHAT: Forces a number to stay between 0.0 and 1.0.
+ * WHY: Alpha (transparency) and colors are often calculated as percentages. 1.1 doesn't exist in math!
+ * HOW: Use Math.min and Math.max to "sandwich" the value between 0 and 1.
+ * USE: Call this before passing an opacity value to a blending function.
+ * RATIONALE: Simple, fast, and prevents "over-bright" pixel errors.
+ */
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
+/**
+ * WHAT: The core "Math Rule" for mixing two individual color numbers.
+ * WHY: Different "Blend Modes" (Multiply, Screen, etc.) use different formulas to create visual effects.
+ * HOW: A big Switch statement that applies a specific formula based on the `mode`.
+ * USE: Internal helper for `compositePixel`.
+ * RATIONALE: Separating channel math from alpha math makes the code easier to read and debug.
+ * 
+ * 🛠️ NOOB CHALLENGE: Can you add a "Subtract" mode? 
+ * (Hint: result = base - top, but don't forget to use `clamp01`!)
+ */
 function blendChannel(base: number, top: number, mode: BlendMode): number {
   switch (mode) {
     case "multiply":
@@ -54,6 +71,15 @@ function blendChannel(base: number, top: number, mode: BlendMode): number {
   }
 }
 
+/**
+ * WHAT: Calculates the final color of ONE pixel by stacking two colors on top of each other.
+ * WHY: This is how we handle transparency. If the top pixel is 50% clear, we need to show some of the bottom pixel.
+ * HOW: It converts 0-255 bytes to 0.0-1.0 decimals, applies the Porter-Duff alpha composition formula, and converts back to bytes.
+ * USE: Internal helper for the layer looping functions.
+ * RATIONALE: Doing math on 0.0-1.0 is much more accurate than using integers, which avoids "rounding artifacts".
+ * 
+ * ⚠️ WATCH OUT: Floating point math can be slow. We only call this when a pixel actually has transparency.
+ */
 function compositePixel(
   baseR: number,
   baseG: number,
@@ -103,6 +129,18 @@ function compositePixel(
   ];
 }
 
+/**
+ * WHAT: Squashes an array of layers into a single image.
+ * WHY: We need to see the result of all our layers combined to show it on the screen.
+ * HOW: It loops through the layers from BOTTOM to TOP, updating a "running result" buffer.
+ * USE: Call this inside the main render loop (CanvasStage).
+ * RATIONALE: We start from the bottom so that the top-most layers correctly overwrite or blend with the ones below.
+ * 
+ * ASCII VISUAL:
+ * [Layer 3 (Top)]    ---Blend--> [ Result ]
+ * [Layer 2 (Mid)]    ---Blend--> [ Result ]
+ * [Layer 1 (Bottom)] ----------- [ Result ]
+ */
 export function compositeLayers(
   layers: LayerCompositeInput[],
   width: number,
@@ -157,6 +195,13 @@ export function compositeLayers(
   return output;
 }
 
+/**
+ * WHAT: Mixes exactly two layers into one.
+ * WHY: Used for "Merging Down" or flattening a small selection.
+ * HOW: Same as `compositeLayers`, but specifically only for two buffers.
+ * USE: Internal helper for `mergeDown`.
+ * RATIONALE: Optimized to avoid looping through the whole layer stack.
+ */
 export function mergeLayerIntoBelow(
   below: LayerCompositeInput,
   above: LayerCompositeInput,
@@ -207,16 +252,15 @@ export function mergeLayerIntoBelow(
     merged[idx + 3] = outA;
   }
 
+  // This byte-level layout is why you see `idx = p * 4` in the merge loop.
   return merged;
 }
 
 /**
- * Merge the layer at `index` into the layer directly below it.
- *
- * We walk the pixel buffer as a flat RGBA byte array:
- * - Each pixel takes 4 bytes (R, G, B, A) in sequence.
- * - Pixel N starts at byte index `N * 4`.
- * This byte-level layout is why you see `idx = p * 4` in the merge loop.
+ * WHAT: Removes one layer and bakes its pixels into the one below it.
+ * WHY: To simplify a project if you have too many layers.
+ * HOW: It finds the two layers in the list, merges their pixels, removes the old one, and updates the list.
+ * USE: Call this when the user clicks the "Merge Down" button in the Layer Panel.
  */
 export function mergeDown(
   layers: LayerData[],
@@ -239,10 +283,14 @@ export function mergeDown(
 }
 
 /**
- * Flatten all visible layers into a single RGBA pixel buffer.
- *
- * Each layer's opacity and blend mode are applied while combining into the
- * final Uint8ClampedArray, preserving the expected compositing results.
+ * WHAT: Turns a complex multi-layer project into a single "flat" image.
+ * WHY: Useful for exporting to PNG or final saving.
+ * HOW: It's just a shortcut that calls `compositeLayers`.
+ * USE: Call this during project export.
+ * 
+ * RATIONALE: Each layer's opacity and blend mode are applied while 
+ * combining into the final Uint8ClampedArray, preserving the 
+ * expected compositing results.
  */
 export function flattenImage(
   layers: LayerData[],

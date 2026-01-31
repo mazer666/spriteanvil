@@ -26,6 +26,13 @@
  *   H --> D
  * ```
  */
+/**
+ * WHAT: Creates a "Selection Mask" based on a freehand loop drawn by the user.
+ * WHY: To let users select irregular shapes (like a character's hair or a tree) that boxes can't handle.
+ * HOW: It loops through every pixel on the canvas and asks: "Are you inside the loop?".
+ * USE: Call this after the user releases the mouse with the Lasso Tool.
+ * RATIONALE: We create a 1-bit mask (Uint8Array) because it's memory efficient and easy to check against during drawing operations.
+ */
 export function createLassoSelection(
   width: number,
   height: number,
@@ -46,6 +53,17 @@ export function createLassoSelection(
   return selection;
 }
 
+/**
+ * WHAT: The core math that decides if a pixel is "Inside" or "Outside" a loop.
+ * WHY: Computers need a mathematical way to understand "Enclosed Areas".
+ * HOW: It uses the "Ray Casting" algorithm. It draws an imaginary line to the right of the pixel. If that line crosses the polygon boundary an ODD number of times, the pixel is inside!
+ * USE: Internal helper for selection tools.
+ * 
+ * ASCII VISUAL:
+ * [P] --------> Cross (Inside!)
+ * [ ] [Loop]
+ * [ ] --------> No Cross (Outside!)
+ */
 function isPointInPolygon(x: number, y: number, polygon: { x: number; y: number }[]): boolean {
   let inside = false;
 

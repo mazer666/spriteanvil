@@ -31,6 +31,16 @@ import { RGBA, setPixel } from "../pixels";
 export type GradientType = "linear" | "radial" | "angle" | "reflected" | "diamond";
 export type DitherType = "none" | "bayer" | "floyd-steinberg";
 
+/**
+ * WHAT: Paints a smooth transition between two colors across the whole canvas.
+ * WHY: Creating gradients by hand in pixel art is tedious. This automates the math.
+ * HOW: It loops through every pixel, calculates its "Distance" (T) along the gradient line, and mixes the Start/End colors based on that T.
+ * USE: Call this when the user drags the mouse with the Gradient Tool.
+ * RATIONALE: We support multiple types (Linear, Radial, Diamond) to give artists more creative control.
+ * 
+ * 🛠️ NOOB CHALLENGE: Can you add a "Square" gradient type? 
+ * (Hint: use `Math.max(Math.abs(distX), Math.abs(distY))`).
+ */
 export function drawGradient(
   buffer: Uint8ClampedArray,
   width: number,
@@ -103,6 +113,20 @@ export function drawGradient(
   return changed;
 }
 
+/**
+ * WHAT: Applies a "Retro" textured fade (Dithering) to the image.
+ * WHY: Classic games often had limited colors. Dithering makes it look like there are more colors by mixing dots of two different colors.
+ * HOW: It uses the Floyd-Steinberg algorithm. It "pushes" the color error of one pixel to its neighbors.
+ * USE: Use this to give your art a retro Gameboy or 16-bit look.
+ * RATIONALE: Floyd-Steinberg is a standard in the industry for high-quality color reduction.
+ * 
+ * ASCII VISUAL (Error Diffusion):
+ * [Pixel X] --7/16--> [Right Neighbor]
+ *     | \
+ *  5/16  1/16
+ *    |    \
+ * [Down] [Down-Right]
+ */
 export function applyFloydSteinbergDither(
   buffer: Uint8ClampedArray,
   width: number,
@@ -112,6 +136,9 @@ export function applyFloydSteinbergDither(
   const result = new Uint8ClampedArray(buffer);
   const errorBuffer = new Float32Array(width * height * 3);
 
+  /**
+   * Internal helper to find which color in our palette is "closest" to the target.
+   */
   function findClosestColor(r: number, g: number, b: number): RGBA {
     let minDist = Infinity;
     let closest = palette[0];
