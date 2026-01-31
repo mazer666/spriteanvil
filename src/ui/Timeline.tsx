@@ -27,6 +27,8 @@ type Props = {
   onCreateTag: (tag: Omit<AnimationTag, "id" | "created_at">) => void;
   onUpdateTag: (id: string, updates: Partial<AnimationTag>) => void;
   onDeleteTag: (id: string) => void;
+  dragDropEnabled?: boolean;
+  onReorderFrames?: (fromIndex: number, toIndex: number) => void;
 };
 
 export default function Timeline({
@@ -52,7 +54,9 @@ export default function Timeline({
   onSelectTag,
   onCreateTag,
   onUpdateTag,
-  onDeleteTag
+  onDeleteTag,
+  dragDropEnabled = false,
+  onReorderFrames
 }: Props) {
   const canvasRefs = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const [newTagName, setNewTagName] = useState("");
@@ -249,187 +253,187 @@ export default function Timeline({
         </span>
 
         {showTags && (
-        <div className="timeline__tags" style={{ padding: "8px", borderBottom: "1px solid #333" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-            <strong style={{ fontSize: "12px" }}>Animation Tags</strong>
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "#aaa" }}>
-              <input
-                type="checkbox"
-                checked={loopTagOnly}
-                onChange={(e) => onToggleLoopTagOnly(e.target.checked)}
-              />
-              Loop selected tag only
-            </label>
-          </div>
-
-          <div style={{ position: "relative", height: "18px", background: "#1a1a1a", border: "1px solid #333", borderRadius: "3px" }}>
-            {animationTags.map((tag) => {
-              const total = Math.max(1, frames.length);
-              const left = (tag.start_frame / total) * 100;
-              const width = ((tag.end_frame - tag.start_frame + 1) / total) * 100;
-              return (
-                <button
-                  key={tag.id}
-                  onClick={() => onSelectTag(tag.id)}
-                  title={`${tag.name}: ${tag.start_frame + 1}-${tag.end_frame + 1}`}
-                  style={{
-                    position: "absolute",
-                    left: `${left}%`,
-                    width: `${width}%`,
-                    height: "100%",
-                    background: tag.color,
-                    border: tag.id === activeTagId ? "2px solid #fff" : "1px solid #111",
-                    cursor: "pointer",
-                    borderRadius: "2px",
-                  }}
+          <div className="timeline__tags" style={{ padding: "8px", borderBottom: "1px solid #333" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+              <strong style={{ fontSize: "12px" }}>Animation Tags</strong>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "#aaa" }}>
+                <input
+                  type="checkbox"
+                  checked={loopTagOnly}
+                  onChange={(e) => onToggleLoopTagOnly(e.target.checked)}
                 />
-              );
-            })}
-          </div>
+                Loop selected tag only
+              </label>
+            </div>
 
-          <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "1fr auto auto auto auto", gap: "6px", alignItems: "center" }}>
-            <input
-              type="text"
-              placeholder="Tag name (Idle)"
-              value={newTagName}
-              onChange={(e) => setNewTagName(e.target.value)}
-              style={{ padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
-            />
-            <input
-              type="number"
-              min="1"
-              max={frames.length}
-              value={newTagStart + 1}
-              onChange={(e) => setNewTagStart(Math.max(0, Number(e.target.value) - 1))}
-              style={{ width: "70px", padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
-              title="Start frame"
-            />
-            <input
-              type="number"
-              min="1"
-              max={frames.length}
-              value={newTagEnd + 1}
-              onChange={(e) => setNewTagEnd(Math.max(0, Number(e.target.value) - 1))}
-              style={{ width: "70px", padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
-              title="End frame"
-            />
-            <input
-              type="color"
-              value={newTagColor}
-              onChange={(e) => setNewTagColor(e.target.value)}
-              title="Tag color"
-              style={{ width: "32px", height: "28px", border: "1px solid #444" }}
-            />
-            <button onClick={handleCreateTag} style={{ padding: "6px", fontSize: "11px" }}>
-              Add Tag
-            </button>
-          </div>
+            <div style={{ position: "relative", height: "18px", background: "#1a1a1a", border: "1px solid #333", borderRadius: "3px" }}>
+              {animationTags.map((tag) => {
+                const total = Math.max(1, frames.length);
+                const left = (tag.start_frame / total) * 100;
+                const width = ((tag.end_frame - tag.start_frame + 1) / total) * 100;
+                return (
+                  <button
+                    key={tag.id}
+                    onClick={() => onSelectTag(tag.id)}
+                    title={`${tag.name}: ${tag.start_frame + 1}-${tag.end_frame + 1}`}
+                    style={{
+                      position: "absolute",
+                      left: `${left}%`,
+                      width: `${width}%`,
+                      height: "100%",
+                      background: tag.color,
+                      border: tag.id === activeTagId ? "2px solid #fff" : "1px solid #111",
+                      cursor: "pointer",
+                      borderRadius: "2px",
+                    }}
+                  />
+                );
+              })}
+            </div>
 
-          {activeTag && (
-            <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "6px", alignItems: "center" }}>
+            <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "1fr auto auto auto auto", gap: "6px", alignItems: "center" }}>
               <input
                 type="text"
-                value={activeTag.name}
-                onChange={(e) => onUpdateTag(activeTag.id, { name: e.target.value })}
+                placeholder="Tag name (Idle)"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
                 style={{ padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
               />
               <input
                 type="number"
                 min="1"
                 max={frames.length}
-                value={activeTag.start_frame + 1}
-                onChange={(e) =>
-                  onUpdateTag(activeTag.id, {
-                    start_frame: Math.max(0, Math.min(frames.length - 1, Number(e.target.value) - 1)),
-                  })
-                }
+                value={newTagStart + 1}
+                onChange={(e) => setNewTagStart(Math.max(0, Number(e.target.value) - 1))}
                 style={{ width: "70px", padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+                title="Start frame"
               />
               <input
                 type="number"
                 min="1"
                 max={frames.length}
-                value={activeTag.end_frame + 1}
-                onChange={(e) =>
-                  onUpdateTag(activeTag.id, {
-                    end_frame: Math.max(0, Math.min(frames.length - 1, Number(e.target.value) - 1)),
-                  })
-                }
+                value={newTagEnd + 1}
+                onChange={(e) => setNewTagEnd(Math.max(0, Number(e.target.value) - 1))}
                 style={{ width: "70px", padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+                title="End frame"
               />
-              <button onClick={() => onDeleteTag(activeTag.id)} style={{ padding: "6px", fontSize: "11px" }}>
-                Delete
+              <input
+                type="color"
+                value={newTagColor}
+                onChange={(e) => setNewTagColor(e.target.value)}
+                title="Tag color"
+                style={{ width: "32px", height: "28px", border: "1px solid #444" }}
+              />
+              <button onClick={handleCreateTag} style={{ padding: "6px", fontSize: "11px" }}>
+                Add Tag
               </button>
             </div>
-          )}
-        </div>
+
+            {activeTag && (
+              <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "6px", alignItems: "center" }}>
+                <input
+                  type="text"
+                  value={activeTag.name}
+                  onChange={(e) => onUpdateTag(activeTag.id, { name: e.target.value })}
+                  style={{ padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max={frames.length}
+                  value={activeTag.start_frame + 1}
+                  onChange={(e) =>
+                    onUpdateTag(activeTag.id, {
+                      start_frame: Math.max(0, Math.min(frames.length - 1, Number(e.target.value) - 1)),
+                    })
+                  }
+                  style={{ width: "70px", padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max={frames.length}
+                  value={activeTag.end_frame + 1}
+                  onChange={(e) =>
+                    onUpdateTag(activeTag.id, {
+                      end_frame: Math.max(0, Math.min(frames.length - 1, Number(e.target.value) - 1)),
+                    })
+                  }
+                  style={{ width: "70px", padding: "4px", background: "#1a1a1a", color: "#fff", border: "1px solid #444" }}
+                />
+                <button onClick={() => onDeleteTag(activeTag.id)} style={{ padding: "6px", fontSize: "11px" }}>
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {showTween && (
-        <div className="timeline__tween">
-          <div className="timeline__tween-header">
-            <strong className="timeline__tween-title">Tween Generator</strong>
-            <span className="timeline__tween-subtitle">Build in-between frames with easing</span>
+          <div className="timeline__tween">
+            <div className="timeline__tween-header">
+              <strong className="timeline__tween-title">Tween Generator</strong>
+              <span className="timeline__tween-subtitle">Build in-between frames with easing</span>
+            </div>
+
+            <div className="timeline__tween-controls">
+              <label className="timeline__tween-label">From</label>
+              <select
+                value={tweenStart}
+                onChange={(e) => setTweenStart(Number(e.target.value))}
+                className="timeline__tween-select"
+              >
+                {frames.map((_, index) => (
+                  <option key={`tween-start-${index}`} value={index}>
+                    {index + 1}
+                  </option>
+                ))}
+              </select>
+
+              <label className="timeline__tween-label">To</label>
+              <select
+                value={tweenEnd}
+                onChange={(e) => setTweenEnd(Number(e.target.value))}
+                className="timeline__tween-select"
+              >
+                {frames.map((_, index) => (
+                  <option key={`tween-end-${index}`} value={index}>
+                    {index + 1}
+                  </option>
+                ))}
+              </select>
+
+              <label className="timeline__tween-label">In-betweens</label>
+              <input
+                type="number"
+                min={1}
+                max={32}
+                value={tweenCount}
+                onChange={(e) => setTweenCount(Number(e.target.value))}
+                className="timeline__tween-input"
+              />
+
+              <label className="timeline__tween-label">Easing</label>
+              <select
+                value={tweenEasing}
+                onChange={(e) => setTweenEasing(e.target.value as EasingCurve)}
+                className="timeline__tween-select"
+              >
+                <option value="linear">Linear</option>
+                <option value="easeInQuad">Ease In Quad</option>
+                <option value="easeOutQuad">Ease Out Quad</option>
+                <option value="elastic">Elastic</option>
+              </select>
+
+              <button
+                onClick={handleGenerateTweens}
+                className="timeline__tween-button"
+                disabled={frames.length < 2}
+              >
+                Generate Tweens
+              </button>
+            </div>
           </div>
-
-          <div className="timeline__tween-controls">
-            <label className="timeline__tween-label">From</label>
-            <select
-              value={tweenStart}
-              onChange={(e) => setTweenStart(Number(e.target.value))}
-              className="timeline__tween-select"
-            >
-              {frames.map((_, index) => (
-                <option key={`tween-start-${index}`} value={index}>
-                  {index + 1}
-                </option>
-              ))}
-            </select>
-
-            <label className="timeline__tween-label">To</label>
-            <select
-              value={tweenEnd}
-              onChange={(e) => setTweenEnd(Number(e.target.value))}
-              className="timeline__tween-select"
-            >
-              {frames.map((_, index) => (
-                <option key={`tween-end-${index}`} value={index}>
-                  {index + 1}
-                </option>
-              ))}
-            </select>
-
-            <label className="timeline__tween-label">In-betweens</label>
-            <input
-              type="number"
-              min={1}
-              max={32}
-              value={tweenCount}
-              onChange={(e) => setTweenCount(Number(e.target.value))}
-              className="timeline__tween-input"
-            />
-
-            <label className="timeline__tween-label">Easing</label>
-            <select
-              value={tweenEasing}
-              onChange={(e) => setTweenEasing(e.target.value as EasingCurve)}
-              className="timeline__tween-select"
-            >
-              <option value="linear">Linear</option>
-              <option value="easeInQuad">Ease In Quad</option>
-              <option value="easeOutQuad">Ease Out Quad</option>
-              <option value="elastic">Elastic</option>
-            </select>
-
-            <button
-              onClick={handleGenerateTweens}
-              className="timeline__tween-button"
-              disabled={frames.length < 2}
-            >
-              Generate Tweens
-            </button>
-          </div>
-        </div>
         )}
 
         <div className="timeline__frames">

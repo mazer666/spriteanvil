@@ -14,6 +14,7 @@
 3. **Eyedropper Tool** (I) - Pick colors from canvas
 4. **Fill Tool** (F) - Flood fill with scanline algorithm + tolerance control
 5. **Line Tool** (L) - Draw straight lines
+6. **Smudge Tool** (S) - Smear colors (implemented in `src/editor/tools/smudge.ts`)
 
 ### 📐 Shape Tools (6 tools)
 
@@ -29,9 +30,10 @@
 13. **Rectangle Selection** (M) - Rectangular marquee
 14. **Ellipse Selection** (Shift+M) - Elliptical marquee
 15. **Lasso Selection** (W) - Free-form polygon selection
-16. **Magic Wand** - Tolerance-based selection
+16. **Magic Wand** - Tolerance-based selection (uses flood fill with tolerance algorithm)
 
 **Selection Operations:**
+
 - Copy (Cmd+C)
 - Cut (Cmd+X)
 - Paste (Cmd+V)
@@ -44,6 +46,7 @@
 ### 🖼️ Layer System (UI + Compositing)
 
 **Features:**
+
 - Create, delete, duplicate layers
 - Rename layers (double-click)
 - Reorder layers (drag & drop)
@@ -70,6 +73,7 @@
 ### 🎨 Palette & Color System
 
 **Palette Management:**
+
 - Create custom palettes
 - Delete palettes (except default)
 - Add colors to palette
@@ -77,6 +81,7 @@
 - Default palette system (16-color default)
 
 **Color Picker:**
+
 - Hex color input (#RRGGBB)
 - Color picker widget
 - Recent colors (last 20)
@@ -87,6 +92,7 @@
 ### 🔄 Transform Operations
 
 **Available Transforms:**
+
 - Flip Horizontal (Cmd+H)
 - Flip Vertical (Cmd+Shift+H)
 - Rotate 90° Clockwise (Cmd+R)
@@ -95,13 +101,14 @@
 - Scale with nearest-neighbor (pixel-perfect)
   - Lock aspect ratio option
   - 0.1x - 8x range
-**Note:** When a selection is active, transforms apply to the selection only.
+    **Note:** When a selection is active, transforms apply to the selection only.
 
 **Access**: Right Panel → Transform tab
 
 ### 🎨 Color Adjustments
 
 **Available Adjustments:**
+
 1. **Hue Shift** (-180° to +180°)
 2. **Saturation** (-100 to +100)
 3. **Brightness** (-100 to +100)
@@ -110,6 +117,7 @@
 6. **Posterize** (2-16 levels)
 
 **Algorithms:**
+
 - RGB ↔ HSL color space conversion
 - Non-destructive preview
 - Undo/redo support
@@ -119,6 +127,7 @@
 ### 🎬 Animation System
 
 **Timeline Features:**
+
 - Add/delete frames
 - Duplicate frames
 - Reorder frames (drag & drop)
@@ -128,6 +137,7 @@
 - Current frame indicator
 
 **Onion Skinning:**
+
 - Toggle on/off (Cmd+;)
 - Previous frames (0-15)
 - Next frames (0-15)
@@ -156,6 +166,7 @@
 ### ⌨️ Keyboard Shortcuts (30+ shortcuts)
 
 **Edit Operations:**
+
 - Undo: Cmd+Z
 - Redo: Cmd+Y / Cmd+Shift+Z
 - Copy: Cmd+C
@@ -165,6 +176,7 @@
 - Deselect: Cmd+D
 
 **Tool Shortcuts:**
+
 - B: Pen
 - E: Eraser
 - I: Eyedropper
@@ -179,6 +191,7 @@
 - V: Move Selection
 
 **View Controls:**
+
 - Cmd+=: Zoom in
 - Cmd+-: Zoom out
 - Cmd+0: Reset zoom to 100%
@@ -187,17 +200,20 @@
 - Space + drag: Pan canvas
 
 **Transform:**
+
 - Cmd+H: Flip horizontal
 - Cmd+Shift+H: Flip vertical
 - Cmd+R: Rotate 90° CW
 - Cmd+Shift+R: Rotate 90° CCW
 
 **Animation:**
+
 - Alt+→: Next frame
 - Alt+←: Previous frame
 - Space: Play/pause
 
 **Other:**
+
 - Cmd+K: Open command palette
 - Cmd+E: Export
 - Cmd+S: Save (planned)
@@ -206,6 +222,7 @@
 ### 🔍 Command Palette
 
 **Features:**
+
 - Fuzzy search across all commands
 - Keyboard navigation (↑/↓ arrows)
 - Category filtering
@@ -218,6 +235,7 @@
 ### ⚙️ View Settings
 
 **Background Options:**
+
 - Checkerboard (customizable colors & size)
 - Solid Dark
 - Solid Light
@@ -225,11 +243,13 @@
 - Bluescreen
 
 **Grid Options:**
+
 - Toggle on/off
 - Pixel size (1-64px)
 - Visual overlay
 
 **Other Settings:**
+
 - Zoom (1x - 32x)
 - Brush stabilizer
 - Checker size & colors
@@ -239,12 +259,14 @@
 ### 💾 History System
 
 **Features:**
+
 - Unlimited undo/redo
 - Per-frame history
 - Efficient snapshot system
 - Undo/redo indicators in UI
 
 **Access**:
+
 - Top bar buttons
 - Cmd+Z / Cmd+Y
 
@@ -261,6 +283,7 @@
 5. **Diamond** - Manhattan distance gradient
 
 **Dithering Support:**
+
 - None (smooth)
 - Bayer matrix (ordered)
 - Floyd-Steinberg (error diffusion)
@@ -268,6 +291,7 @@
 ### Symmetry Modes (Applied, Custom Axis Pending)
 
 **Implemented in `src/editor/symmetry.ts`:**
+
 - Horizontal mirror
 - Vertical mirror
 - Both axes
@@ -275,16 +299,18 @@
 - Radial 8-way
 - Visual guides
 
-*Note: Symmetry applies to pen/eraser, line, shapes, and gradients; custom symmetry axes are still pending.*
+_Note: Symmetry applies to pen/eraser, line, shapes, and gradients; custom symmetry axes are still pending._
 
 ### Selection Tools (Integrated)
 
 **Lasso Selection:**
+
 - Free-form polygon drawing
 - Point-in-polygon algorithm
 - Path smoothing
 
 **Magic Wand:**
+
 - Color tolerance selection
 - Flood-fill based
 - Adjustable tolerance
@@ -294,6 +320,7 @@
 ## 🗄️ Database Integration (Supabase)
 
 **Complete Schema with RLS:**
+
 - ✅ `projects` table
 - ✅ `sprites` table
 - ✅ `frames` table
@@ -303,12 +330,14 @@
 - ✅ `user_settings` table
 
 **Security:**
+
 - Row Level Security (RLS) on all tables
 - Performance-optimized policies
 - No SQL injection vulnerabilities
 - Secure multi-user support
 
 **APIs:**
+
 - `src/lib/supabase/projects.ts`
 - `src/lib/supabase/sprites.ts`
 - `src/lib/supabase/frames.ts`
@@ -392,17 +421,17 @@ src/
 
 ## 📊 Implementation Status by Phase
 
-| Phase | Features | Status | Notes |
-|-------|----------|--------|-------|
-| **Phase 0** | Documentation | 80% | Core docs in place |
-| **Phase 1** | Foundation | 60% | Database 100% complete |
-| **Phase 2** | Drawing Tools | 70% | Core tools + gradient/lasso/wand wired |
-| **Phase 3** | Animation | 80% | PNG/GIF/JSON export working |
-| **Phase 4** | Layers & Color | 45% | UI + compositing working |
-| **Phase 5** | AI Features | 5% | Database ready |
-| **Phase 6** | Professional UX | 70% | Shortcuts + command palette done |
-| **Phase 7** | Export | 80% | PNG/GIF/JSON UI available |
-| **Phase 8** | Collaboration | 10% | Infrastructure only |
+| Phase       | Features        | Status | Notes                                  |
+| ----------- | --------------- | ------ | -------------------------------------- |
+| **Phase 0** | Documentation   | 80%    | Core docs in place                     |
+| **Phase 1** | Foundation      | 60%    | Database 100% complete                 |
+| **Phase 2** | Drawing Tools   | 70%    | Core tools + gradient/lasso/wand wired |
+| **Phase 3** | Animation       | 80%    | PNG/GIF/JSON export working            |
+| **Phase 4** | Layers & Color  | 45%    | UI + compositing working               |
+| **Phase 5** | AI Features     | 5%     | Database ready                         |
+| **Phase 6** | Professional UX | 70%    | Shortcuts + command palette done       |
+| **Phase 7** | Export          | 80%    | PNG/GIF/JSON UI available              |
+| **Phase 8** | Collaboration   | 10%    | Infrastructure only                    |
 
 **Overall: ~68% Complete**
 
@@ -411,6 +440,7 @@ src/
 ## 🚀 What's Production-Ready
 
 ### Core Functionality (Partial)
+
 - ✅ Core drawing tools (pen/eraser/line/shapes)
 - ✅ Rectangle/ellipse selections + basic ops
 - ✅ Palette and color adjustment panels
@@ -423,14 +453,16 @@ src/
 - ⏳ JSON/GIF export wiring
 
 ### User Experience (70%)
+
 - ✅ Keyboard navigation
 - ✅ Command palette
 - ✅ Contextual help (shortcuts)
-- ⏳ Responsive UI
+- ✅ Responsive UI (Mobile Header implemented in `src/ui/MobileHeader.tsx` with touch-friendly popovers)
 - ⏳ Tutorial system
 - ⏳ Help documentation
 
 ### Performance (70%)
+
 - ✅ Efficient pixel operations
 - ✅ Optimized rendering
 - ⏳ Web Workers for heavy operations
@@ -442,6 +474,7 @@ src/
 ## ⏳ Planned Features (Not Yet Implemented)
 
 ### Phase 5: AI Features
+
 - AI image generation integration
 - Prompt-based sprite generation
 - Image-to-image transformation
@@ -449,6 +482,7 @@ src/
 - API key management UI
 
 ### Phase 8: Collaboration
+
 - Real-time collaborative editing
 - Live cursor tracking
 - Presence indicators
@@ -457,6 +491,7 @@ src/
 - Conflict resolution
 
 ### Additional Features
+
 - Video export (WebM/MP4)
 - APNG export
 - Responsive design for mobile/tablet
@@ -465,13 +500,25 @@ src/
 - Multiple symmetry guides simultaneously
 - Brush presets & custom brushes
 
+### Phase 9: Market Leadership (Procreate & Figma Parity)
+
+- **Figma-Like Minimalist UI**: Contextual HUDs, extensive whitespace, "invisible" chrome.
+- **Procreate Gestures**: 2-finger Undo, 3-finger Redo, Quick-Pinch, QuickShape (draw & hold).
+- **Advanced Brush Engine**: Streamline stabilization (rope mode), pressure dynamics, dual brushes.
+- **Smart Tile Mode**: 3x3 seamless loop preview with wrap-around drawing.
+- **ColorDrop**: Drag color to fill with gesture-based tolerance control.
+- **Time-Lapse Recording**: Undo-stable background recording (GIF/MP4).
+- **Engine "Live Link"**: Auto-sync to Godot/Unity project folders.
+- **Ghost References**: Drag-drop reference images with opacity control.
+- **Procedural "Pixel-Juice"**: Auto-outlines, drop shadows, pixel-liquify.
+
 ---
 
 ## 📝 Known Limitations
 
 1. **Single layer drawing** - While layers exist in state, drawing currently only affects the main buffer (multi-layer compositing not fully integrated)
 2. **No auto-save** - Manual save required
-3. **Desktop-focused** - Not optimized for mobile/touch
+3. **Mobile Support** - Beta support available with dedicated Mobile Header (touch controls for tools/layers/colors).
 4. **No WebGL acceleration** - All rendering is Canvas 2D
 5. **Memory limits** - Very large canvases (>1024x1024) may be slow
 
@@ -516,6 +563,7 @@ src/
 ### Keyboard Shortcuts Cheat Sheet
 
 **Essential:**
+
 - B: Pen tool
 - E: Eraser
 - M: Select
@@ -524,6 +572,7 @@ src/
 - Space: Play/Pause animation
 
 **Pro Tips:**
+
 - Hold Shift with shape tools for filled versions
 - Use Cmd+K to quickly find any command
 - Alt+Arrow keys to navigate frames

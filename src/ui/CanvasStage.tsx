@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CanvasSpec, ToolId, UiSettings, LayerData, FloatingSelection } from "../types";
+import SelectionTransformOverlay from "./SelectionTransformOverlay";
 import Minimap from "./Minimap";
 import { cloneBuffer, hexToRgb, getPixel } from "../editor/pixels";
 import { compositeLayers } from "../editor/layers";
@@ -53,6 +54,7 @@ export default function CanvasStage(props: {
   currentFrameIndex?: number;
   remoteCursors?: Record<string, { x: number; y: number; color: string }>;
   showMinimap?: boolean;
+  onCommitTransform?: () => void;
 }) {
   const {
     settings,
@@ -75,7 +77,8 @@ export default function CanvasStage(props: {
     frames,
     currentFrameIndex,
     remoteCursors,
-    showMinimap = true
+    showMinimap = true,
+    onCommitTransform
   } = props;
 
   const shapePreviewTools: ToolId[] = [
@@ -635,10 +638,10 @@ export default function CanvasStage(props: {
       const patternFill: PatternFill | undefined =
         settings.fillPattern !== "solid"
           ? {
-              pattern: settings.fillPattern as PatternFill["pattern"],
-              primary: c,
-              secondary: { r: sr, g: sg, b: sb, a: 255 },
-            }
+            pattern: settings.fillPattern as PatternFill["pattern"],
+            primary: c,
+            secondary: { r: sr, g: sg, b: sb, a: 255 },
+          }
           : undefined;
       const pixelsChanged = settings.fillTolerance > 0
         ? floodFillWithTolerance(
@@ -1543,6 +1546,12 @@ export default function CanvasStage(props: {
     ctx.strokeRect(originX + 0.5, originY + 0.5, imgW - 1, imgH - 1);
   }
 
+  const zoom = settings.zoom;
+  const imgW = canvasSpec.width * zoom;
+  const imgH = canvasSpec.height * zoom;
+  const originX = (stageSize?.width ? (stageSize.width - imgW) / 2 : 0) + panOffset.x;
+  const originY = (stageSize?.height ? (stageSize.height - imgH) / 2 : 0) + panOffset.y;
+
   return (
     <div ref={stageRef} className={bgClass} style={stageStyle}>
       <div className="stage__hud">
@@ -1588,6 +1597,15 @@ export default function CanvasStage(props: {
           zoom={settings.zoom}
           onPanTo={(x, y) => setPanOffset({ x, y })}
           onChangeZoom={onChangeZoom}
+        />
+      )}
+      {tool === "move" && floatingBuffer && onUpdateTransform && onCommitTransform && (
+        <SelectionTransformOverlay
+          zoom={zoom}
+          panOffset={{ x: originX, y: originY }}
+          floatingBuffer={floatingBuffer}
+          onUpdateTransform={onUpdateTransform}
+          onCommit={onCommitTransform}
         />
       )}
     </div>

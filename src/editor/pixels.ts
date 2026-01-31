@@ -116,3 +116,29 @@ export function drawLine(
 
   return changedAny;
 }
+
+export function resizeBuffer(
+  src: Uint8ClampedArray,
+  srcW: number,
+  srcH: number,
+  destW: number,
+  destH: number
+): Uint8ClampedArray {
+  const dest = new Uint8ClampedArray(destW * destH * 4);
+  const ratioX = srcW / destW;
+  const ratioY = srcH / destH;
+
+  for (let y = 0; y < destH; y++) {
+    const sy = Math.floor(y * ratioY);
+    for (let x = 0; x < destW; x++) {
+      const sx = Math.floor(x * ratioX);
+      const srcIdx = (sy * srcW + sx) * 4;
+      const destIdx = (y * destW + x) * 4;
+      dest[destIdx + 0] = src[srcIdx + 0];
+      dest[destIdx + 1] = src[srcIdx + 1];
+      dest[destIdx + 2] = src[srcIdx + 2];
+      dest[destIdx + 3] = src[srcIdx + 3];
+    }
+  }
+  return dest;
+}

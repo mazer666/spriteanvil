@@ -587,9 +587,45 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ---
 
-## Phase 9: Best in Class Solution-Unique Improvements
+## Phase 9: Market Leadership (Procreate Power + Figma Minimalism)
 
-### 9.1 Better Symmetry & Mirror
+### 9.1 Procreate-Level Brush Engine & Gestures
+
+- [ ] **Advanced Input System**:
+  - [ ] 2-finger tap (Undo), 3-finger tap (Redo).
+  - [ ] QuickShape: Draw & hold triggers geometric fit (line/poly/ellipse).
+  - [ ] ColorDrop: Drag swatch to canvas -> triggers flood fill with slide-to-adjust tolerance.
+- [ ] **Brush Studio**:
+  - [ ] "Streamline" rope stabilization (position averaging window).
+  - [ ] Pressure dynamics: Size/Opacity/Flow tied to input pressure.
+  - [ ] Dual brushes: Masking brush tip with texture grain.
+  - [ ] Wet mix / smudge engine.
+
+### 9.2 Figma-Style Minimalist UI
+
+- [ ] **Contextual HUDs**:
+  - [ ] Selection actions appear floating near selection (Transform, Flip, etc.).
+  - [ ] "Invisible" chrome: Hide panels when drawing.
+- [ ] **Properties Panel**:
+  - [ ] Context-aware right panel (Show text props only when text selected).
+  - [ ] High density data with generous whitespace.
+
+### 9.3 Innovation Features
+
+- [ ] **Smart Tile Mode**:
+  - [ ] 3x3 grid rendering.
+  - [ ] Wrap-around drawing (draw on right edge -> appears on left).
+- [ ] **Time-Lapse Recorder**:
+  - [ ] Capture canvas state on every standard undo-commit.
+  - [ ] Replay engine for export.
+- [ ] **Engine Keep-Alive (Live Link)**:
+  - [ ] File watcher / companion server.
+  - [ ] Auto-export on save to target directory.
+- [ ] **Procedural "Juice"**:
+  - [ ] Real-time 1px Auto-Outline (Stroke).
+  - [ ] Pixel-perfect Liquify (warp grid).
+
+### 9.4 Better Symmetry & Mirror
 
 - [ ] Line symmetry with custom angle control (beyond horizontal/vertical).
 - [ ] Document symmetry axis calculations with math comments.

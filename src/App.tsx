@@ -693,9 +693,9 @@ export default function App() {
         framePrev.map((frame) =>
           frame.id === currentFrame.id
             ? {
-                ...frame,
-                pixels: compositeLayers([baseLayer], canvasSpec.width, canvasSpec.height),
-              }
+              ...frame,
+              pixels: compositeLayers([baseLayer], canvasSpec.width, canvasSpec.height),
+            }
             : frame
         )
       );
@@ -2279,18 +2279,6 @@ export default function App() {
           canvasSpec={canvasSpec}
           buffer={buffer}
           compositeBuffer={compositePreviewBuffer}
-          previewLayerPixels={previewLayerPixels}
-          onStrokeEnd={onStrokeEnd}
-          selection={selection}
-          onChangeSelection={handleChangeSelection}
-          floatingBuffer={floatingBuffer}
-          onBeginTransform={beginSelectionTransform}
-          onUpdateTransform={updateFloating}
-          onColorPick={handleSelectColor}
-          selectionMask={selection}
-          layerPixels={activeLayer?.pixels ?? null}
-          onInpaint={handleInpaintRequest}
-          onImageToImage={handleImageToImageRequest}
           onUndo={handleUndo}
           onRedo={handleRedo}
           canUndo={canUndo}

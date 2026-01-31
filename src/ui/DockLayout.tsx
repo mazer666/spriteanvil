@@ -2,6 +2,7 @@ import React, { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import ToolRail from "./ToolRail";
 import ToolBar from "./ToolBar";
 import RightPanel from "./RightPanel";
+import MobileHeader from "./MobileHeader";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
 import {
@@ -37,6 +38,7 @@ type Props = {
   floatingBuffer?: FloatingSelection | null;
   onBeginTransform?: () => FloatingSelection | null;
   onUpdateTransform?: (next: FloatingSelection) => void;
+  onCommitTransform?: () => void;
   onColorPick?: (color: string) => void;
   onCursorMove?: (position: { x: number; y: number } | null) => void;
   remoteCursors?: Record<string, { x: number; y: number; color: string }>;
@@ -165,6 +167,7 @@ export default function DockLayout({
   floatingBuffer,
   onBeginTransform,
   onUpdateTransform,
+  onCommitTransform,
   onColorPick,
   onCursorMove,
   remoteCursors,
@@ -341,30 +344,30 @@ export default function DockLayout({
   const dragStateRef = useRef<
     | null
     | {
-        kind: "right" | "timeline";
-        startX: number;
-        startY: number;
-        startRightWidth: number;
-        startTimelineHeight: number;
-      }
+      kind: "right" | "timeline";
+      startX: number;
+      startY: number;
+      startRightWidth: number;
+      startTimelineHeight: number;
+    }
   >(null);
   const toolRailDragRef = useRef<
     | null
     | {
-        startX: number;
-        startY: number;
-        originX: number;
-        originY: number;
-      }
+      startX: number;
+      startY: number;
+      originX: number;
+      originY: number;
+    }
   >(null);
   const rightPanelDragRef = useRef<
     | null
     | {
-        startX: number;
-        startY: number;
-        originX: number;
-        originY: number;
-      }
+      startX: number;
+      startY: number;
+      originX: number;
+      originY: number;
+    }
   >(null);
   const toolRailRafRef = useRef<number | null>(null);
   const rightPanelRafRef = useRef<number | null>(null);
@@ -612,148 +615,34 @@ export default function DockLayout({
   const leftPanelLabel = isPanelFloating ? "Tools" : "Left";
   const rightPanelLabel = isPanelFloating ? "Panel" : "Right";
 
-  return (
-    <div
-      className={
-        "dock" +
-        (isMobile ? " dock--mobile" : "") +
-        (isToolRailOpen ? " dock--left-open" : "") +
-        (isRightPanelOpen ? " dock--right-open" : "") +
-        (isToolRailCollapsed ? " dock--left-collapsed" : "") +
-        (isRightPanelCollapsed ? " dock--right-collapsed" : "") +
-        (!showLeftPanel ? " dock--left-hidden" : "") +
-        (!showRightPanel ? " dock--right-hidden" : "") +
-        (!showTimeline ? " dock--timeline-collapsed" : "") +
-        (isZenMode ? " dock--zen" : "") +
-        (isPanelFloating ? " dock--floating-panels" : "")
-      }
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      style={{
-        "--leftPanelWidth": `${0}px`,
-        "--rightPanelWidth": `${!showRightPanel || isZenMode ? 0 : isRightPanelCollapsed ? 52 : sizes.rightWidth}px`,
-        "--timelineHeight": `${!showTimeline || isZenMode ? 0 : sizes.timelineHeight}px`,
-        "--vSplitterWidth": `${!showRightPanel || isZenMode ? 0 : 4}px`,
-        "--hSplitterHeight": `${!showTimeline || isZenMode ? 0 : 4}px`,
-        ...(isZenMode ? { "--topbarHeight": "0px", "--statusBarHeight": "0px" } : {}),
-      } as React.CSSProperties}
-    >
-      <div className="dock__top">
-        <div className="dock__topbar">{topBar}</div>
-        {!isMobile && (
-          <div className="dock__panelControls">
-            <button
-              className="uiBtn uiBtn--ghost"
-              onClick={toggleLeftPanel}
-              title={leftPanelTitle}
-            >
-              {showLeftPanel ? "⟨" : "⟩"} {leftPanelLabel}
-            </button>
-            <button
-              className="uiBtn uiBtn--ghost"
-              onClick={toggleTimeline}
-              title={showTimeline ? "Hide timeline" : "Show timeline"}
-            >
-              {showTimeline ? "⌄" : "⌃"} Timeline
-            </button>
-            <button
-              className="uiBtn uiBtn--ghost"
-              onClick={toggleRightPanel}
-              title={rightPanelTitle}
-            >
-              {showRightPanel ? "⟩" : "⟨"} {rightPanelLabel}
-            </button>
-            <button
-              className="uiBtn uiBtn--ghost"
-              onClick={() => setIsZenMode((prev) => !prev)}
-              title="Toggle Zen Mode (Tab)"
-            >
-              {isZenMode ? "◼" : "◻"} Zen
-            </button>
-            <button className="uiBtn uiBtn--ghost" onClick={resetLayout} title="Reset layout">
-              ↺ Reset
-            </button>
-          </div>
-        )}
-        {isMobile && (
-          <div className="dock__mobileControls">
-            <button
-              className="uiBtn"
-              onClick={toggleLeftPanel}
-              title="Toggle tools"
-            >
-              ☰ Tools
-            </button>
-            <button
-              className="uiBtn"
-              onClick={() => setIsMinimapVisible((prev) => !prev)}
-              title="Toggle minimap"
-            >
-              ◳ Map
-            </button>
-            <button
-              className="uiBtn"
-              onClick={toggleTimeline}
-              title={showTimeline ? "Hide timeline" : "Show timeline"}
-            >
-              ↕ Timeline
-            </button>
-            <button
-              className="uiBtn"
-              onClick={toggleRightPanel}
-              title="Toggle panel"
-            >
-              ☰ Panel
-            </button>
-            <button className="uiBtn" onClick={resetLayout} title="Reset layout">
-              ↺ Reset
-            </button>
-          </div>
-        )}
-      </div>
+  // Procreate-style Mobile/Tablet Mode
+  if (isMobile || isTablet) {
+    return (
+      <div className="dock dock--mobile">
+        <MobileHeader
+          tool={tool}
+          onChangeTool={onChangeTool}
+          settings={settings}
+          onChangeSettings={onChangeSettings}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          layers={layers}
+          activeLayerId={activeLayerId}
+          onLayerOperations={onLayerOperations}
+          palettes={palettes}
+          activePaletteId={activePaletteId}
+          recentColors={recentColors}
+          onPaletteOperations={onPaletteOperations}
+          onColorAdjustOperations={onColorAdjustOperations}
+          onToggleMenu={() => {
+            // Placeholder: Could toggle a sidebar or modal
+            console.log("Toggle Menu");
+          }}
+        />
 
-      <div className="dock__body" ref={dockBodyRef}>
-        {showLeftPanel && (
-          <div
-            className={
-              "dock__floatingToolRail" +
-              (isToolRailCollapsed ? " dock__floatingToolRail--collapsed" : "") +
-              (isToolRailOpen ? " dock__floatingToolRail--open" : "")
-            }
-            ref={toolRailRef}
-            style={
-              isMobile
-                ? undefined
-                : {
-                    left: toolRailPosition.x,
-                    top: toolRailPosition.y,
-                  }
-            }
-          >
-            <div className="dock__floatingToolRailHeader" onPointerDown={beginToolRailDrag}>
-              <span className="dock__floatingToolRailGrip">⋮⋮</span>
-              <span className="dock__floatingToolRailTitle">Tools</span>
-              <button
-                className="uiBtn uiBtn--ghost"
-                onClick={() =>
-                  setIsToolRailCollapsed((prev) => {
-                    const next = !prev;
-                    updateLayout({ leftCollapsed: next });
-                    return next;
-                  })
-                }
-                title={isToolRailCollapsed ? "Expand tools" : "Collapse tools"}
-                type="button"
-              >
-                {isToolRailCollapsed ? "›" : "‹"}
-              </button>
-            </div>
-            <ToolRail tool={tool} onChangeTool={onChangeTool} />
-          </div>
-        )}
-
-        <div className="dock__center">
+        <div className="dock__body" style={{ top: 52, height: "calc(100vh - 52px)" }}>
           <CanvasStage
             settings={settings}
             tool={tool}
@@ -775,130 +664,201 @@ export default function DockLayout({
             remoteCursors={remoteCursors}
             frames={frames}
             currentFrameIndex={currentFrameIndex}
-            showMinimap={!isMobile || isMinimapVisible}
+            showMinimap={!isMobile} // Only show minimap on tablet if desired
           />
         </div>
 
-        <div
-          className="splitter splitter--v"
-          title="Drag to resize panel"
-          onPointerDown={(e) => beginDrag("right", e)}
-        />
+        {/* Floating Tool Rail (Optional for Tablet if space allows) */}
+        {!isMobile && (
+          <div className="dock__floatingToolRail" style={{ left: 12, top: 70, bottom: 'auto', maxHeight: 'calc(100vh - 80px)' }}>
+            <ToolRail tool={tool} onChangeTool={onChangeTool} />
+          </div>
+        )}
+      </div>
+    );
+  }
 
-        <div
-          className={"dock__right" + (isRightPanelCollapsed ? " dock__right--collapsed" : "")}
-          ref={rightPanelRef}
-          style={
-            isPanelFloating
-              ? {
-                  left: rightPanelPosition.x,
-                  top: rightPanelPosition.y,
-                }
-              : undefined
-          }
-        >
-          {isPanelFloating && (
-            <div className="dock__floatingPanelHeader" onPointerDown={beginRightPanelDrag}>
-              <span className="dock__floatingPanelGrip">⋮⋮</span>
-              <span className="dock__floatingPanelTitle">Panel</span>
-            </div>
-          )}
-          {!isMobile && (
-            <button
-              className="panel-toggle panel-toggle--right"
-              onClick={() =>
-                setIsRightPanelCollapsed((prev) => {
-                  const next = !prev;
-                  updateLayout({ rightCollapsed: next });
-                  return next;
-                })
-              }
-              title={isRightPanelCollapsed ? "Expand panel" : "Collapse panel"}
-            >
-              {isRightPanelCollapsed ? "‹" : "›"}
-            </button>
-          )}
-          <RightPanel
-            tool={tool}
-            settings={settings}
-            onChangeSettings={onChangeSettings}
-            canvasSpec={canvasSpec}
-            previewBuffer={compositeBuffer}
-            selectionMask={selectionMask}
-            layerPixels={layerPixels}
-            onInpaint={onInpaint}
-            onImageToImage={onImageToImage}
-            collapsed={isRightPanelCollapsed}
-            layers={layers}
-            activeLayerId={activeLayerId}
-            onLayerOperations={onLayerOperations}
-            palettes={palettes}
-            activePaletteId={activePaletteId}
-            recentColors={recentColors}
-            onPaletteOperations={onPaletteOperations}
-            onTransformOperations={onTransformOperations}
-            onColorAdjustOperations={onColorAdjustOperations}
-            hasSelection={selection !== null}
-            onSelectionOperations={onSelectionOperations}
-          />
+  // Desktop Figma-style Mode
+  return (
+    <div
+      className={
+        "dock" +
+        (isToolRailOpen ? " dock--left-open" : "") +
+        (isRightPanelOpen ? " dock--right-open" : "") +
+        (isToolRailCollapsed ? " dock--left-collapsed" : "") +
+        (isRightPanelCollapsed ? " dock--right-collapsed" : "") +
+        (!showLeftPanel ? " dock--left-hidden" : "") +
+        (!showRightPanel ? " dock--right-hidden" : "") +
+        (!showTimeline ? " dock--timeline-collapsed" : "") +
+        (isZenMode ? " dock--zen" : "")
+      }
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      style={{
+        "--leftPanelWidth": `${!showLeftPanel || isZenMode ? 0 : isToolRailCollapsed ? 52 : 72}px`,
+        "--rightPanelWidth": `${!showRightPanel || isZenMode ? 0 : isRightPanelCollapsed ? 52 : sizes.rightWidth}px`,
+        "--timelineHeight": `${!showTimeline || isZenMode ? 0 : sizes.timelineHeight}px`,
+        "--vSplitterWidth": `${!showRightPanel || isZenMode ? 0 : 4}px`,
+        "--hSplitterHeight": `${!showTimeline || isZenMode ? 0 : 4}px`,
+        ...(isZenMode ? { "--topbarHeight": "0px", "--statusBarHeight": "0px" } : {}),
+      } as React.CSSProperties}
+    >
+      <div className="dock__top">
+        <div className="dock__topbar">{topBar}</div>
+        <div className="dock__panelControls">
+          <button
+            className="uiBtn uiBtn--ghost"
+            onClick={toggleLeftPanel}
+            title={leftPanelTitle}
+          >
+            {showLeftPanel ? "⟨" : "⟩"} {leftPanelLabel}
+          </button>
+          <button
+            className="uiBtn uiBtn--ghost"
+            onClick={toggleTimeline}
+            title={showTimeline ? "Hide timeline" : "Show timeline"}
+          >
+            {showTimeline ? "⌄" : "⌃"} Timeline
+          </button>
+          <button
+            className="uiBtn uiBtn--ghost"
+            onClick={toggleRightPanel}
+            title={rightPanelTitle}
+          >
+            {showRightPanel ? "⟩" : "⟨"} {rightPanelLabel}
+          </button>
+          <button
+            className="uiBtn uiBtn--ghost"
+            onClick={() => setIsZenMode((prev) => !prev)}
+            title="Toggle Zen Mode (Tab)"
+          >
+            {isZenMode ? "◼" : "◻"} Zen
+          </button>
+          <button className="uiBtn uiBtn--ghost" onClick={resetLayout} title="Reset layout">
+            ↺ Reset
+          </button>
         </div>
       </div>
 
-      <div
-        className="splitter splitter--h"
-        title="Drag to resize timeline"
-        onPointerDown={(e) => beginDrag("timeline", e)}
-      />
-
-      <div className="dock__bottom">
-        <Timeline
-          settings={settings}
-          onChangeSettings={onChangeSettings}
-          timelineVisible={showTimeline}
-          onToggleTimeline={(next) => {
-            setShowTimeline(next);
-            updateLayout({ timelineVisible: next });
-          }}
-          canvasSpec={canvasSpec}
-          frames={frames}
-          currentFrameIndex={currentFrameIndex}
-          isPlaying={isPlaying}
-          onSelectFrame={onSelectFrame}
-          onInsertFrame={onInsertFrame}
-          onDuplicateFrame={onDuplicateFrame}
-          onDeleteFrame={onDeleteFrame}
-          onUpdateFrameDuration={onUpdateFrameDuration}
-          onTogglePlayback={onTogglePlayback}
-          onGenerateTweens={onGenerateTweens}
-          animationTags={animationTags}
-          activeTagId={activeTagId}
-          loopTagOnly={loopTagOnly}
-          onToggleLoopTagOnly={onToggleLoopTagOnly}
-          onSelectTag={onSelectTag}
-          onCreateTag={onCreateTag}
-          onUpdateTag={onUpdateTag}
-          onDeleteTag={onDeleteTag}
-        />
-      </div>
-
-        {isMobile && (
-          <div className="dock__toolbar">
-            <ToolBar tool={tool} onChangeTool={onChangeTool} />
+      <div className="dock__body" ref={dockBodyRef}>
+        {showLeftPanel && (
+          <div className="dock__left">
+            <ToolRail tool={tool} onChangeTool={onChangeTool} />
           </div>
         )}
 
-      <div className="dock__status">
-        {statusBar}
+        <div className="dock__center">
+          <CanvasStage
+            settings={settings}
+            tool={tool}
+            canvasSpec={canvasSpec}
+            buffer={buffer}
+            compositeBuffer={compositeBuffer}
+            previewLayerPixels={previewLayerPixels}
+            layers={layers}
+            activeLayerId={activeLayerId}
+            onStrokeEnd={onStrokeEnd}
+            selection={selection}
+            onChangeSelection={onChangeSelection}
+            floatingBuffer={floatingBuffer}
+            onBeginTransform={onBeginTransform}
+            onUpdateTransform={onUpdateTransform}
+            onCommitTransform={onCommitTransform}
+            onChangeZoom={(zoom) => onChangeSettings({ ...settings, zoom })}
+            onColorPick={onColorPick}
+            onCursorMove={onCursorMove}
+            remoteCursors={remoteCursors}
+            frames={frames}
+            currentFrameIndex={currentFrameIndex}
+            showMinimap={true}
+          />
+        </div>
+
+        {showRightPanel && (
+          <>
+            <div
+              className="splitter splitter--v"
+              title="Drag to resize panel"
+              onPointerDown={(e) => beginDrag("right", e)}
+            />
+
+            <RightPanel
+              tool={tool}
+              settings={settings}
+              onChangeSettings={onChangeSettings}
+              canvasSpec={canvasSpec}
+              previewBuffer={previewLayerPixels ?? undefined}
+              selectionMask={selectionMask}
+              layerPixels={layerPixels}
+              onInpaint={onInpaint}
+              onImageToImage={onImageToImage}
+              collapsed={isRightPanelCollapsed}
+              layers={layers}
+              activeLayerId={activeLayerId}
+              onLayerOperations={onLayerOperations}
+              palettes={palettes}
+              activePaletteId={activePaletteId}
+              recentColors={recentColors}
+              onPaletteOperations={onPaletteOperations}
+              onTransformOperations={onTransformOperations}
+              onColorAdjustOperations={onColorAdjustOperations}
+              hasSelection={selection !== null}
+              onSelectionOperations={onSelectionOperations}
+            />
+          </>
+        )}
       </div>
 
-      {isZenMode && (
-        <button
-          className="uiBtn dock__zenExit"
-          onClick={() => setIsZenMode(false)}
-          title="Exit Zen Mode (Tab)"
-        >
-          Exit Zen
-        </button>
+      {showTimeline && (
+        <>
+          <div
+            className="splitter splitter--h"
+            title="Drag to resize timeline"
+            onPointerDown={(e) => beginDrag("timeline", e)}
+          />
+          <div className="dock__bottom">
+            <Timeline
+              settings={settings}
+              onChangeSettings={onChangeSettings}
+              timelineVisible={showTimeline}
+              onToggleTimeline={(next) => {
+                setShowTimeline(next);
+                updateLayout({ timelineVisible: next });
+              }}
+              canvasSpec={canvasSpec}
+              frames={frames}
+              currentFrameIndex={currentFrameIndex}
+              isPlaying={isPlaying}
+              onSelectFrame={onSelectFrame}
+              onInsertFrame={onInsertFrame}
+              onDuplicateFrame={onDuplicateFrame}
+              onDeleteFrame={onDeleteFrame}
+              onUpdateFrameDuration={onUpdateFrameDuration}
+              onTogglePlayback={onTogglePlayback}
+              onGenerateTweens={onGenerateTweens}
+              animationTags={animationTags}
+              activeTagId={activeTagId}
+              loopTagOnly={loopTagOnly}
+              onToggleLoopTagOnly={onToggleLoopTagOnly}
+              onSelectTag={onSelectTag}
+              onCreateTag={onCreateTag}
+              onUpdateTag={onUpdateTag}
+              onDeleteTag={onDeleteTag}
+              dragDropEnabled={true}
+              onReorderFrames={(from, to) => {
+                // Placeholder for reorder
+              }}
+              fps={1000 / (frames[currentFrameIndex]?.durationMs || 100)}
+            />
+          </div>
+        </>
+      )}
+
+      {!isZenMode && statusBar && (
+        <div className="dock__status">
+          {statusBar}
+        </div>
       )}
     </div>
   );
