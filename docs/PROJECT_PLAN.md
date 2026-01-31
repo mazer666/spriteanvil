@@ -779,7 +779,67 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ---
 
-## Phase 12: Mobile & Tablet Optimization (Secondary Priority)
+## Phase 12: UX Excellence & Performance
+
+### 12.1 High-End Performance (CRITICAL PRIORITY)
+
+- [ ] **WebGL Migration Plan**:
+  - [ ] Abstract `CanvasRenderingContext2D` calls to a `Renderer` interface.
+  - [ ] Implement `WebGLRenderer` for GPU-accelerated compositing of many layers.
+- [ ] **Web Workers**:
+  - [ ] Offload PNG/GIF export generation.
+  - [ ] Offload complex magic-wand/lasso selection algorithms.
+
+### 12.2 Non-Enforced Onboarding System
+
+- [ ] **Interactive Tutorial**:
+  - [ ] Optional "Learning Mode" triggerable on first launch.
+  - [ ] "Skip" button always visible.
+  - [ ] Manual access via `ProjectDashboard.tsx` (Learning Center) and `SettingsPanel.tsx`.
+- [ ] **Tutorial Content**:
+  - [ ] Module 1: Timeline Basics (Keyframes, Layers).
+  - [ ] Module 2: Export Settings & Formats.
+  - [ ] Module 3: Layer Compositing & Blend Modes.
+- [ ] **Data Dependency**:
+  - [ ] Update `user_settings` table to track `tutorial_completed` (boolean) and `tutorial_progress` (JSON/step-id) to persist state across sessions.
+
+### 12.3 Project Dashboard & Gallery View
+
+- [ ] **Gallery Mode**:
+  - [ ] Grid view of `projects` with large thumbnails.
+  - [ ] Sorting: Last Modified, Created Date, Name.
+- [ ] **Project Management**:
+  - [ ] Duplicate Project (creates deep copy of sprites/frames).
+  - [ ] Template System: "New from Preset" (NES, GB, 64x64, etc.).
+- [ ] **Visuals**:
+  - [ ] Hero section for "Recent Project".
+  - [ ] "Create New" cards with template previews.
+
+### 12.4 UI Polish & Interaction Design
+
+- [ ] **Context-HUDs**:
+  - [ ] Floating toolbar appearing near active selection (`selection.ts`).
+  - [ ] Actions: Crop, Flip, Rotate, Deselect.
+- [ ] **Visual Feedback**:
+  - [ ] Optimize "Marching Ants" renderer in `CanvasStage.tsx` for 60fps at high zoom.
+  - [ ] Add micro-animations for tool switching and toggle states.
+- [ ] **Context Menus**:
+  - [ ] Right-click on Layer (`LayerPanel.tsx`): Duplicate, Lock, Merge Down, Properties.
+  - [ ] Right-click on Canvas: Quick tool picker, cut/copy/paste.
+
+### 12.5 Data Safety & Workflow
+
+- [ ] **Auto-Save Engine**:
+  - [ ] Implement `IndexedDB` local backup for active project.
+  - [ ] Hook into `snapshot.ts` to save state on every undo-stack push.
+  - [ ] Crash recovery prompt on restart ("Unsaved changes found...").
+- [ ] **Multi-Layer Drawing**:
+  - [ ] Finalize `layers.ts` compositing logic in real-time canvas rendering.
+  - [ ] Ensure "Active Layer" is the only edit target, while others are reference.
+
+---
+
+## Phase 13: Mobile & Tablet Optimization (Secondary Priority)
 
 ### 12.1 Touch & Gesture Interface
 

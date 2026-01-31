@@ -535,7 +535,16 @@ src/
 - **Ecosystem**: Engine Live Link (Godot/Unity), Plugin API, Time-Lapse Recording.
 - **Pro Canvas Tools**: Reference HUD, Dither-Gradient Tool.
 
-### Phase 12: Mobile & Tablet Optimization
+### Phase 12: UX Excellence & Performance
+
+- **High-End Performance (CRITICAL)**: WebGL rendering abstraction, WebWorker offloading for Export/Selection.
+- **Non-Enforced Onboarding**: Optional interactive tutorials for Timeline, Export, and Compositing.
+- **Project Gallery**: Grid view with thumbnails, duplication, and template presets.
+- **UI Polish**: Context-HUDs for selections, optimized marching ants, and right-click menus.
+- **Data Safety**: Auto-save to IndexedDB/LocalStorage, crash recovery.
+
+
+### Phase 13: Mobile & Tablet Optimization
 
 - **Touch & Gesture**: Pinch-zoom, two-finger pan, three-finger undo/redo.
 - **Mobile Layout**: Full-screen canvas, simplified palettes, bottom drawer timeline.
