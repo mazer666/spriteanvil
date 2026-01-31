@@ -766,24 +766,24 @@ export default function DockLayout({
         <div className="dock__topbar">{topBar}</div>
         <div className="dock__panelControls">
           <button
-            className="uiBtn uiBtn--ghost"
+            className={"uiBtn uiBtn--ghost" + (showLeftPanel ? " uiBtn--active" : "")}
             onClick={toggleLeftPanel}
           >
-            {showLeftPanel ? "Close Tools" : "Tools"}
+            Tools
           </button>
           
           <button
-            className="uiBtn uiBtn--ghost"
+            className={"uiBtn uiBtn--ghost" + (showTimeline ? " uiBtn--active" : "")}
             onClick={toggleTimeline}
           >
             Timeline
           </button>
 
           <button
-            className="uiBtn uiBtn--ghost"
+            className={"uiBtn uiBtn--ghost" + (showRightPanel ? " uiBtn--active" : "")}
             onClick={toggleRightPanel}
           >
-            {showRightPanel ? "Close Panel" : "Panel"}
+            Panel
           </button>
           
           <button
@@ -816,6 +816,11 @@ export default function DockLayout({
              >
                <span className="dock__floatingToolRailGrip">:::</span>
                <span className="dock__floatingToolRailTitle">Tools</span>
+               <button 
+                 className="dock__panelClose" 
+                 onClick={(e) => { e.stopPropagation(); toggleLeftPanel(); }}
+                 title="Close Tools"
+               >×</button>
              </div>
              <ToolRail tool={tool} onChangeTool={onChangeTool} />
            </div>
@@ -888,6 +893,11 @@ export default function DockLayout({
              >
                <span className="dock__floatingPanelGrip">:::</span>
                <span className="dock__floatingPanelTitle">Panel</span>
+               <button 
+                 className="dock__panelClose" 
+                 onClick={(e) => { e.stopPropagation(); toggleRightPanel(); }}
+                 title="Close Panel"
+               >×</button>
                <div 
                  className="splitter splitter--v" 
                  style={{ width: '12px', right: 0, position: 'absolute', height: '100%', cursor: 'ew-resize', opacity: 0 }}
@@ -946,10 +956,16 @@ export default function DockLayout({
           >
              <div 
                 className="dock__floatingPanelHeader" 
-                style={{ justifyContent: 'center', background: 'var(--bg-1)', cursor: 'grab' }}
+                style={{ background: 'var(--bg-1)', cursor: 'grab' }}
                 onPointerDown={beginTimelineMove}
              >
-                <span>Timeline</span>
+                <span className="dock__floatingPanelGrip">:::</span>
+                <span className="dock__floatingPanelTitle" style={{ flex: 1, textAlign: 'center' }}>Timeline</span>
+                <button 
+                  className="dock__panelClose" 
+                  onClick={(e) => { e.stopPropagation(); toggleTimeline(); }}
+                  title="Close Timeline"
+                >×</button>
              </div>
              <Timeline
                 settings={settings}

@@ -190,13 +190,6 @@ export default function Timeline({
       <div className="timeline__header">
         <div className="timeline__title">Timeline</div>
         <div className="timeline__controls">
-          <button 
-            className="uiBtn uiBtn--ghost"
-            onClick={() => onToggleTimeline(!timelineVisible)}
-            title={timelineVisible ? "Minimize timeline" : "Show timeline"}
-          >
-           {timelineVisible ? "▁ Minimize" : "▔ Show"}
-          </button>
           <button
             className="uiBtn"
             onClick={() => onSelectFrame(Math.max(0, currentFrameIndex - 1))}

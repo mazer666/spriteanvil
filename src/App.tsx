@@ -2450,10 +2450,10 @@ export default function App() {
               </div>
 
               <div className="topbar__right">
-                <button className="uiBtn" onClick={() => setShowExportPanel(true)} title="Export Sprite (Cmd+E)">
+                <button className={"uiBtn" + (showExportPanel ? " uiBtn--active" : "")} onClick={() => setShowExportPanel(prev => !prev)} title="Export Sprite (Cmd+E)">
                   Export
                 </button>
-                <button className="uiBtn" onClick={() => setShowSettingsPanel(true)} title="Workspace Settings">
+                <button className={"uiBtn" + (showSettingsPanel ? " uiBtn--active" : "")} onClick={() => setShowSettingsPanel(prev => !prev)} title="Workspace Settings">
                   Settings
                 </button>
                 
@@ -2484,8 +2484,8 @@ export default function App() {
                   <div className="topbar__menu-body">
                       <button className="uiBtn" onClick={() => { setShowCommandPalette(true); setShowTopbarMenu(false); }}>Commands</button>
                       <button className="uiBtn" onClick={() => { setProjectView("dashboard"); setShowTopbarMenu(false); }}>Projects</button>
-                      <button className="uiBtn" onClick={() => { setShowExportPanel(true); setShowTopbarMenu(false); }}>Export</button>
-                      <button className="uiBtn" onClick={() => { setShowSettingsPanel(true); setShowTopbarMenu(false); }}>Settings</button>
+                      <button className="uiBtn" onClick={() => { setShowExportPanel(prev => !prev); setShowTopbarMenu(false); }}>Export</button>
+                      <button className="uiBtn" onClick={() => { setShowSettingsPanel(prev => !prev); setShowTopbarMenu(false); }}>Settings</button>
                   </div>
                 </div>
               )}
