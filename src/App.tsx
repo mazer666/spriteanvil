@@ -544,6 +544,15 @@ export default function App() {
           { label: "Eyedropper", shortcut: "I" },
         ],
       },
+      {
+        title: "Transform",
+        items: [
+          { label: "Flip Horizontal", shortcut: "Cmd+H" },
+          { label: "Flip Vertical", shortcut: "Cmd+Shift+H" },
+          { label: "Rotate 90° CW", shortcut: "Cmd+Alt+R" },
+          { label: "Rotate 90° CCW", shortcut: "Cmd+Alt+Shift+R" },
+        ],
+      },
     ],
     []
   );
@@ -2198,8 +2207,8 @@ export default function App() {
     { id: "shortcuts", name: "Show Shortcuts", shortcut: "Cmd+/", category: "Help", action: () => setShowShortcutOverlay(true) },
     { id: "flipH", name: "Flip Horizontal", shortcut: "Cmd+H", category: "Transform", action: handleFlipHorizontal },
     { id: "flipV", name: "Flip Vertical", shortcut: "Cmd+Shift+H", category: "Transform", action: handleFlipVertical },
-    { id: "rotate90CW", name: "Rotate 90° CW", shortcut: "Cmd+R", category: "Transform", action: handleRotate90CW },
-    { id: "rotate90CCW", name: "Rotate 90° CCW", shortcut: "Cmd+Shift+R", category: "Transform", action: handleRotate90CCW },
+    { id: "rotate90CW", name: "Rotate 90° CW", shortcut: "Cmd+Alt+R", category: "Transform", action: handleRotate90CW },
+    { id: "rotate90CCW", name: "Rotate 90° CCW", shortcut: "Cmd+Alt+Shift+R", category: "Transform", action: handleRotate90CCW },
     { id: "rotate180", name: "Rotate 180°", category: "Transform", action: handleRotate180 },
     { id: "invert", name: "Invert Colors", category: "Color", action: handleInvert },
     { id: "desaturate", name: "Desaturate", category: "Color", action: handleDesaturate },

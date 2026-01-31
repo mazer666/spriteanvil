@@ -47,10 +47,10 @@ export default function TransformPanel({
       <div style={{ marginBottom: '12px' }}>
         <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '4px' }}>Flip</div>
         <div style={{ display: 'flex', gap: '4px' }}>
-          <button onClick={onFlipHorizontal} style={{ flex: 1, padding: '6px', fontSize: '12px' }} title="Flip Horizontal">
+          <button onClick={onFlipHorizontal} style={{ flex: 1, padding: '6px', fontSize: '12px' }} title="Flip Horizontal (Cmd+H)">
             ↔ Horizontal
           </button>
-          <button onClick={onFlipVertical} style={{ flex: 1, padding: '6px', fontSize: '12px' }} title="Flip Vertical">
+          <button onClick={onFlipVertical} style={{ flex: 1, padding: '6px', fontSize: '12px' }} title="Flip Vertical (Cmd+Shift+H)">
             ↕ Vertical
           </button>
         </div>
@@ -59,10 +59,10 @@ export default function TransformPanel({
       <div style={{ marginBottom: '12px' }}>
         <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '4px' }}>Rotate</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-          <button onClick={onRotate90CCW} style={{ padding: '6px', fontSize: '12px' }} title="Rotate 90° Counter-Clockwise">
+          <button onClick={onRotate90CCW} style={{ padding: '6px', fontSize: '12px' }} title="Rotate 90° CCW (Cmd+Alt+Shift+R)">
             ↶ 90° CCW
           </button>
-          <button onClick={onRotate90CW} style={{ padding: '6px', fontSize: '12px' }} title="Rotate 90° Clockwise">
+          <button onClick={onRotate90CW} style={{ padding: '6px', fontSize: '12px' }} title="Rotate 90° CW (Cmd+Alt+R)">
             ↷ 90° CW
           </button>
           <button onClick={onRotate180} style={{ padding: '6px', fontSize: '12px', gridColumn: 'span 2' }} title="Rotate 180°">

@@ -100,10 +100,10 @@ export function useKeyboardShortcuts(handlers: ShortcutHandler, enabled: boolean
       } else if (mod && e.key === 'h' && e.shiftKey && handlers.onFlipVertical) {
         e.preventDefault();
         handlers.onFlipVertical();
-      } else if (mod && e.key === 'r' && !e.shiftKey && handlers.onRotate90CW) {
+      } else if (mod && e.altKey && e.key === 'r' && !e.shiftKey && handlers.onRotate90CW) {
         e.preventDefault();
         handlers.onRotate90CW();
-      } else if (mod && e.key === 'r' && e.shiftKey && handlers.onRotate90CCW) {
+      } else if (mod && e.altKey && e.key === 'r' && e.shiftKey && handlers.onRotate90CCW) {
         e.preventDefault();
         handlers.onRotate90CCW();
       } else if (mod && e.key === 'k' && handlers.onOpenCommandPalette) {
