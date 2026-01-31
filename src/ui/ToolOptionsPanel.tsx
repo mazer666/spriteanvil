@@ -1,3 +1,15 @@
+/**
+ * src/ui/ToolOptionsPanel.tsx
+ * -----------------------------------------------------------------------------
+ * ## TOOL OPTIONS (Noob Guide)
+ * 
+ * Every tool has "Secret Settings". This panel shows them.
+ * 
+ * - If you have the PEN, you can change its SIZE or OPACITY.
+ * - If you have a SELECTION tool, you can change if it REPLACES or ADDS 
+ *   to what you already picked.
+ * - If you have the GRADIENT tool, you can choose between LINEAR or RADIAL.
+ */
 import React from "react";
 import { ToolId, UiSettings, GradientType, DitheringType } from "../types";
 

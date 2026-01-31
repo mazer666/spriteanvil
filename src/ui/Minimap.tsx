@@ -1,3 +1,17 @@
+/**
+ * src/ui/Minimap.tsx
+ * -----------------------------------------------------------------------------
+ * ## THE MINIMAP (Noob Guide)
+ * 
+ * The Minimap is a "Bird's Eye View" of your entire drawing.
+ * 
+ * 1. THE VIEWPORT: The white box shows the part of the canvas you are 
+ *    currently looking at.
+ * 2. NAVIGATION: You can click and drag inside the Minimap to quickly 
+ *    "Fly" to a different part of your huge drawing.
+ * 3. ZOOM SLIDER: Use the slider below it to zoom in and out without 
+ *    using your mouse wheel.
+ */
 import React, { useEffect, useRef } from "react";
 import { CanvasSpec } from "../types";
 

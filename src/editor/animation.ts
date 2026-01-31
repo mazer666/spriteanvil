@@ -1,3 +1,20 @@
+/**
+ * src/editor/animation.ts
+ * -----------------------------------------------------------------------------
+ * ## ANIMATION TWEENING (Noob Guide)
+ * 
+ * "Tweening" comes from the phrase "In Betweening".
+ * 
+ * If you have Frame A (a red ball on the left) and Frame B (the ball on the right),
+ * "Tweening" is the math that automatically creates the frames in the middle
+ * so the ball seems to slide smoothly instead of teleporting.
+ * 
+ * 1. EASING: This makes the ball start slow and speed up (like a real car),
+ *    instead of moving at a constant, robotic speed.
+ * 
+ * 2. INTERPOLATION: This is just fancy math for "finding the middle". 
+ *    If Frame A is color 0 and Frame B is color 10, the "middle" (0.5) is color 5.
+ */
 import { Frame } from "../types";
 
 export type EasingCurve = "linear" | "easeInQuad" | "easeOutQuad" | "elastic";

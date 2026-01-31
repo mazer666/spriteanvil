@@ -1,3 +1,17 @@
+/**
+ * src/ui/toolCatalog.ts
+ * -----------------------------------------------------------------------------
+ * ## TOOL CATALOG (Noob Guide)
+ * 
+ * This file is the "Main Menu" of all tools available in SpriteAnvil.
+ * 
+ * 1. TOOL DEFINITION: Every tool has an ID (the code name), a LABEL 
+ *    (the icon), and a TITLE (the tooltip name).
+ * 2. GROUPS: We organize tools into sections like "Shapes" or "Selection" 
+ *    to make them easier to find.
+ * 3. SHORTCUTS: The text in parentheses like (B) is just a hint; the 
+ *    actual magic happens in useKeyboardShortcuts.ts!
+ */
 import { ToolId } from "../types";
 
 export type ToolDefinition = {

@@ -1,3 +1,17 @@
+/**
+ * src/editor/tools/patterns.ts
+ * -----------------------------------------------------------------------------
+ * ## PATTERNS & NOISE (Noob Guide)
+ * 
+ * Patterns let you fill areas with "Repeating Textures" instead of flat color.
+ * 
+ * 1. CHECKER: Alternates pixels like a chessboard. Classic for transparency.
+ * 2. DITHER: Uses a "Bayer Matrix" (a fixed grid of numbers) to decide 
+ *    which pixels to color. It creates a smooth-looking fade with only 
+ *    two colors.
+ * 3. NOISE: Uses "Random Math" (Hashing) to scatter pixels randomly, 
+ *    making things look grainy or like sand.
+ */
 import { RGBA } from "../pixels";
 
 export type PatternId = "checker" | "dither" | "noise";

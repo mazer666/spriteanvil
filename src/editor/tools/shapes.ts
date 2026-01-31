@@ -1,15 +1,20 @@
 /**
- * Shape Drawing Tools
- *
- * This module implements tools for drawing geometric shapes:
- * - Rectangles (filled and outlined)
- * - Circles (filled and outlined)
- * - Ellipses (filled and outlined)
- *
- * All functions use pixel-perfect algorithms suitable for pixel art.
- * No anti-aliasing - every pixel is either fully on or fully off.
- *
- * @module editor/tools/shapes
+ * src/editor/tools/shapes.ts
+ * -----------------------------------------------------------------------------
+ * ## SHAPE TOOLS (Noob Guide)
+ * 
+ * Shape tools help you draw perfect Boxes, Circles, and Ovals.
+ * 
+ * 1. THE MATH: Computers use geometry to decide which pixels to color. 
+ *    For a box, it's easy: just color everything between X and Y.
+ * 
+ * 2. THE CIRCLE (Bresenham): Drawing circles is harder! We use a famous 
+ *    algorithm that calculates 1/8th of the circle and then "mirrors" it 
+ *    to finish the rest, ensuring it looks perfectly round.
+ * 
+ * 3. FILL vs OUTLINE: 
+ *    - Outline: Only the border is painted.
+ *    - Filled: Everything inside the border is also painted.
  */
 
 import { RGBA, setPixel, drawLine } from "../pixels"

@@ -3,7 +3,21 @@
  * -----------------------------------------------------------------------------
  * Pixel buffer utilities (RGBA).
  *
- * We store pixels in a Uint8ClampedArray: [R,G,B,A, R,G,B,A, ...]
+ * ## How we store pixels (for beginners):
+ * We use a "Uint8ClampedArray". Think of this as a giant list of numbers from 0 to 255.
+ * Every pixel on the screen is made of 4 numbers in this list:
+ * [Red, Green, Blue, Alpha (transparency)]
+ *
+ * So if your canvas is 2x2 pixels, your list looks like this:
+ * [P1_R, P1_G, P1_B, P1_A,  P2_R, P2_G, P2_B, P2_A,  P3_R, P3_G, P3_B, P3_A,  P4_R, P4_G, P4_B, P4_A]
+ *
+ * ## The Math (Coordinates to Index):
+ * To find a pixel at (x, y), we use this formula:
+ * index = (y * width + x) * 4
+ *
+ * - (y * width + x): This finds which pixel number we are at (counting from top-left, row by row).
+ * - * 4: Because each pixel takes 4 slots in the array.
+ *
  * This matches ImageData's internal format and avoids endianness issues.
  */
 
@@ -43,6 +57,7 @@ export function getPixel(
   y: number
 ): RGBA | null {
   if (x < 0 || y < 0 || x >= width || y >= height) return null;
+  // Index math: jump to 'y' rows down, add 'x' pixels across, then multiply by 4 (RGBA)
   const i = (y * width + x) * 4;
   return {
     r: buf[i + 0],
@@ -61,6 +76,7 @@ export function setPixel(
   rgba: RGBA
 ): boolean {
   if (x < 0 || y < 0 || x >= width || y >= height) return false;
+  // Find where this pixel starts in the flat array
   const i = (y * width + x) * 4;
 
   // Only mark changed if pixel actually differs (helps avoid false history commits).
@@ -77,6 +93,17 @@ export function setPixel(
 
 /**
  * Draw a line using Bresenham (pixel-perfect, no blur).
+ * 
+ * --- NOOB GUIDE: WHY BRESENHAM? ---
+ * In pixel art, we don't want "blurry" lines. If you use standard math,
+ * you get half-pixels which looks bad. Bresenham is a classic "integer only"
+ * algorithm that decides exactly which pixel to color to make the straightest
+ * line possible with zero blur.
+ * 
+ * It's like walking on a grid: "Do I go right, or right AND up?"
+ * We keep track of an "error" (how far we are from the 'real' line) 
+ * to decide when to jump.
+ * 
  * Returns true if at least one pixel changed.
  */
 export function drawLine(
@@ -94,9 +121,11 @@ export function drawLine(
   let dx = Math.abs(x1 - x0);
   let dy = Math.abs(y1 - y0);
 
+  // sx/sy tell us which direction we are moving (+1 or -1)
   const sx = x0 < x1 ? 1 : -1;
   const sy = y0 < y1 ? 1 : -1;
 
+  // The 'error' determines when we need to move in the 'minor' axis
   let err = dx - dy;
 
   while (true) {

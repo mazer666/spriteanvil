@@ -1,3 +1,16 @@
+/**
+ * src/editor/tools/lasso.ts
+ * -----------------------------------------------------------------------------
+ * ## LASSO SELECTION (Noob Guide)
+ * 
+ * Lasso is a "Freehand" selection tool.
+ * 
+ * 1. THE PATH: As you move the mouse, we record every point you touch.
+ * 2. THE POLYGON: Once you let go, we connect the start and end to create 
+ *     a closed shape (a polygon).
+ * 3. THE MASK: We check every pixel on the canvas to see if it's "Inside" 
+ *    or "Outside" that polygon. If it's inside, it becomes selected!
+ */
 export function createLassoSelection(
   width: number,
   height: number,

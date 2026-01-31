@@ -35,9 +35,15 @@ export default function SelectionTransformOverlay({
         initialPixels: Uint8ClampedArray;
     } | null>(null);
 
-    // Convert canvas coordinates to screen coordinates for rendering
+    // --- COORDINATE CONVERSION (Noob Guide) ---
+    // The 'floatingBuffer' uses "Canvas Coordinates" (the actual pixel position in your art).
+    // But the screen uses "CSS Pixels". we need to map them:
+    // 1. Multiply by 'zoom' (if zoom is 10x, 1 pixel on canvas = 10 pixels on screen).
+    // 2. Add 'panOffset' (if the user has moved the view, we must offset our overlay).
     const screenX = (floatingBuffer.x * zoom) + panOffset.x;
     const screenY = (floatingBuffer.y * zoom) + panOffset.y;
+    
+    // Width and height only need zoom (they don't care about the pan position).
     const screenW = floatingBuffer.width * zoom;
     const screenH = floatingBuffer.height * zoom;
 
@@ -56,6 +62,11 @@ export default function SelectionTransformOverlay({
                 next.x = Math.round(initialX + dx);
                 next.y = Math.round(initialY + dy);
             } else {
+                // --- RESIZING LOGIC (Noob Guide) ---
+                // 'dx' and 'dy' are how far the mouse has moved.
+                // If we grab the LEFT handle and move left, 'dx' is negative.
+                // We must shrink/grow the WIDTH and offset the X position
+                // so the right side stays pinned.
                 let newX = initialX;
                 let newY = initialY;
                 let newW = initialW;
@@ -82,6 +93,8 @@ export default function SelectionTransformOverlay({
                     next.y = newY;
                     next.width = newW;
                     next.height = newH;
+                    // 'resizeBuffer' takes the old pixel grid and creates a new one
+                    // with the new dimensions (nearest neighbor).
                     next.pixels = resizeBuffer(initialPixels, initialW, initialH, newW, newH);
                 }
             }

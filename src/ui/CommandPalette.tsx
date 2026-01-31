@@ -21,8 +21,12 @@ export default function CommandPalette({ commands, isOpen, onClose }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // --- SEARCH LOGIC (Noob Guide) ---
+  // To make searching easy, we combine everything we know about a command
+  // into one long string (the "haystack"), and see if it contains what you typed.
   const query = search.toLowerCase();
   const filteredCommands = commands.filter((cmd) => {
+    // We look at the name, description, category, and even hidden keywords
     const haystack = [
       cmd.name,
       cmd.description,
@@ -30,9 +34,11 @@ export default function CommandPalette({ commands, isOpen, onClose }: Props) {
       cmd.shortcut,
       ...(cmd.keywords ?? []),
     ]
-      .filter(Boolean)
-      .join(" ")
+      .filter(Boolean) // Remove empty/null items
+      .join(" ")       // Combine into "Name Description Category Keywords"
       .toLowerCase();
+
+    // If your search matches anywhere in that big string, we show it!
     return haystack.includes(query);
   });
 

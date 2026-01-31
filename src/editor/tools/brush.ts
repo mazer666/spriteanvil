@@ -1,3 +1,19 @@
+/**
+ * src/editor/tools/brush.ts
+ * -----------------------------------------------------------------------------
+ * ## BRUSHES AND PENS (Noob Guide)
+ * 
+ * Drawing with a digital brush is like "Stamping".
+ * 
+ * 1. THE STAMP: When you click once, we draw a circle of pixels (a stamp) 
+ *    around your mouse. The "Brush Size" is how big that circle is.
+ * 
+ * 2. THE LINE: When you drag the mouse, we don't just draw one stamp. 
+ *    We draw MANY stamps very close together so they look like a solid line.
+ * 
+ * 3. TEXTURE: If you have a texture enabled, we only paint the pixels 
+ *    where the "Stamp" and the "Texture Pattern" both say it's okay.
+ */
 import { setPixel } from "../pixels";
 import { getSymmetryTransforms } from "../symmetry";
 import { UiSettings } from "../../types";

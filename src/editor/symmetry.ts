@@ -1,3 +1,19 @@
+/**
+ * src/editor/symmetry.ts
+ * -----------------------------------------------------------------------------
+ * ## SYMMETRY (Noob Guide)
+ * 
+ * Symmetry is like drawing with a "Mirror".
+ * 
+ * 1. MIRRORING: If you draw a pixel on the Left, the computer automatically
+ *    draws the exact same pixel on the Right (Horizontal) or Bottom (Vertical).
+ * 
+ * 2. RADIAL: This is like a kaleidoscope! It takes your one pixel and 
+ *    rotates it around the center to create 4, 8, or even 32 copies at once.
+ * 
+ * 3. MATH: We use "Reflection Matrices" and "Rotation Math" (Sines and Cosines)
+ *    to calculate where these extra pixels should go.
+ */
 import { RGBA, setPixel } from "./pixels";
 import type { SymmetryMode } from "../types";
 

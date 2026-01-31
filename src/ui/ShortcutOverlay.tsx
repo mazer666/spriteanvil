@@ -1,3 +1,13 @@
+/**
+ * src/ui/ShortcutOverlay.tsx
+ * -----------------------------------------------------------------------------
+ * ## SHORTCUT CHEAT SHEET (Noob Guide)
+ * 
+ * This is a "Pop-up Help" screen that reminds you which keys do what.
+ * 
+ * - Learning these keys is the best way to become a "Speed Painter".
+ * - For example, instead of clicking the Eraser icon, you can just press [E]!
+ */
 import React from "react";
 
 export type ShortcutGroup = {

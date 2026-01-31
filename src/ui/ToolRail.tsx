@@ -1,3 +1,15 @@
+/**
+ * src/ui/ToolRail.tsx
+ * -----------------------------------------------------------------------------
+ * ## TOOL RAIL (Noob Guide)
+ * 
+ * This is your "Toolbox". It sits on the left side of the screen.
+ * 
+ * 1. GROUPS: Tools are organized into groups like "Drawing" or "Select". 
+ *    You can collapse these groups if you don't need them.
+ * 2. SHORTCUTS: Next to each tool name, you'll see a letter (like 'B' for Pen). 
+ *    Pressing that key on your keyboard will automatically pick that tool!
+ */
 import React from "react";
 import { ToolId } from "../types";
 import { TOOL_GROUPS } from "./toolCatalog";

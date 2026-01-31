@@ -1,3 +1,16 @@
+/**
+ * src/ui/PalettePanel.tsx
+ * -----------------------------------------------------------------------------
+ * ## PALETTE PANEL (Noob Guide)
+ * 
+ * This is where you pick your "Paint Colors".
+ * 
+ * 1. PRIMARY vs SECONDARY: You usually have two colors active at once. 
+ * 2. RAMPS: You can pick two colors and ask the app to "Fill in the gaps" 
+ *    with a smooth line of shades (great for shading characters!).
+ * 3. IMPORT/EXPORT: You can save your favorite colors as a file and 
+ *    share them with other artists.
+ */
 import React, { useRef, useState } from "react";
 import { PaletteData } from "../lib/projects/snapshot";
 

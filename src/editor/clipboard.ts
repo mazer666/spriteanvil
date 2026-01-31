@@ -1,3 +1,20 @@
+/**
+ * src/editor/clipboard.ts
+ * -----------------------------------------------------------------------------
+ * ## COPY & PASTE (Noob Guide)
+ * 
+ * The clipboard is like a "Scrapbook".
+ * 
+ * 1. COPY: You pick a piece of your drawing and "cut it out". We save 
+ *    those specific pixels and their width/height into a separate little
+ *    box called the Clipboard.
+ * 
+ * 2. PASTE: We take that "scrap" out of the box and place it back onto 
+ *    the canvas. You can move it around before it's "glued down" (committed).
+ * 
+ * 3. CUT: Same as Copy, but we erase the original pixels from the canvas
+ *    after copying them.
+ */
 import { SelectionMask, getSelectionBounds } from "./selection";
 import { cloneBuffer } from "./pixels";
 

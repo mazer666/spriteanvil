@@ -3,7 +3,7 @@
 **Forge sprites. Shape motion.**  
 SpriteAnvil is an in-browser **pixel-art sprite + animation editor** focused on a clean workflow and a beginner-friendly, well-documented codebase.
 
-> Status: Beta / Production Ready for Core Features. Mobile support in beta. The UI shell + core editor foundations exist; more tools and workflows are being integrated incrementally.
+> Status: Phase 9 (UI Overhaul) Complete. Professional floating UI, Zen Mode, and modern aesthetics integrated. Core features production-ready.
 
 ---
 

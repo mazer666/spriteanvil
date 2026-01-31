@@ -1,3 +1,23 @@
+/**
+ * src/editor/layers.ts
+ * -----------------------------------------------------------------------------
+ * ## LAYER COMPOSITING (Noob Guide)
+ * 
+ * Think of layers like "Clear Plastic Sheets".
+ * Imagine you have three sheets:
+ * 1. Bottom Sheet: A background drawing.
+ * 2. Middle Sheet: A character.
+ * 3. Top Sheet: Shiny highlights.
+ * 
+ * "Compositing" is the process of looking through all these sheets from the 
+ * top and figuring out what color each pixel on your screen should be.
+ * 
+ * - If the Top Sheet has a red pixel, you see Red.
+ * - If the Top Sheet is see-through (transparent), you look through it to 
+ *   the Middle Sheet.
+ * - "Blend Modes" (like Multiply or Screen) are like "Magic Filters" that 
+ *   mix the colors of the sheets together instead of just blocking them.
+ */
 import { BlendMode, LayerData } from "../types";
 
 type LayerCompositeInput = Pick<LayerData, "opacity" | "blend_mode" | "is_visible" | "pixels">;

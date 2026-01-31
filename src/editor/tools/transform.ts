@@ -1,3 +1,21 @@
+/**
+ * src/editor/tools/transform.ts
+ * -----------------------------------------------------------------------------
+ * ## TRANSFORMS (Noob Guide)
+ * 
+ * Transforms are how you Move, Rotate, or Flip your drawing.
+ * 
+ * 1. THE GRID: Imagine your drawing is on a piece of graph paper. 
+ *    To "Flip" it, we just copy pixel (1,2) to position (max-1, 2).
+ * 
+ * 2. THE MATRIX: For complex rotations, we use a "Transform Matrix". 
+ *    It's basically a math machine where you put in a pixel's old position 
+ *    and it spits out the new position.
+ * 
+ * 3. NEAREST NEIGHBOR: When we resize a drawing, we sometimes end up 
+ *    between pixels. To keep it "crunchy" and not "blurry", we just pick 
+ *     the "Nearest" real pixel. This is key for pixel art!
+ */
 import { cloneBuffer } from "../pixels";
 import { getSelectionBounds } from "../selection";
 import { FloatingSelection } from "../../types";

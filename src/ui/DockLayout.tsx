@@ -1,3 +1,21 @@
+/**
+ * src/ui/DockLayout.tsx
+ * -----------------------------------------------------------------------------
+ * ## THE DOCK (Noob Guide)
+ * 
+ * Think of the Dock as the "Dashboard" of the app. It holds all the panels 
+ * (Tools, Layers, Timeline) and the main drawing area.
+ * 
+ * 1. FLOATING PANELS: Just like windows on your computer, you can move 
+ *    the toolbars around and "Dock" them where you want.
+ * 
+ * 2. ZEN MODE: Pressing [Tab] hides everything except the canvas so you 
+ *    can focus on your art.
+ * 
+ * 3. RESPONSIVE: If you use the app on a phone, the Dock automatically 
+ *    switches to a "Tabbed" view because there isn't enough space for 
+ *    floating windows.
+ */
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import ToolRail from "./ToolRail";
 import ToolBar from "./ToolBar";

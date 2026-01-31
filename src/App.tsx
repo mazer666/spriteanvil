@@ -1,4 +1,27 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+/**
+ * src/App.tsx
+ * -----------------------------------------------------------------------------
+ * ## THE ORCHESTRATOR (Noob Guide)
+ * 
+ * Think of App.tsx as the "Brain" or "Conductor" of SpriteAnvil.
+ * 
+ * 1. STATE (The Memory): 
+ *    We keep all the important information here (like which colors are picked, 
+ *    what pixels are on each frame, and if the user is currently drawing).
+ * 
+ * 2. HANDLERS (The Actions): 
+ *    When you click a button or draw, a "Handler" function here is called.
+ *    It updates the State and tells the rest of the app what changed.
+ * 
+ * 3. FLOW (The Pipeline):
+ *    State flows DOWN to the UI components (DockLayout, RightPanel, etc.).
+ *    UI components are "dumb" — they just show what App.tsx tells them to.
+ * 
+ * 4. COMPOSITING:
+ *    Since we have layers, this file handles "squashing" them all together
+ *    into one final image that you see on the canvas.
+ */
 import DockLayout from "./ui/DockLayout";
 import ExportPanel from "./ui/ExportPanel";
 import SettingsPanel from "./ui/SettingsPanel";

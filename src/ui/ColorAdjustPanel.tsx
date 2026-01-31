@@ -1,3 +1,19 @@
+/**
+ * src/ui/ColorAdjustPanel.tsx
+ * -----------------------------------------------------------------------------
+ * ## COLOR ADJUST PANEL (Noob Guide)
+ * 
+ * This panel is for "Filtering" your artwork.
+ * 
+ * 1. SLIDERS: When you move a slider, we show you a "Preview" layer 
+ *    on top of your drawing so you can see the change in real-time.
+ * 2. APPLY: The changes aren't permanent until you click the [Apply] button.
+ * 3. QUICK EFFECTS: Buttons like "Invert" or "Grayscale" are one-click 
+ *    shortcuts for common color changes.
+ * 
+ * NOTE FOR DEVS: We use a "Ref" for the preview callback to prevent 
+ * React from getting stuck in an infinite update loop!
+ */
 import React, { useState } from "react";
 
 type Props = {

@@ -1,4 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+/**
+ * src/ui/CanvasStage.tsx
+ * -----------------------------------------------------------------------------
+ * ## THE CANVAS STAGE (Noob Guide)
+ * 
+ * This is the "Main Screen" where you actually see and draw pixels.
+ * 
+ * It handles the "Camera" (Zoom and Pan), the "Input" (Mouse, Pen, Touch),
+ * and "Compositing" (putting all your layers together so you see them as one).
+ * 
+ * 1. BUFFER vs PREVIEW: To stay fast, we draw into a "Preview Buffer" while 
+ *    you are moving the mouse. Only when you LET GO do we merge that into 
+ *    the real Layer pixels.
+ * 
+ * 2. COORDINATES: We convert your Mouse Position (Screen Pixels) into 
+ *    Grid Positions (Canvas Pixels) using Zoom and Pan math.
+ */
 import { CanvasSpec, ToolId, UiSettings, LayerData, FloatingSelection } from "../types";
 import SelectionTransformOverlay from "./SelectionTransformOverlay";
 import Minimap from "./Minimap";

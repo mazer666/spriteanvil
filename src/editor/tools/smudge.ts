@@ -1,3 +1,17 @@
+/**
+ * src/editor/tools/smudge.ts
+ * -----------------------------------------------------------------------------
+ * ## SMUDGE TOOL (Noob Guide)
+ * 
+ * Smudging is like "Rubbing wet paint with your finger".
+ * 
+ * 1. THE MIX: When you drag from Pixel A to Pixel B, we take some of the 
+ *    color from A and mix it into B.
+ * 2. THE STRENGTH: The more "Strength" you have, the more of the original 
+ *    color is carried along as you drag.
+ * 3. THE EFFECT: It's great for blurring edges or creating smooth 
+ *    painterly transitions without using a gradient tool.
+ */
 import { getPixel, setPixel } from "../pixels";
 import { getPatternMask, PatternId } from "./patterns";
 

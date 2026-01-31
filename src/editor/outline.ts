@@ -1,3 +1,19 @@
+/**
+ * src/editor/outline.ts
+ * -----------------------------------------------------------------------------
+ * ## SMART OUTLINES (Noob Guide)
+ * 
+ * An "Outline" is just a border around your drawing. 
+ * But how does the computer know where the "edge" is?
+ * 
+ * 1. SCANNING: We look at every single pixel in your drawing.
+ * 2. NEIGHBORS: For each pixel, we check its neighbors (Up, Down, Left, Right).
+ * 3. THE EDGE: 
+ *    - An "Inside" edge is a colored pixel that touches a transparent one.
+ *    - An "Outside" edge is a transparent pixel that touches a colored one.
+ * 
+ * Once we find these edge pixels, we color them with your chosen outline color!
+ */
 import { RGBA, setPixel, getPixel, cloneBuffer } from "./pixels";
 
 export type OutlineMode = "inside" | "outside" | "center";

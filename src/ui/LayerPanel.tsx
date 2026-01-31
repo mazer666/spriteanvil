@@ -1,3 +1,16 @@
+/**
+ * src/ui/LayerPanel.tsx
+ * -----------------------------------------------------------------------------
+ * ## LAYER PANEL (Noob Guide)
+ * 
+ * This is where you manage your "Transparent Sheets".
+ * 
+ * 1. THE LIST: You can drag layers to change which ones are on top.
+ * 2. VISIBILITY (👁): Click the eye to hide a layer if it's in your way.
+ * 3. LOCKING (🔒): Lock a layer to make sure you don't accidentally edit it.
+ * 4. BLENDING: The "Blend Mode" dropdown lets you choose how the sheet 
+ *    should mix with the ones below (like making it look like a shadow).
+ */
 import React, { useState } from "react";
 import { BlendMode, LayerData } from "../types";
 

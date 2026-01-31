@@ -1,3 +1,21 @@
+/**
+ * src/editor/tools/gradient.ts
+ * -----------------------------------------------------------------------------
+ * ## GRADIENTS & DITHERING (Noob Guide)
+ * 
+ * A Gradient is a "Smooth Fade" from one color to another.
+ * 
+ * 1. MATH: For every pixel, we calculate how far it is from your Start point 
+ *    vs your End point. If it's halfway, we mix the colors 50/50.
+ * 
+ * 2. TYPES:
+ *    - Linear: Fades in a straight line.
+ *    - Radial: Fades outward in a circle.
+ * 
+ * 3. DITHERING: In pixel art, we sometimes don't want a "blurry" fade. 
+ *    Dithering uses patterns of dots (checkerboards) to blend colors 
+ *    using only the colors in your palette. It's a classic retro look!
+ */
 import { RGBA, setPixel } from "../pixels";
 
 export type GradientType = "linear" | "radial" | "angle" | "reflected" | "diamond";

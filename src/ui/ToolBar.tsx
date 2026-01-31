@@ -1,3 +1,14 @@
+/**
+ * src/ui/ToolBar.tsx
+ * -----------------------------------------------------------------------------
+ * ## TOOL BAR (Noob Guide)
+ * 
+ * The Tool Bar is a "Quick Access" version of the Tool Rail.
+ * 
+ * - It shows all the tools in a horizontal row.
+ * - In some layouts (like Mobile), this is the primary way to switch 
+ *   between things like the Pen and the Eraser.
+ */
 import React from "react";
 import { ToolId } from "../types";
 import { TOOL_GROUPS } from "./toolCatalog";

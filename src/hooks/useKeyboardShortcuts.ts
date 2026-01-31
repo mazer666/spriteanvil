@@ -1,3 +1,17 @@
+/**
+ * src/hooks/useKeyboardShortcuts.ts
+ * -----------------------------------------------------------------------------
+ * ## KEYBOARD SHORTCUTS (Noob Guide)
+ * 
+ * This file is the "Ears" of the application. It listens for whenever 
+ * you press a key and tells the rest of the app what to do.
+ * 
+ * 1. GLOBAL KEYDOWN: We attach a listener to the whole window.
+ * 2. INPUT PROTECTION: We make sure NOT to trigger shortcuts if you 
+ *    are currently typing a name in a text box.
+ * 3. TOOL MAPPING: For example, if it hears 'B', it tells the app 
+ *    to switch to the "Brush" (Pen) tool.
+ */
 import { useEffect } from "react";
 import { ToolId } from "../types";
 import { isInputFocused } from "../utils/dom";

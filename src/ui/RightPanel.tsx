@@ -1,3 +1,17 @@
+/**
+ * src/ui/RightPanel.tsx
+ * -----------------------------------------------------------------------------
+ * ## RIGHT PANEL (Noob Guide)
+ * 
+ * This is the "Stack of Drawers" on the right side of the screen.
+ * 
+ * 1. ACCORDIONS: Each section (Layers, Colors, etc.) can be opened 
+ *    or closed by clicking its header.
+ * 2. REORDERING: See those ☰ icons? You can grab them and drag the 
+ *    sections to change which "Drawer" is on top.
+ * 3. DYNAMIC: The panel changes what it shows based on which tool 
+ *    you have selected.
+ */
 import React, { useEffect, useMemo, useState } from "react";
 import { UiSettings, ToolId, LayerData, BlendMode, CanvasSpec } from "../types";
 import LayerPanel from "./LayerPanel";

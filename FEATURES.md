@@ -1,7 +1,7 @@
 # SpriteAnvil - Complete Feature List
 
-**Version**: 0.8.0 (Phase 8 Implementation)
-**Last Updated**: 2026-01-28
+**Version**: 0.9.0 (Phase 9 Implementation)
+**Last Updated**: 2026-01-31
 
 ---
 
@@ -450,9 +450,9 @@ src/
 - ✅ PNG spritesheet export
 - ✅ Keyboard shortcuts + command palette
 - ✅ Undo/redo system
-- ⏳ Gradient/lasso/magic wand integration
-- ⏳ Layer compositing
-- ⏳ JSON/GIF export wiring
+- ✅ Gradient/lasso/magic wand integration
+- ✅ Layer compositing (Integrated in drawing flow)
+- ✅ JSON/GIF export wiring
 
 ### User Experience (90%)
 
