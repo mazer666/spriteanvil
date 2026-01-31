@@ -3,7 +3,8 @@ export type BackgroundMode =
   | "solidDark"
   | "solidLight"
   | "greenscreen"
-  | "bluescreen";
+  | "bluescreen"
+  | "solidCustom";
 
 export type ToolId =
   | "pen"
@@ -79,6 +80,7 @@ export type UiSettings = {
   checkerSize: number;
   checkerA: string;
   checkerB: string;
+  customBackgroundColor: string;
 
   // Grid overlay (view-only)
   showGrid: boolean;

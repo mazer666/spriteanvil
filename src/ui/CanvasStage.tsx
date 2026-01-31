@@ -274,18 +274,24 @@ export default function CanvasStage(props: {
         return "stage stage--green";
       case "bluescreen":
         return "stage stage--blue";
+      case "solidCustom":
+        return "stage stage--custom";
       default:
         return "stage stage--checker";
     }
   }, [settings.backgroundMode]);
 
   const stageStyle = useMemo(() => {
-    return {
+    const style: any = {
       ["--checkerSize" as any]: `${settings.checkerSize}px`,
       ["--checkerA" as any]: settings.checkerA,
       ["--checkerB" as any]: settings.checkerB
     };
-  }, [settings.checkerSize, settings.checkerA, settings.checkerB]);
+    if (settings.backgroundMode === "solidCustom") {
+      style.background = settings.customBackgroundColor || "#000000";
+    }
+    return style;
+  }, [settings.checkerSize, settings.checkerA, settings.checkerB, settings.backgroundMode, settings.customBackgroundColor]);
 
   function cssPx(n: number) {
     return Math.max(1, Math.floor(n));

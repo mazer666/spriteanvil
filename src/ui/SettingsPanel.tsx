@@ -61,6 +61,22 @@ export default function SettingsPanel({
                 }
               />
             </label>
+
+            {settings.showGrid && (
+              <label className="ui-row">
+                <span>Grid Size (px)</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="128"
+                  value={settings.gridSize}
+                  onChange={(e) =>
+                    onChangeSettings({ ...settings, gridSize: Math.max(1, parseInt(e.target.value) || 1) })
+                  }
+                />
+              </label>
+            )}
+
             <label className="ui-row">
               <span>Onion Skin</span>
               <input
@@ -71,6 +87,7 @@ export default function SettingsPanel({
                 }
               />
             </label>
+
             <label className="ui-row">
               <span>Background</span>
               <select
@@ -84,8 +101,33 @@ export default function SettingsPanel({
                 <option value="solidLight">Solid (Light)</option>
                 <option value="greenscreen">Greenscreen</option>
                 <option value="bluescreen">Bluescreen</option>
+                <option value="solidCustom">Custom Color</option>
               </select>
             </label>
+
+            {settings.backgroundMode === "solidCustom" && (
+              <label className="ui-row">
+                <span>Color</span>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    value={settings.customBackgroundColor || "#000000"}
+                    onChange={(e) =>
+                      onChangeSettings({ ...settings, customBackgroundColor: e.target.value })
+                    }
+                    style={{ padding: 0, width: '32px', height: '32px', border: 'none', background: 'none' }}
+                  />
+                  <input
+                    type="text"
+                    value={settings.customBackgroundColor || "#000000"}
+                    onChange={(e) =>
+                      onChangeSettings({ ...settings, customBackgroundColor: e.target.value })
+                    }
+                    style={{ width: '80px' }}
+                  />
+                </div>
+              </label>
+            )}
           </div>
         </div>
       </div>

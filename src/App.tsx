@@ -369,6 +369,7 @@ export default function App() {
     checkerSize: 24,
     checkerA: "rgba(255,255,255,0.08)",
     checkerB: "rgba(0,0,0,0.10)",
+    customBackgroundColor: "#2a2a2a",
     showGrid: true,
     gridSize: 1,
     showOnionSkin: true,
