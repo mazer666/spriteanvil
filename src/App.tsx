@@ -44,6 +44,7 @@ import {
   loadLocalProjects,
   saveLocalProjects,
 } from "./hooks/useProjectPersistence";
+import { useAnimationSystem, ConfirmDialogConfig } from "./hooks/useAnimationSystem";
 import { AnimationTag } from "./lib/supabase/animation_tags";
 import {
   flipHorizontal,
@@ -662,32 +663,39 @@ export default function App() {
     [activeAnimationTagId, animationTags]
   );
 
-  useEffect(() => {
-    if (!isPlaying) return;
+  // Animation system hook - handles frame operations and playback
+  const animationSystem = useAnimationSystem(
+    // State
+    {
+      frames,
+      currentFrameIndex,
+      selectedFrameIndices,
+      isPlaying,
+      frameLayers,
+      frameActiveLayerIds,
+    },
+    // Actions
+    {
+      setFrames,
+      setCurrentFrameIndex,
+      setSelectedFrameIndices,
+      setIsPlaying,
+      setFrameLayers,
+      setFrameActiveLayerIds,
+    },
+    // Config
+    {
+      canvasSpec,
+      defaultPivot,
+      activeTag,
+      loopTagOnly,
+      setConfirmDialog: setConfirmDialog as (dialog: ConfirmDialogConfig | null) => void,
+      setConfirmBusy,
+      setProjectError,
+    }
+  );
 
-    const advanceFrame = () => {
-      setCurrentFrameIndex((prev) => {
-        const tagStart = activeTag?.start_frame ?? 0;
-        const tagEnd = activeTag?.end_frame ?? frames.length - 1;
-        const loopRange = loopTagOnly && activeTag ? { start: tagStart, end: tagEnd } : null;
-        const next = loopRange
-          ? (prev + 1 > loopRange.end ? loopRange.start : prev + 1)
-          : (prev + 1) % frames.length;
-        const nextDuration = frames[next]?.durationMs ?? currentFrame.durationMs;
-        playbackTimerRef.current = window.setTimeout(advanceFrame, nextDuration);
-        return next;
-      });
-    };
-
-    playbackTimerRef.current = window.setTimeout(advanceFrame, currentFrame.durationMs);
-
-    return () => {
-      if (playbackTimerRef.current !== null) {
-        clearTimeout(playbackTimerRef.current);
-        playbackTimerRef.current = null;
-      }
-    };
-  }, [activeTag, currentFrame.durationMs, frames, isPlaying, loopTagOnly]);
+  // Note: The playback useEffect is now handled inside useAnimationSystem
 
   useEffect(() => {
     setFrameLayers((prev) => {
@@ -1364,239 +1372,17 @@ export default function App() {
   }
 
 /**
- * WHAT: Inserts a brand new, empty Frame after the current one.
+ * Animation handlers - delegated to useAnimationSystem hook
+ * These wrappers maintain the function names for JSX compatibility
  */
-  function handleInsertFrame() {
-    const newLayer = createLayer("Layer 1");
-    const composite = compositeLayers([newLayer], canvasSpec.width, canvasSpec.height);
-    const newFrame: Frame = {
-      id: crypto.randomUUID(),
-      pixels: composite,
-      durationMs: 100,
-      pivot: defaultPivot
-    };
-
-    setFrames((prev) => {
-      const updated = [...prev];
-      updated.splice(currentFrameIndex + 1, 0, newFrame);
-      return updated;
-    });
-    setFrameLayers((prev) => ({ ...prev, [newFrame.id]: [newLayer] }));
-    setFrameActiveLayerIds((prev) => ({ ...prev, [newFrame.id]: newLayer.id }));
-
-    setCurrentFrameIndex(currentFrameIndex + 1);
-  }
-
-/**
- * WHAT: Duplicates the CURRENT Frame (pixels, layers, and all).
- * WHY: When you want to make a small change to the previous drawing for animation.
- * HOW: It "Clones" every buffer so they don't share memory.
- */
-  function handleDuplicateFrame() {
-    if (frames.length === 0) return;
-    const current = frames[currentFrameIndex];
-    if (!current) return;
-
-    // 1. Create new frame object
-    const nextFrame: Frame = {
-      ...current,
-      id: crypto.randomUUID(),
-      pixels: cloneBuffer(current.pixels),
-    };
-
-    // 2. Clone all layers for this frame
-    const currentLayers = frameLayers[current.id] || [];
-    const nextLayers = currentLayers.map(l => ({
-      ...l,
-      id: crypto.randomUUID(),
-      pixels: cloneBuffer(l.pixels!)
-    }));
-
-    // 3. Update state
-    setFrames((prev) => {
-       const next = [...prev];
-       next.splice(currentFrameIndex + 1, 0, nextFrame);
-       return next;
-    });
-
-    setFrameLayers(prev => ({
-      ...prev,
-      [nextFrame.id]: nextLayers
-    }));
-
-    setFrameActiveLayerIds(prev => ({
-       ...prev,
-       [nextFrame.id]: nextLayers[0]?.id || ""
-    }));
-
-    setCurrentFrameIndex(currentFrameIndex + 1);
-  }
-
-  function handleReorderFrames(fromIndex: number, toIndex: number) {
-    if (fromIndex === toIndex) return;
-    if (fromIndex < 0 || fromIndex >= frames.length) return;
-    if (toIndex < 0 || toIndex >= frames.length) return;
-
-    setFrames(prev => {
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
-
-
-    // Update current frame index if necessary to follow the selected frame
-    if (currentFrameIndex === fromIndex) {
-      setCurrentFrameIndex(toIndex);
-    } else if (currentFrameIndex > fromIndex && currentFrameIndex <= toIndex) {
-      setCurrentFrameIndex(currentFrameIndex - 1);
-    } else if (currentFrameIndex < fromIndex && currentFrameIndex >= toIndex) {
-      setCurrentFrameIndex(currentFrameIndex + 1);
-    }
-  }
-
-  function handleMultiSelectFrame(index: number, modifier?: "add" | "range" | null) {
-    if (modifier === "add") { // Cmd/Ctrl
-      setSelectedFrameIndices(prev => {
-        const next = new Set(prev);
-        if (next.has(index)) {
-          next.delete(index);
-          if (next.size === 0) next.add(index); // Prevent empty selection
-        } else {
-          next.add(index);
-        }
-        return next;
-      });
-      // Don't necessarily change currentFrameIndex if just toggling others, but standard is last clicked becomes primary
-      setCurrentFrameIndex(index);
-    } else if (modifier === "range") { // Shift
-      const start = Math.min(currentFrameIndex, index);
-      const end = Math.max(currentFrameIndex, index);
-      const range = new Set<number>();
-      for (let i = start; i <= end; i++) range.add(i);
-      setSelectedFrameIndices(range);
-      setCurrentFrameIndex(index); 
-    } else {
-      // Single select
-      setSelectedFrameIndices(new Set([index]));
-      setCurrentFrameIndex(index);
-    }
-  }
-
-  function handleDeleteFrame() {
-    // Determine frames to delete (Multi-select or current)
-    let indicesToDelete = Array.from(selectedFrameIndices);
-    if (indicesToDelete.length === 0) indicesToDelete = [currentFrameIndex];
-    
-    // Sort descending to remove safe
-    indicesToDelete.sort((a, b) => b - a);
-
-    const message = indicesToDelete.length > 1 
-      ? `Are you sure you want to delete these ${indicesToDelete.length} frames?` 
-      : "Are you sure you want to delete this frame?";
-
-    setConfirmDialog({
-      title: indicesToDelete.length > 1 ? "Delete Frames?" : "Delete Frame?",
-      message: `${message} This action cannot be undone.`,
-      confirmLabel: "Delete",
-      isDangerous: true,
-      onConfirm: async () => {
-        setConfirmBusy(true);
-        try {
-          const frameIdsToDelete = indicesToDelete.map(i => frames[i]?.id).filter(Boolean);
-          
-          const finalLength = frames.length - indicesToDelete.length;
-          const shouldCreateNew = finalLength <= 0;
-          let newFrame: Frame | null = null;
-          let newLayer: LayerData | null = null;
-          let newFrameId: string | null = null;
-
-          if (shouldCreateNew) {
-               newFrameId = crypto.randomUUID();
-               newFrame = {
-                   id: newFrameId,
-                   pixels: new Uint8ClampedArray(canvasSpec.width * canvasSpec.height * 4),
-                   durationMs: 100,
-                   pivot: defaultPivot
-               };
-               
-               const rootLayerId = crypto.randomUUID();
-               newLayer = {
-                  id: rootLayerId,
-                  name: "Layer 1",
-                  opacity: 1,
-                  blend_mode: "normal",
-                  is_visible: true,
-                  is_locked: false,
-                  pixels: new Uint8ClampedArray(canvasSpec.width * canvasSpec.height * 4),
-               };
-          }
-
-          setFrames((prev) => {
-            const next = [...prev];
-            indicesToDelete.forEach(i => {
-                if(i >= 0 && i < next.length) next.splice(i, 1);
-            });
-
-            if (next.length === 0 && newFrame) {
-                next.push(newFrame);
-            }
-            return next;
-          });
-
-          setFrameLayers((prev) => {
-             const next = { ...prev };
-             frameIdsToDelete.forEach(id => delete next[id]);
-             if (shouldCreateNew && newFrameId && newLayer) {
-                 next[newFrameId] = [newLayer];
-             }
-             return next;
-          });
-          
-           setFrameActiveLayerIds((prev) => {
-             const next = { ...prev };
-             frameIdsToDelete.forEach(id => delete next[id]);
-             if (shouldCreateNew && newFrameId && newLayer) {
-                 next[newFrameId] = newLayer.id;
-             }
-             return next;
-          });
-
-          setCurrentFrameIndex(0);
-          setSelectedFrameIndices(new Set([0]));
-
-        } catch (error) {
-          console.error(error);
-          setProjectError(error instanceof Error ? error.message : "Failed to delete frame.");
-        } finally {
-          setConfirmBusy(false);
-          setConfirmDialog(null);
-        }
-      },
-    });
-  }
-
-/**
- * WHAT: Switches the active "Page" of your animation.
- */
-  function handleSelectFrame(index: number) {
-    if (isPlaying) setIsPlaying(false);
-    setCurrentFrameIndex(index);
-  }
-
-  function handleUpdateFrameDuration(index: number, durationMs: number) {
-    setFrames((prev) =>
-      prev.map((f, i) => (i === index ? { ...f, durationMs } : f))
-    );
-  }
-
-/**
- * WHAT: Starts or Stops the animation playback.
- * USE: Spacebar or the Play button.
- */
-  function handleTogglePlayback() {
-    setIsPlaying(!isPlaying);
-  }
+  const handleInsertFrame = animationSystem.handleInsertFrame;
+  const handleDuplicateFrame = animationSystem.handleDuplicateFrame;
+  const handleReorderFrames = animationSystem.handleReorderFrames;
+  const handleMultiSelectFrame = animationSystem.handleMultiSelectFrame;
+  const handleDeleteFrame = animationSystem.handleDeleteFrame;
+  const handleSelectFrame = animationSystem.handleSelectFrame;
+  const handleUpdateFrameDuration = animationSystem.handleUpdateFrameDuration;
+  const handleTogglePlayback = animationSystem.handleTogglePlayback;
 
   function handleSelectColor(color: string) {
     setSettings((s) => ({ ...s, primaryColor: color }));
