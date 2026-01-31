@@ -6,6 +6,8 @@ import { AnimationTag } from "../lib/supabase/animation_tags";
 type Props = {
   settings: UiSettings;
   onChangeSettings: (next: UiSettings) => void;
+  timelineVisible: boolean;
+  onToggleTimeline: (next: boolean) => void;
   canvasSpec: CanvasSpec;
   frames: Frame[];
   currentFrameIndex: number;
@@ -30,6 +32,8 @@ type Props = {
 export default function Timeline({
   settings,
   onChangeSettings,
+  timelineVisible,
+  onToggleTimeline,
   canvasSpec,
   frames,
   currentFrameIndex,
@@ -156,6 +160,13 @@ export default function Timeline({
         <div className="timeline__title">Timeline</div>
 
         <div className="timeline__controls">
+          <button
+            className="uiBtn uiBtn--ghost"
+            onClick={() => onToggleTimeline(!timelineVisible)}
+            title={timelineVisible ? "Minimize timeline" : "Show timeline"}
+          >
+            {timelineVisible ? "▁ Minimize" : "▔ Show"}
+          </button>
           <button
             className="uiBtn"
             onClick={() => onSelectFrame(Math.max(0, currentFrameIndex - 1))}

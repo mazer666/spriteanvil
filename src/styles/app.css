@@ -59,6 +59,7 @@ body{
   transition: all 0.15s ease;
   white-space: nowrap;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 12px rgba(0,0,0,0.35);
+  pointer-events: auto;
 }
 .uiBtn:hover{
   border-color: var(--border-strong);
@@ -129,10 +130,10 @@ body{
     "hsplitter"
     "bottom"
     "status";
-  grid-template-rows: var(--topbarHeight) 1fr 4px var(--timelineHeight) var(--statusBarHeight);
+  grid-template-rows: var(--topbarHeight) 1fr var(--hSplitterHeight) var(--timelineHeight) var(--statusBarHeight);
   grid-template-columns: 100%;
   overflow: hidden;
-  transition: grid-template-rows 0.2s ease;
+  transition: all 0.2s ease-in-out;
 }
 
 .dock__top{
@@ -145,6 +146,7 @@ body{
   display: flex;
   align-items: center;
   gap: 12px;
+  pointer-events: auto;
 }
 .dock__topbar{
   flex: 1;
@@ -155,26 +157,37 @@ body{
   grid-area: main;
   display: grid;
   grid-template-areas: "left center vsplitter right";
-  grid-template-columns: var(--leftPanelWidth) 1fr 4px var(--rightPanelWidth);
+  grid-template-columns: var(--leftPanelWidth) 1fr var(--vSplitterWidth) var(--rightPanelWidth);
   grid-template-rows: 100%;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
-  transition: grid-template-columns 0.2s ease;
+  transition: all 0.2s ease-in-out;
   position: relative;
+  pointer-events: auto;
+}
+
+.dock--floating-panels .dock__body{
+  grid-template-areas: "center";
+  grid-template-columns: 1fr;
 }
 
 .dock__floatingToolRail{
   position: absolute;
-  z-index: 220;
+  z-index: 340;
   width: 76px;
   max-width: 90vw;
+  max-height: calc(100vh - var(--topbarHeight) - var(--statusBarHeight) - 24px);
   background: rgba(18, 18, 22, 0.96);
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 14px;
   box-shadow: 0 16px 34px rgba(0,0,0,0.45);
   backdrop-filter: blur(10px);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease-in-out;
+  pointer-events: auto;
 }
 
 .dock__floatingToolRailHeader{
@@ -189,6 +202,7 @@ body{
   color: var(--accent-strong);
   background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.5));
   cursor: grab;
+  touch-action: none;
 }
 
 .dock__floatingToolRailHeader:active{
@@ -242,6 +256,7 @@ body{
   background: radial-gradient(600px 400px at 50% 40%, rgba(255,255,255,0.06), rgba(0,0,0,0.6));
   min-width: 0;
   min-height: 0;
+  z-index: 1;
 }
 
 .splitter--v{
@@ -250,6 +265,11 @@ body{
   cursor: col-resize;
   user-select: none;
   transition: background 0.15s ease;
+  width: var(--vSplitterWidth);
+}
+
+.dock--floating-panels .splitter--v{
+  display: none;
 }
 .splitter--v:hover{
   background: rgba(75,184,191,0.35);
@@ -263,8 +283,8 @@ body{
   grid-area: right;
   background: var(--panel);
   border-left: 1px solid var(--border);
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
+  max-height: 100vh;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -272,6 +292,34 @@ body{
   padding-top: 48px;
   height: calc(100% + var(--timelineHeight));
   margin-bottom: calc(-1 * var(--timelineHeight));
+  transition: all 0.2s ease-in-out;
+  pointer-events: auto;
+}
+
+.dock--floating-panels .dock__right{
+  position: absolute;
+  right: auto;
+  bottom: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 16px 34px rgba(0,0,0,0.45);
+  width: min(360px, 92vw);
+  max-height: calc(100vh - var(--topbarHeight) - var(--statusBarHeight) - 16px);
+  height: auto;
+  padding-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+  z-index: 260;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.98);
+  transition: all 0.2s ease-in-out;
+}
+
+.dock--floating-panels.dock--right-open .dock__right{
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0);
 }
 
 .dock__left--collapsed .toolrail__sectionTitle,
@@ -329,6 +377,7 @@ body{
   gap: 8px;
   z-index: 130;
   margin-right: 12px;
+  pointer-events: auto;
 }
 
 .dock__right--collapsed .rightpanel__tabs{
@@ -373,6 +422,10 @@ body{
   left: 8px;
 }
 
+.dock--floating-panels .panel-toggle--right{
+  display: none;
+}
+
 .dock__toolbar{
   position: absolute;
   left: 0;
@@ -381,6 +434,37 @@ body{
   padding: 8px;
   z-index: 150;
   pointer-events: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.dock__floatingPanelHeader{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-strong);
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.5));
+  cursor: grab;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  touch-action: none;
+}
+
+.dock__floatingPanelHeader:active{
+  cursor: grabbing;
+}
+
+.dock__floatingPanelGrip{
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.dock__floatingPanelTitle{
+  flex: 1;
+  text-align: center;
 }
 
 .toolbar{
@@ -413,6 +497,7 @@ body{
   gap: 8px;
   z-index: 340;
   margin-right: 12px;
+  pointer-events: auto;
 }
 
 .splitter--h{
@@ -421,6 +506,7 @@ body{
   cursor: row-resize;
   user-select: none;
   transition: background 0.15s ease;
+  height: var(--hSplitterHeight);
 }
 .splitter--h:hover{
   background: rgba(75,184,191,0.35);
@@ -436,6 +522,12 @@ body{
   min-height: 0;
   width: calc(100% - var(--rightPanelWidth));
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  transition: all 0.2s ease-in-out;
+  pointer-events: auto;
+}
+
+.dock--floating-panels .dock__bottom{
+  width: 100%;
 }
 
 .dock__status{
@@ -447,6 +539,7 @@ body{
   padding: 0 12px;
   font-size: 12px;
   color: var(--muted);
+  pointer-events: auto;
 }
 
 .status-bar{
@@ -770,8 +863,9 @@ body{
   display: inline-flex;
   align-items: center;
   gap: 16px;
-  flex-wrap: wrap;
-  row-gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  min-width: 0;
 }
 
 .topbar__menuBtn{
@@ -902,6 +996,10 @@ body{
     width: min(360px, 90vw);
   }
 
+  .dock--floating-panels .dock__right{
+    transform: none;
+  }
+
   .dock--left-open .dock__left{
     transform: translateX(0);
   }
@@ -940,6 +1038,7 @@ body{
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
+    align-content: flex-start;
   }
 
   .dock--mobile .toolrail__sectionTitle,
@@ -1053,6 +1152,12 @@ body{
   flex-direction: column;
   padding: 8px 8px;
   gap: 4px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  max-height: 100%;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 .toolgroup{
   border: 1px solid rgba(255,255,255,0.08);
@@ -1111,6 +1216,7 @@ body{
   user-select: none;
   flex-shrink: 0;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 10px rgba(0,0,0,0.35);
+  pointer-events: auto;
 }
 .toolbtn:hover{
   border-color: var(--border-strong);
@@ -1208,6 +1314,8 @@ body{
   scrollbar-width: thin;
   scrollbar-color: rgba(75,184,191,0.3) transparent;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 .rightpanel__content::-webkit-scrollbar{
   width: 8px;

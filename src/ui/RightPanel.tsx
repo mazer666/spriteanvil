@@ -128,7 +128,6 @@ export default function RightPanel({
     selection: true,
     ai: true,
   });
-  const [compactSections, setCompactSections] = useState<Record<string, boolean>>({});
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -156,10 +155,6 @@ export default function RightPanel({
 
   const toggleSection = (key: string) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const toggleCompact = (key: string) => {
-    setCompactSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const sections = useMemo(
@@ -278,13 +273,11 @@ export default function RightPanel({
           const section = sections[sectionId as keyof typeof sections];
           if (!section) return null;
           const isOpen = openSections[sectionId];
-          const isCompact = compactSections[sectionId];
           return (
             <section
               key={sectionId}
               className={
                 "accordion-section" +
-                (isCompact ? " accordion-section--compact" : "") +
                 (draggingId === sectionId ? " accordion-section--dragging" : "")
               }
               draggable
@@ -304,14 +297,6 @@ export default function RightPanel({
                   <span className="accordion-section__icon">{isOpen ? "−" : "+"}</span>
                 </button>
                 <div className="accordion-section__tools">
-                  <button
-                    className="uiBtn uiBtn--ghost"
-                    onClick={() => toggleCompact(sectionId)}
-                    title={isCompact ? "Expand section spacing" : "Compact section spacing"}
-                    type="button"
-                  >
-                    {isCompact ? "Expand" : "Compact"}
-                  </button>
                   <span className="accordion-section__drag" title="Drag to reorder">
                     ☰
                   </span>
