@@ -817,13 +817,13 @@ export default function DockLayout({
              }}
            >
              <div 
-               className="dock__floatingToolRailHeader"
+               className="dock__floatingToolRailHeader dock__floatingToolRailHeader--hoverable"
                onPointerDown={beginToolRailDrag}
              >
                <span className="dock__floatingToolRailGrip">:::</span>
                <span className="dock__floatingToolRailTitle">Tools</span>
                <button 
-                 className="dock__panelClose" 
+                 className="dock__panelClose dock__panelClose--hoverReveal" 
                  onPointerDown={(e) => e.stopPropagation()}
                  onClick={(e) => { e.stopPropagation(); toggleLeftPanel(); }}
                  title="Close Tools"

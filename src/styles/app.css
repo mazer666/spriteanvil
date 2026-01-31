@@ -246,7 +246,7 @@ body {
 .dock__floatingToolRail {
   position: absolute;
   z-index: 340;
-  width: 90px;
+  width: 76px;
   max-width: 90vw;
   max-height: calc(100vh - var(--topbarHeight) - var(--statusBarHeight) - 24px);
   background: var(--panel);
@@ -288,6 +288,31 @@ body {
 
 .dock__floatingToolRailTitle {
   flex: 1;
+}
+
+/* Hover-reveal close button for narrow ToolRail */
+.dock__floatingToolRailHeader--hoverable {
+  position: relative;
+}
+
+.dock__panelClose--hoverReveal {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  background: var(--panel);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 14px;
+  z-index: 10;
+  transition: opacity 0.15s;
+}
+
+.dock__floatingToolRailHeader--hoverable:hover .dock__panelClose--hoverReveal {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .dock__floatingToolRail--collapsed .toolrail__sectionTitle,
