@@ -519,6 +519,19 @@ src/
 - **Ghost References**: Drag-drop reference images with opacity control.
 - **Procedural "Pixel-Juice"**: Auto-outlines, drop shadows, pixel-liquify.
 
+### Phase 10: Advanced Creative Suite
+
+- **Extended Brush Engine**: Angle, Roundness, Custom Shapes (1-bit mask support).
+- **Clone Stamp Tool**: Source/Target cloning with alignment options.
+- **Path / Bezier Tool**: Vector-based path drawing with stroke rasterization.
+- **Advanced Selection Transform**: Rotate, scale, and skew selection marquees without affecting pixels.
+- **Smart Cloning**: Master components and instances (Figma-style symbols).
+
+### Phase 11: Mobile & Tablet Optimization
+
+- **Touch & Gesture**: Pinch-zoom, two-finger pan, three-finger undo/redo.
+- **Mobile Layout**: Full-screen canvas, simplified palettes, bottom drawer timeline.
+
 ---
 
 ## 📝 Known Limitations

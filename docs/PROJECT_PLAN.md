@@ -28,8 +28,9 @@ A core principle throughout every phase: **code and architecture must be underst
 - [Phase 6: Professional UX & Accessibility](#phase-6-professional-ux--accessibility)
 - [Phase 7: Clipboard & Import/Export Excellence](#phase-7-clipboard--importexport-excellence)
 - [Phase 8: Collaboration & Cloud Features](#phase-8-collaboration--cloud-features)
-- [Phase 9: Best in class solution-Unique Improvements](#phase-9-unique-improvements)
-- [Phase 10: Mobile & Tablet Optimization](#phase-10-mobile--tablet-optimization-secondary-priority)
+- [Phase 9: Market Leadership - Procreate Power + Figma Minimalism](#phase-9-market-leadership-procreate-power--figma-minimalism)
+- [Phase 10: Advanced Creative Suite](#phase-10-advanced-creative-suite)
+- [Phase 11: Mobile & Tablet Optimization](#phase-11-mobile--tablet-optimization-secondary-priority)
 - [Documentation Best Practices Applied Throughout](#code-documentation-best-practices-applied-throughout-all-phases)
 - [Summary](#summary)
 
@@ -679,9 +680,53 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ---
 
-## Phase 10: Mobile & Tablet Optimization (Secondary Priority)
+## Phase 10: Advanced Creative Suite
 
-### 10.1 Touch & Gesture Interface
+### 10.1 Extended Brush Engine (Brush Tip Parameters)
+
+- [ ] **Brush Tip Parameters**:
+  - [ ] Angle (0-360 degrees) support for all brush shapes.
+  - [ ] Roundness (0-100%) flattening (aspect ratio of the tip).
+  - [ ] Simulation of calligraphy and chisel tips.
+- [ ] **Custom Brush Shapes**:
+  - [ ] Support for user-defined 1-bit bitmaps (masks).
+  - [ ] Preset shapes: Square, Raute (Diamond), Custom Alpha.
+  - [ ] Brush management interface (Import/Create).
+- [ ] **Technical**:
+  - [ ] Update `src/editor/tools/brush.ts` to handle rotation/aspect math.
+  - [ ] Optimize hit-testing for non-square brushes.
+
+### 10.2 Advanced & Vector Tools
+
+- [ ] **Clone Stamp Tool**:
+  - [ ] Source point (Alt+Click) vs. Target drawing.
+  - [ ] Aligned vs. Non-aligned cloning modes.
+  - [ ] Cross-frame cloning support.
+- [ ] **Path / Bezier Tool**:
+  - [ ] Vector overlay rendering in `CanvasStage.tsx`.
+  - [ ] Cubic Bezier manipulation (handles, anchors).
+  - [ ] "Stroke Path" rasterization to pixel grid.
+  - [ ] Editable shape paths before commit.
+- [ ] **Advanced Selection Transform**:
+  - [ ] "Transform Selection" mode (modifying the marquee without pixels).
+  - [ ] Rotate/Scale the selection outline.
+  - [ ] Perspective skew for selection box.
+
+### 10.3 Smart Cloning & Instances
+
+- [ ] **Tiles & Symbols (Figma-style)**:
+  - [ ] Master Component -> Instance model.
+  - [ ] Editing Master updates all Instances in real-time.
+  - [ ] Override support (flipping/rotating instances).
+- [ ] **Pattern/Tile Mode**:
+  - [ ] 3x3 repeating view for tile creation.
+  - [ ] Seamless drawing across boundaries.
+
+---
+
+## Phase 11: Mobile & Tablet Optimization (Secondary Priority)
+
+### 11.1 Touch & Gesture Interface
 
 - [ ] **Pinch-zoom** with **momentum scrolling**.
 - [ ] Document gesture detection + momentum calculation.
@@ -694,7 +739,7 @@ A core principle throughout every phase: **code and architecture must be underst
 - [ ] Timeline scrubbing via finger drag.
 - [ ] Floating toolbox buttons for accessibility.
 
-### 10.2 Mobile Layout Adaptations
+### 11.2 Mobile Layout Adaptations
 
 - [ ] Full-screen canvas mode + floating toolbar.
 - [ ] Simplified mobile tool palette.
