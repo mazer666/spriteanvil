@@ -259,14 +259,10 @@ export default function DockLayout({
   const rightPanelRef = useRef<HTMLDivElement | null>(null);
 
   function updateLayout(patch: Partial<LayoutSettings>) {
+    const currentLayout = settings.layout ?? defaultLayout;
     const nextLayout: LayoutSettings = {
-      ...defaultLayout,
-      ...settings.layout,
+      ...currentLayout,
       ...patch,
-      toolRailPosition:
-        patch.toolRailPosition ?? settings.layout?.toolRailPosition ?? defaultLayout.toolRailPosition,
-      rightPanelOrder:
-        patch.rightPanelOrder ?? settings.layout?.rightPanelOrder ?? defaultLayout.rightPanelOrder,
     };
     const isSame = settings.layout && JSON.stringify(settings.layout) === JSON.stringify(nextLayout);
     if (isSame) return;

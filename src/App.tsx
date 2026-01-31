@@ -986,15 +986,17 @@ export default function App() {
     setActivePaletteId(snapshot.activePaletteId);
     setRecentColors(snapshot.recentColors);
     if (snapshot.settings) {
+      const { layout: snapshotLayout, ...restSettings } = snapshot.settings;
       setSettings((prev) => ({
         ...prev,
-        ...snapshot.settings,
+        ...restSettings,
         layout: {
           ...prev.layout,
-          ...(snapshot.settings.layout ?? {}),
-          rightPanelOrder:
-            snapshot.settings.layout?.rightPanelOrder?.length ? snapshot.settings.layout.rightPanelOrder : prev.layout.rightPanelOrder,
-          toolRailPosition: snapshot.settings.layout?.toolRailPosition ?? prev.layout.toolRailPosition,
+          ...(snapshotLayout ?? {}),
+          rightPanelOrder: snapshotLayout?.rightPanelOrder?.length
+            ? snapshotLayout.rightPanelOrder
+            : prev.layout.rightPanelOrder,
+          toolRailPosition: snapshotLayout?.toolRailPosition ?? prev.layout.toolRailPosition,
         },
       }));
     }
