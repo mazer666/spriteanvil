@@ -15,6 +15,7 @@ export type ToolGroup = {
 export const TOOL_GROUPS: ToolGroup[] = [
   {
     title: "Tools",
+    collapsible: true,
     tools: [
       { id: "pen", label: "✎", title: "Pen (B)" },
       { id: "smudge", label: "≈", title: "Smudge (S)" },
@@ -49,6 +50,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
   },
   {
     title: "View",
+    collapsible: true,
     tools: [{ id: "move", label: "✋", title: "Move Selection (V)" }],
   },
 ];

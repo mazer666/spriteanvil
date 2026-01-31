@@ -3,6 +3,8 @@ import ToolRail from "./ToolRail";
 import ToolBar from "./ToolBar";
 import RightPanel from "./RightPanel";
 import MobileHeader from "./MobileHeader";
+import MobileBottomDock from "./MobileBottomDock";
+import MobileSheet from "./MobileSheet";
 import Timeline from "./Timeline";
 import CanvasStage from "./CanvasStage";
 import {
@@ -251,6 +253,7 @@ export default function DockLayout({
   const [rightPanelPosition, setRightPanelPosition] = useState(
     layout.rightPanelPosition ?? { x: 24, y: 84 }
   );
+  const [timelinePosition, setTimelinePosition] = useState<{ x: number; y: number } | null>(null); // null = centered
 
   // Force floating mode for desktop
   const isPanelFloating = true; 
@@ -361,6 +364,14 @@ export default function DockLayout({
   const pendingToolRailRef = useRef<{ x: number; y: number } | null>(null);
   const pendingRightPanelRef = useRef<{ x: number; y: number } | null>(null);
 
+  // Timeline drag for MOVE
+  const timelineDragRef = useRef<{
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
+
   function clamp(n: number, a: number, b: number) {
     return Math.max(a, Math.min(b, n));
   }
@@ -395,6 +406,30 @@ export default function DockLayout({
 
   function endDrag() {
     dragStateRef.current = null;
+  }
+
+  // --- Timeline Move (separate from resize) ---
+  function beginTimelineMove(e: React.PointerEvent) {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    const origin = timelinePosition ?? { x: window.innerWidth / 2, y: window.innerHeight - 150 };
+    timelineDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: origin.x,
+      originY: origin.y,
+    };
+  }
+
+  function moveTimeline(e: React.PointerEvent) {
+    if (!timelineDragRef.current) return;
+    const drag = timelineDragRef.current;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    setTimelinePosition({ x: drag.originX + dx, y: drag.originY + dy });
+  }
+
+  function endTimelineMove() {
+    timelineDragRef.current = null;
   }
 
   // --- Tool Rail Drag ---
@@ -539,34 +574,28 @@ export default function DockLayout({
     updateLayout(defaultLayout);
   }
 
+  // Mobile Sheet State
+  const [activeMobileSheet, setActiveMobileSheet] = useState<"tools" | "layers" | "palette" | "options" | null>(null);
+
   // Mobile Render
   if (isMobile || isTablet) {
     return (
       <div className="dock dock--mobile">
-        <MobileHeader
-          tool={tool}
-          onChangeTool={onChangeTool}
-          settings={settings}
-          onChangeSettings={onChangeSettings}
-          onUndo={onUndo}
-          onRedo={onRedo}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          layers={layers}
-          activeLayerId={activeLayerId}
-          onLayerOperations={onLayerOperations}
-          palettes={palettes}
-          activePaletteId={activePaletteId}
-          recentColors={recentColors}
-          onPaletteOperations={onPaletteOperations}
-          onColorAdjustOperations={onColorAdjustOperations}
-          onToggleMenu={() => {
-            if (onNavigateToDashboard) onNavigateToDashboard();
-            else console.log("Navigate to dashboard");
-          }}
-        />
+        {/* Slim Top Bar for Gallery/Branding */}
+        <div className="dock__top" style={{ height: 44 }}>
+          <button
+            className="uiBtn uiBtn--ghost"
+            onClick={() => {
+              if (onNavigateToDashboard) onNavigateToDashboard();
+            }}
+            style={{ marginLeft: 8 }}
+          >
+            ☰ <span className="mobile-label">Gallery</span>
+          </button>
+        </div>
 
-        <div className="dock__body" style={{ top: 52, height: "calc(100vh - 52px)" }}>
+        {/* Canvas Body - Room for top and bottom dock */}
+        <div className="dock__body" style={{ top: 44, height: "calc(100vh - 44px - 64px)" }}>
           <CanvasStage
             settings={settings}
             tool={tool}
@@ -588,12 +617,115 @@ export default function DockLayout({
             remoteCursors={remoteCursors}
             frames={frames}
             currentFrameIndex={currentFrameIndex}
-            showMinimap={!isMobile} 
+            showMinimap={isTablet && !isMobile}
           />
         </div>
 
-        {!isMobile && (
-          <div className="dock__floatingToolRail" style={{ left: 12, top: 70, bottom: 'auto', maxHeight: 'calc(100vh - 80px)' }}>
+        {/* Bottom Dock */}
+        <MobileBottomDock
+          tool={tool}
+          onChangeTool={onChangeTool}
+          settings={settings}
+          onChangeSettings={onChangeSettings}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onOpenSheet={setActiveMobileSheet}
+        />
+
+        {/* Tool Picker Sheet */}
+        <MobileSheet
+          isOpen={activeMobileSheet === "tools"}
+          title="Select Tool"
+          onClose={() => setActiveMobileSheet(null)}
+        >
+          <ToolRail tool={tool} onChangeTool={(t) => { onChangeTool(t); setActiveMobileSheet(null); }} />
+        </MobileSheet>
+
+        {/* Layers Sheet */}
+        <MobileSheet
+          isOpen={activeMobileSheet === "layers"}
+          title="Layers"
+          onClose={() => setActiveMobileSheet(null)}
+        >
+          {layers && activeLayerId && onLayerOperations && (
+            <RightPanel
+              tool={tool}
+              settings={settings}
+              onChangeSettings={onChangeSettings}
+              canvasSpec={canvasSpec}
+              collapsed={false}
+              layers={layers}
+              activeLayerId={activeLayerId}
+              onLayerOperations={onLayerOperations}
+              palettes={palettes}
+              activePaletteId={activePaletteId}
+              recentColors={recentColors}
+              onPaletteOperations={onPaletteOperations}
+              onTransformOperations={onTransformOperations}
+              onColorAdjustOperations={onColorAdjustOperations}
+              onSelectionOperations={onSelectionOperations}
+            />
+          )}
+        </MobileSheet>
+
+        {/* Palette Sheet */}
+        <MobileSheet
+          isOpen={activeMobileSheet === "palette"}
+          title="Colors"
+          onClose={() => setActiveMobileSheet(null)}
+        >
+          {/* Render only palette section if needed - For now using RightPanel */}
+          {palettes && activePaletteId && onPaletteOperations && (
+            <RightPanel
+              tool={tool}
+              settings={settings}
+              onChangeSettings={onChangeSettings}
+              canvasSpec={canvasSpec}
+              collapsed={false}
+              layers={layers}
+              activeLayerId={activeLayerId}
+              onLayerOperations={onLayerOperations}
+              palettes={palettes}
+              activePaletteId={activePaletteId}
+              recentColors={recentColors}
+              onPaletteOperations={onPaletteOperations}
+              onTransformOperations={onTransformOperations}
+              onColorAdjustOperations={onColorAdjustOperations}
+              onSelectionOperations={onSelectionOperations}
+            />
+          )}
+        </MobileSheet>
+
+        {/* Tool Options Sheet */}
+        <MobileSheet
+          isOpen={activeMobileSheet === "options"}
+          title="Tool Settings"
+          onClose={() => setActiveMobileSheet(null)}
+        >
+          <RightPanel
+            tool={tool}
+            settings={settings}
+            onChangeSettings={onChangeSettings}
+            canvasSpec={canvasSpec}
+            collapsed={false}
+            layers={layers}
+            activeLayerId={activeLayerId}
+            onLayerOperations={onLayerOperations}
+            palettes={palettes}
+            activePaletteId={activePaletteId}
+            recentColors={recentColors}
+            onPaletteOperations={onPaletteOperations}
+            onTransformOperations={onTransformOperations}
+            onColorAdjustOperations={onColorAdjustOperations}
+            onSelectionOperations={onSelectionOperations}
+          />
+        </MobileSheet>
+
+        {/* Tablet Floating Tool Rail */}
+        {isTablet && !isMobile && (
+          <div className="dock__floatingToolRail" style={{ left: 12, top: 56, bottom: 'auto', maxHeight: 'calc(100vh - 130px)' }}>
             <ToolRail tool={tool} onChangeTool={onChangeTool} />
           </div>
         )}
@@ -605,7 +737,7 @@ export default function DockLayout({
   return (
     <div
       className={
-        "dock" +
+        "dock dock--floating-panels" +
         (isToolRailOpen ? " dock--left-open" : "") +
         (isRightPanelOpen ? " dock--right-open" : "") +
         (!showLeftPanel ? " dock--left-hidden" : "") +
@@ -794,9 +926,10 @@ export default function DockLayout({
              className="dock__bottom"
              style={{
                position: 'absolute',
-               left: '50%',
-               bottom: '20px',
-               transform: 'translateX(-50%)',
+               ...(timelinePosition 
+                 ? { left: timelinePosition.x, top: timelinePosition.y, transform: 'translate(-50%, -50%)' }
+                 : { left: '50%', bottom: '20px', transform: 'translateX(-50%)' }
+               ),
                width: '80%',
                maxWidth: '800px',
                height: timelineHeight,
@@ -807,11 +940,14 @@ export default function DockLayout({
                display: 'flex',
                flexDirection: 'column'
              }}
+             onPointerMove={moveTimeline}
+             onPointerUp={endTimelineMove}
+             onPointerCancel={endTimelineMove}
           >
              <div 
                 className="dock__floatingPanelHeader" 
                 style={{ justifyContent: 'center', background: 'var(--bg-1)', cursor: 'grab' }}
-                onPointerDown={(e) => beginDrag("timeline", e)}
+                onPointerDown={beginTimelineMove}
              >
                 <span>Timeline</span>
              </div>
@@ -841,6 +977,24 @@ export default function DockLayout({
                 onDeleteTag={onDeleteTag}
                 onReorderFrames={onReorderFrames}
                 dragDropEnabled
+             />
+             {/* Corner Resize Handle */}
+             <div 
+               className="resize-handle resize-handle--corner"
+               style={{
+                 position: 'absolute',
+                 right: 0,
+                 bottom: 0,
+                 width: '16px',
+                 height: '16px',
+                 cursor: 'nwse-resize',
+                 background: 'linear-gradient(135deg, transparent 50%, var(--border-strong) 50%)',
+                 borderRadius: '0 0 8px 0'
+               }}
+               onPointerDown={(e) => beginDrag("timeline", e)}
+               onPointerMove={onDragMove}
+               onPointerUp={endDrag}
+               onPointerCancel={endDrag}
              />
           </div>
         )}
