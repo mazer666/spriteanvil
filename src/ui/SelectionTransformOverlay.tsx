@@ -48,7 +48,7 @@ export default function SelectionTransformOverlay({
 
             const dx = (e.clientX - dragStartRef.current.mouseX) / zoom;
             const dy = (e.clientY - dragStartRef.current.mouseY) / zoom;
-            const { initialX, initialY, initialW, initialH } = dragStartRef.current;
+            const { initialX, initialY, initialW, initialH, initialPixels } = dragStartRef.current;
 
             let next = { ...floatingBuffer };
 
@@ -56,25 +56,35 @@ export default function SelectionTransformOverlay({
                 next.x = Math.round(initialX + dx);
                 next.y = Math.round(initialY + dy);
             } else {
+                let newX = initialX;
+                let newY = initialY;
                 let newW = initialW;
                 let newH = initialH;
 
-                if (activeHandle === "right") {
+                // Horizontal resizing
+                if (activeHandle.includes("left")) {
+                    newW = Math.max(1, Math.round(initialW - dx));
+                    newX = initialX + (initialW - newW);
+                } else if (activeHandle.includes("right")) {
                     newW = Math.max(1, Math.round(initialW + dx));
-                } else if (activeHandle === "bottom") {
-                    newH = Math.max(1, Math.round(initialH + dy));
-                } else if (activeHandle === "bottom-right") {
-                    newW = Math.max(1, Math.round(initialW + dx));
+                }
+
+                // Vertical resizing
+                if (activeHandle.includes("top")) {
+                    newH = Math.max(1, Math.round(initialH - dy));
+                    newY = initialY + (initialH - newH);
+                } else if (activeHandle.includes("bottom")) {
                     newH = Math.max(1, Math.round(initialH + dy));
                 }
 
                 if (newW !== initialW || newH !== initialH) {
+                    next.x = newX;
+                    next.y = newY;
                     next.width = newW;
                     next.height = newH;
-                    next.pixels = resizeBuffer(dragStartRef.current.initialPixels, initialW, initialH, newW, newH);
+                    next.pixels = resizeBuffer(initialPixels, initialW, initialH, newW, newH);
                 }
             }
-            // TODO: Implement other handles (top, left, etc require adjusting x/y too)
 
             onUpdateTransform(next);
         }
@@ -110,17 +120,15 @@ export default function SelectionTransformOverlay({
         };
     };
 
-    const handleStyle = {
-        position: "absolute" as const,
+    const handleStyle: React.CSSProperties = {
+        position: "absolute",
         width: "10px",
         height: "10px",
         background: "white",
         border: "1px solid #000",
-        pointerEvents: "auto" as const,
+        pointerEvents: "auto",
         zIndex: 100,
     };
-
-
 
     return (
         <div
@@ -132,10 +140,10 @@ export default function SelectionTransformOverlay({
                 height: screenH,
                 border: "1px solid #00f",
                 boxSizing: "border-box",
-                pointerEvents: "none", // Let clicks pass through body, but capture on handles
+                pointerEvents: "none",
             }}
         >
-            {/* Move Area (Invisible fill) */}
+            {/* Move Area */}
             <div
                 style={{
                     position: "absolute",
@@ -146,18 +154,40 @@ export default function SelectionTransformOverlay({
                 onPointerDown={(e) => handlePointerDown(e, "move")}
             />
 
-            {/* Handles */}
+            {/* Corner Handles */}
+            <div
+                style={{ ...handleStyle, left: -5, top: -5, cursor: "nwse-resize" }}
+                onPointerDown={(e) => handlePointerDown(e, "top-left")}
+            />
+            <div
+                style={{ ...handleStyle, right: -5, top: -5, cursor: "nesw-resize" }}
+                onPointerDown={(e) => handlePointerDown(e, "top-right")}
+            />
             <div
                 style={{ ...handleStyle, right: -5, bottom: -5, cursor: "nwse-resize" }}
                 onPointerDown={(e) => handlePointerDown(e, "bottom-right")}
+            />
+            <div
+                style={{ ...handleStyle, left: -5, bottom: -5, cursor: "nesw-resize" }}
+                onPointerDown={(e) => handlePointerDown(e, "bottom-left")}
+            />
+
+            {/* Side Handles */}
+            <div
+                style={{ ...handleStyle, left: "50%", top: -5, marginLeft: -5, cursor: "ns-resize" }}
+                onPointerDown={(e) => handlePointerDown(e, "top")}
             />
             <div
                 style={{ ...handleStyle, right: -5, top: "50%", marginTop: -5, cursor: "ew-resize" }}
                 onPointerDown={(e) => handlePointerDown(e, "right")}
             />
             <div
-                style={{ ...handleStyle, bottom: -5, left: "50%", marginLeft: -5, cursor: "ns-resize" }}
+                style={{ ...handleStyle, left: "50%", bottom: -5, marginLeft: -5, cursor: "ns-resize" }}
                 onPointerDown={(e) => handlePointerDown(e, "bottom")}
+            />
+            <div
+                style={{ ...handleStyle, left: -5, top: "50%", marginTop: -5, cursor: "ew-resize" }}
+                onPointerDown={(e) => handlePointerDown(e, "left")}
             />
 
             {/* Confirm Button */}

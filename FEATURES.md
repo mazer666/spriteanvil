@@ -490,6 +490,7 @@ src/
 
 ### Phase 8: Collaboration
 
+- **Advanced Project Dashboard (Modul 2)**: Gallery view, size presets, manual tutorial launch.
 - Real-time collaborative editing
 - Live cursor tracking
 - Presence indicators
@@ -529,6 +530,7 @@ src/
 
 ### Phase 11: Market Leadership & Ecosystem
 
+- **Procedural Texture Generator (Modul 11)**: Perlin/Worley noise, tileable textures.
 - **Intelligent Tile-Engine**: Auto-tiling (Wang/Blobset), Tile Properties & Metadata.
 - **Procedural Pixel-FX**: Live-FX Layers (Shadow/Glow/Outline), Global Index Shader.
 - **Hybrid-Animation**: Pixel-bones & Mesh deformation, Motion Tracking Arcs.
@@ -537,7 +539,7 @@ src/
 
 ### Phase 12: UX Excellence & Performance
 
-- **High-End Performance (CRITICAL)**: WebGL rendering abstraction, WebWorker offloading for Export/Selection.
+- **High-End Performance (CRITICAL - Modul 5)**: WebGL rendering abstraction, WebWorker offloading for Export/Selection.
 - **Non-Enforced Onboarding**: Optional interactive tutorials for Timeline, Export, and Compositing.
 - **Project Gallery**: Grid view with thumbnails, duplication, and template presets.
 - **UI Polish**: Context-HUDs for selections, optimized marching ants, and right-click menus.

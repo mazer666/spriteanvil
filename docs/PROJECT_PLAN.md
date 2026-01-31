@@ -576,12 +576,16 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 8.2 Project Management
 
+- [ ] **Advanced Project Dashboard (Modul 2)**:
+  - [ ] Central "Project Screen" as main entry point.
+  - [ ] Manage, delete, duplicate projects.
+  - [ ] **Presets** for standard sprite sizes (16x16, 32x32, GBA-Sized).
+  - [ ] **Tutorial System**: Manual launch from Dashboard & Settings.
 - [ ] Project gallery with thumbnails.
 - [ ] Search/filter by tags/date.
 - [ ] Templates for quick starts.
 - [ ] Favorites/starred projects.
 - [ ] Recent projects quick-access.
-- [ ] Duplicate project with customization.
 - [ ] Project stats (frame count, size, etc.).
 - [ ] Publish projects to portfolio.
 - [ ] Archive old projects.
@@ -744,6 +748,10 @@ A core principle throughout every phase: **code and architecture must be underst
   - [ ] Drop Shadow, Outline, Glow, Color Overlay.
   - [ ] Effects stack per layer.
   - [ ] **Architecture**: WebWorker/WASM offloading for real-time convolution filters.
+- [ ] **Procedural Texture Generator (Modul 11)**:
+  - [ ] Integration of mathematical generators (Perlin Noise, Worley/Cellular Noise) directly into editor.
+  - [ ] Creation of tileable pixel base textures (rocks, clouds, noise).
+  - [ ] **Technical**: Update `CanvasStage.tsx` for procedural inputs/WebGL shader effects.
 - [ ] **Global Index Shader**:
   - [ ] Real-time color quantization to target Palette.
   - [ ] Dithering pattern overlay (post-process).
@@ -783,12 +791,13 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ### 12.1 High-End Performance (CRITICAL PRIORITY)
 
-- [ ] **WebGL Migration Plan**:
+- [ ] **WebGL Migration Plan (Modul 5)**:
   - [ ] Abstract `CanvasRenderingContext2D` calls to a `Renderer` interface.
   - [ ] Implement `WebGLRenderer` for GPU-accelerated compositing of many layers.
-- [ ] **Web Workers**:
+  - [ ] Ensure fluid performance for large canvases (>1024px).
+- [ ] **Web Workers (Modul 5)**:
   - [ ] Offload PNG/GIF export generation.
-  - [ ] Offload complex magic-wand/lasso selection algorithms.
+  - [ ] Offload complex magic-wand/lasso selection algorithms to avoid UI blocking.
 
 ### 12.2 Non-Enforced Onboarding System
 
