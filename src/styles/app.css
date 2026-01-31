@@ -290,45 +290,7 @@ body {
   flex: 1;
 }
 
-/* Hover-reveal close button for narrow ToolRail */
-/* Hover-reveal close button for narrow ToolRail */
-.dock__floatingToolRailHeader--hoverable {
-  position: relative;
-}
 
-.dock__floatingToolRailHeader--hoverable .dock__floatingToolRailTitle {
-  transition: opacity 0.15s;
-}
-
-.dock__floatingToolRailHeader--hoverable:hover .dock__floatingToolRailTitle {
-  opacity: 0;
-}
-
-.dock__panelClose--hoverReveal {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  opacity: 0;
-  pointer-events: none;
-  background: transparent; /* Remove background so it doesn't block if opacity fails partially? User said 'overlay' */
-  /* Actually, user wants it TO BE visible on hover. */
-  border-radius: 4px;
-  padding: 4px;
-  font-size: 16px;
-  z-index: 10;
-  transition: opacity 0.15s;
-  color: var(--ink);
-}
-
-.dock__panelClose--hoverReveal:hover {
-  background: var(--bg-hover);
-}
-
-.dock__floatingToolRailHeader--hoverable:hover .dock__panelClose--hoverReveal {
-  opacity: 1;
-  pointer-events: auto;
-}
 
 .dock__floatingToolRail--collapsed .toolrail__sectionTitle,
 .dock__floatingToolRail--collapsed .toolrail__divider,
@@ -2299,4 +2261,46 @@ body {
   font-size: 12px;
   font-family: monospace;
   color: var(--muted);
+}
+
+/* --- Hover-reveal Close Button Fixes (moved to end for specificity) --- */
+.dock__floatingToolRailHeader--hoverable {
+  position: relative;
+}
+
+.dock__floatingToolRailHeader--hoverable .dock__floatingToolRailTitle {
+  transition: opacity 0.15s;
+}
+
+.dock__floatingToolRailHeader--hoverable:hover .dock__floatingToolRailTitle {
+  opacity: 0;
+}
+
+.dock__panelClose--hoverReveal {
+  position: absolute;
+  right: 4px; /* Right aligned per user request */
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  visibility: hidden; /* Ensure it's gone */
+  pointer-events: none;
+  background: transparent;
+  border-radius: 4px;
+  padding: 4px;
+  font-size: 18px; /* Match standard size */
+  z-index: 100;
+  transition: opacity 0.15s, visibility 0.15s;
+  color: var(--ink);
+  left: auto; /* Reset left if set elsewhere */
+}
+
+.dock__panelClose--hoverReveal:hover {
+  background: var(--bg-hover);
+  color: var(--error-text);
+}
+
+.dock__floatingToolRailHeader--hoverable:hover .dock__panelClose--hoverReveal {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }

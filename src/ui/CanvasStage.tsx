@@ -1249,7 +1249,17 @@ export default function CanvasStage(props: {
     }
 
     if (settings.showGrid && zoom >= 6) {
-      drawGrid(ctx, originX, originY, canvasSpec.width, canvasSpec.height, zoom, settings.gridSize);
+      // Determine grid color based on background
+      let gridColor = "rgba(255,255,255,0.15)"; // Default for dark/checker
+      if (settings.backgroundMode === "solidLight" || settings.backgroundMode === "greenscreen") {
+        gridColor = "rgba(0,0,0,0.15)";
+      } else if (settings.backgroundMode === "solidCustom") {
+        const { r, g, b } = hexToRgb(settings.customBackgroundColor || "#000000");
+        const lum = (r * 0.299 + g * 0.587 + b * 0.114);
+        if (lum > 160) gridColor = "rgba(0,0,0,0.15)"; // Light background -> dark grid
+      }
+
+      drawGrid(ctx, originX, originY, canvasSpec.width, canvasSpec.height, zoom, settings.gridSize, gridColor);
     }
 
     if (settings.symmetryMode !== "none") {
@@ -1633,13 +1643,12 @@ function drawGrid(
   spriteW: number,
   spriteH: number,
   zoom: number,
-  gridSize: number
+  gridSize: number,
+  color: string
 ) {
   const step = Math.max(1, gridSize) * zoom;
-
-  ctx.save();
-  ctx.globalCompositeOperation = "difference";
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+  
+  ctx.strokeStyle = color;
   ctx.lineWidth = 1;
 
   for (let x = 0; x <= spriteW; x += gridSize) {
@@ -1649,7 +1658,7 @@ function drawGrid(
     ctx.lineTo(px, originY + spriteH * zoom);
     ctx.stroke();
   }
-
+  
   for (let y = 0; y <= spriteH; y += gridSize) {
     const py = originY + y * zoom + 0.5;
     ctx.beginPath();
@@ -1660,7 +1669,11 @@ function drawGrid(
 
   const majorEvery = 8 * gridSize;
   if (majorEvery > 0) {
-    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    // Increase opacity for major lines logic (simple heuristic)
+    // If color is black-ish, make it darker. If white-ish, make it whiter.
+    // For now, simple override if we detect black/white base.
+    let majorColor = color.replace("0.15", "0.25");
+    ctx.strokeStyle = majorColor;
     for (let x = 0; x <= spriteW; x += majorEvery) {
       const px = originX + x * zoom + 0.5;
       ctx.beginPath();
@@ -1677,7 +1690,6 @@ function drawGrid(
     }
   }
 
-  ctx.restore();
   void step;
 }
 
