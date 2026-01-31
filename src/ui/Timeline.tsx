@@ -11,8 +11,9 @@ type Props = {
   canvasSpec: CanvasSpec;
   frames: Frame[];
   currentFrameIndex: number;
+  selectedFrameIndices?: Set<number>;
   isPlaying: boolean;
-  onSelectFrame: (index: number) => void;
+  onSelectFrame: (index: number, modifier?: "add" | "range" | null) => void;
   onInsertFrame: () => void;
   onDuplicateFrame: () => void;
   onDeleteFrame: () => void;
@@ -38,7 +39,9 @@ export default function Timeline({
   onToggleTimeline,
   canvasSpec,
   frames,
+
   currentFrameIndex,
+  selectedFrameIndices,
   isPlaying,
   onSelectFrame,
   onInsertFrame,
@@ -391,8 +394,13 @@ export default function Timeline({
           {frames.map((frame, index) => (
             <div
               key={frame.id}
-              className={`timeline-frame ${index === currentFrameIndex ? "timeline-frame--active" : ""}`}
-              onClick={() => onSelectFrame(index)}
+              className={`timeline-frame ${(selectedFrameIndices ? selectedFrameIndices.has(index) : index === currentFrameIndex) ? "timeline-frame--active" : ""}`}
+              onClick={(e) => {
+                let modifier: "add" | "range" | null = null;
+                if (e.metaKey || e.ctrlKey) modifier = "add";
+                else if (e.shiftKey) modifier = "range";
+                onSelectFrame(index, modifier);
+              }}
               title={`Frame ${index + 1}`}
               draggable={dragDropEnabled}
               onDragStart={(e) => handleDragStart(e, index)}
