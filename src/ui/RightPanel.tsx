@@ -90,6 +90,8 @@ type Props = {
   };
 };
 
+const DEFAULT_SECTION_ORDER = ["tools", "layers", "colors", "transform", "selection", "ai"];
+
 export default function RightPanel({
   tool,
   settings,
@@ -113,18 +115,10 @@ export default function RightPanel({
   onImageToImage,
   collapsed = false,
 }: Props) {
-  const defaultOrder = ["tools", "layers", "colors", "transform", "selection", "ai"];
   const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
-    try {
-      const raw = localStorage.getItem("spriteanvil:rightpanelOrder");
-      if (!raw) return defaultOrder;
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return defaultOrder;
-      const normalized = parsed.filter((id) => defaultOrder.includes(id));
-      return normalized.length ? normalized : defaultOrder;
-    } catch {
-      return defaultOrder;
-    }
+    const initial = settings.layout?.rightPanelOrder ?? DEFAULT_SECTION_ORDER;
+    const normalized = initial.filter((id) => DEFAULT_SECTION_ORDER.includes(id));
+    return normalized.length ? normalized : DEFAULT_SECTION_ORDER;
   });
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     tools: true,
@@ -138,8 +132,27 @@ export default function RightPanel({
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
   useEffect(() => {
-    localStorage.setItem("spriteanvil:rightpanelOrder", JSON.stringify(sectionOrder));
-  }, [sectionOrder]);
+    const normalized = sectionOrder.filter((id) => DEFAULT_SECTION_ORDER.includes(id));
+    if (
+      JSON.stringify(normalized) !==
+      JSON.stringify(settings.layout?.rightPanelOrder ?? DEFAULT_SECTION_ORDER)
+    ) {
+      onChangeSettings({
+        ...settings,
+        layout: {
+          ...settings.layout,
+          rightPanelOrder: normalized,
+        },
+      });
+    }
+  }, [onChangeSettings, sectionOrder, settings]);
+
+  useEffect(() => {
+    const normalized = (settings.layout?.rightPanelOrder ?? DEFAULT_SECTION_ORDER).filter((id) =>
+      DEFAULT_SECTION_ORDER.includes(id)
+    );
+    setSectionOrder(normalized.length ? normalized : DEFAULT_SECTION_ORDER);
+  }, [settings.layout?.rightPanelOrder]);
 
   const toggleSection = (key: string) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
