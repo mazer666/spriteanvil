@@ -94,6 +94,7 @@ export default function App() {
   ]);
 
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
+  const [selectedFrameIndices, setSelectedFrameIndices] = useState<Set<number>>(new Set([0]));
   const [selection, setSelection] = useState<Uint8Array | null>(null);
   const [floatingBuffer, setFloatingBuffer] = useState<FloatingSelection | null>(null);
   const [isTransforming, setIsTransforming] = useState(false);
@@ -1443,44 +1444,115 @@ export default function App() {
     }
   }
 
-  function handleDeleteFrame() {
-    if (frames.length <= 1) return;
+  function handleMultiSelectFrame(index: number, modifier?: "add" | "range" | null) {
+    if (modifier === "add") { // Cmd/Ctrl
+      setSelectedFrameIndices(prev => {
+        const next = new Set(prev);
+        if (next.has(index)) {
+          next.delete(index);
+          if (next.size === 0) next.add(index); // Prevent empty selection
+        } else {
+          next.add(index);
+        }
+        return next;
+      });
+      // Don't necessarily change currentFrameIndex if just toggling others, but standard is last clicked becomes primary
+      setCurrentFrameIndex(index);
+    } else if (modifier === "range") { // Shift
+      const start = Math.min(currentFrameIndex, index);
+      const end = Math.max(currentFrameIndex, index);
+      const range = new Set<number>();
+      for (let i = start; i <= end; i++) range.add(i);
+      setSelectedFrameIndices(range);
+      setCurrentFrameIndex(index); 
+    } else {
+      // Single select
+      setSelectedFrameIndices(new Set([index]));
+      setCurrentFrameIndex(index);
+    }
+  }
 
-    const frameToDelete = frames[currentFrameIndex];
-    if (!frameToDelete) return;
+  function handleDeleteFrame() {
+    // Determine frames to delete (Multi-select or current)
+    let indicesToDelete = Array.from(selectedFrameIndices);
+    if (indicesToDelete.length === 0) indicesToDelete = [currentFrameIndex];
+    
+    // Sort descending to remove safe
+    indicesToDelete.sort((a, b) => b - a);
+
+    const message = indicesToDelete.length > 1 
+      ? `Are you sure you want to delete these ${indicesToDelete.length} frames?` 
+      : "Are you sure you want to delete this frame?";
 
     setConfirmDialog({
-      title: "Delete Frame?",
-      message: "Are you sure you want to delete this frame? This action cannot be undone.",
+      title: indicesToDelete.length > 1 ? "Delete Frames?" : "Delete Frame?",
+      message: `${message} This action cannot be undone.`,
       confirmLabel: "Delete",
       isDangerous: true,
       onConfirm: async () => {
         setConfirmBusy(true);
         try {
-          const frameId = frameToDelete.id;
+          // Identify IDs first
+          const frameIdsToDelete = indicesToDelete.map(i => frames[i]?.id).filter(Boolean);
           
           setFrames((prev) => {
-            const next = [...prev];
-            next.splice(currentFrameIndex, 1);
+            let next = [...prev];
+            indicesToDelete.forEach(i => {
+                if(i >= 0 && i < next.length) next.splice(i, 1);
+            });
+            
+            // Safety: If all deleted, create one empty
+            if (next.length === 0) {
+               const newFrameId = crypto.randomUUID();
+               next = [{
+                   id: newFrameId,
+                   pixels: new Uint8ClampedArray(canvasSpec.width * canvasSpec.height * 4),
+                   durationMs: 100,
+                   pivot: defaultPivot
+               }];
+               // Initialize layer for new frame
+               const rootLayerId = crypto.randomUUID();
+               const baseLayer: LayerData = {
+                  id: rootLayerId,
+                  name: "Layer 1",
+                  opacity: 1,
+                  blend_mode: "normal",
+                  is_visible: true,
+                  is_locked: false,
+                  pixels: new Uint8ClampedArray(canvasSpec.width * canvasSpec.height * 4),
+               };
+               // We need to update frameLayers state too.
+               // Since we are inside setFrames, we can't synchronously update frameLayers based on *state* here easily.
+               // But we can just issue the update.
+               setTimeout(() => {
+                 setFrameLayers(l => ({ ...l, [newFrameId]: [baseLayer] }));
+                 setFrameActiveLayerIds(ids => ({ ...ids, [newFrameId]: rootLayerId }));
+               }, 0);
+            }
             return next;
           });
 
+          // Cleanup layers for deleted frames
           setFrameLayers((prev) => {
-            const { [frameId]: _, ...rest } = prev;
-            return rest;
+             const next = { ...prev };
+             frameIdsToDelete.forEach(id => delete next[id]);
+             return next;
+          });
+          
+           setFrameActiveLayerIds((prev) => {
+             const next = { ...prev };
+             frameIdsToDelete.forEach(id => delete next[id]);
+             return next;
           });
 
-          setFrameActiveLayerIds((prev) => {
-            const { [frameId]: _, ...rest } = prev;
-            return rest;
-          });
+          // Reset selection
+          setTimeout(() => {
+              setCurrentFrameIndex(0);
+              setSelectedFrameIndices(new Set([0]));
+          }, 0);
 
-          if (currentFrameIndex >= frames.length - 1) {
-             setCurrentFrameIndex(Math.max(0, frames.length - 2));
-          }
-        } catch (error) {
-          console.error(error);
-          setProjectError(error instanceof Error ? error.message : "Failed to delete frame.");
+        } catch (err) {
+          console.error(err);
         } finally {
           setConfirmBusy(false);
           setConfirmDialog(null);

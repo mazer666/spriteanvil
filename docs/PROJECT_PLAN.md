@@ -30,7 +30,8 @@ A core principle throughout every phase: **code and architecture must be underst
 - [Phase 8: Collaboration & Cloud Features](#phase-8-collaboration--cloud-features)
 - [Phase 9: Market Leadership - Procreate Power + Figma Minimalism](#phase-9-market-leadership-procreate-power--figma-minimalism)
 - [Phase 10: Advanced Creative Suite](#phase-10-advanced-creative-suite)
-- [Phase 11: Mobile & Tablet Optimization](#phase-11-mobile--tablet-optimization-secondary-priority)
+- [Phase 11: Market Leadership & Ecosystem](#phase-11-market-leadership--ecosystem)
+- [Phase 12: Mobile & Tablet Optimization](#phase-12-mobile--tablet-optimization-secondary-priority)
 - [Documentation Best Practices Applied Throughout](#code-documentation-best-practices-applied-throughout-all-phases)
 - [Summary](#summary)
 
@@ -724,9 +725,63 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ---
 
-## Phase 11: Mobile & Tablet Optimization (Secondary Priority)
+## Phase 11: Market Leadership & Ecosystem
 
-### 11.1 Touch & Gesture Interface
+### 11.1 Intelligent Tile-Engine
+
+- [ ] **Auto-Tiling System**:
+  - [ ] Wang Tiles / Blobset support (47-tile autotile logic).
+  - [ ] "Terrains" metadata layer for auto-transitions.
+  - [ ] Real-time edge matching during drawing.
+- [ ] **Tile Properties**:
+  - [ ] Custom metadata overlay (Collision boxes, Spawn points).
+  - [ ] String/Int/Bool property assignment per tile.
+  - [ ] JSON export compatibility with Godot/Tiled.
+
+### 11.2 Procedural Pixel-FX (Non-Destructive)
+
+- [ ] **Live-FX Layer System**:
+  - [ ] Drop Shadow, Outline, Glow, Color Overlay.
+  - [ ] Effects stack per layer.
+  - [ ] **Architecture**: WebWorker/WASM offloading for real-time convolution filters.
+- [ ] **Global Index Shader**:
+  - [ ] Real-time color quantization to target Palette.
+  - [ ] Dithering pattern overlay (post-process).
+
+### 11.3 Hybrid-Animation & Skeletal Art
+
+- [ ] **Pixel-Bones**:
+  - [ ] IK/FK bone system layout tool.
+  - [ ] Mesh deformation preserving pixel grid (Euclidean warping).
+- [ ] **Motion Tracking**:
+  - [ ] Onion-skin arc visualization.
+  - [ ] Velocity graphs for animation timing.
+
+### 11.4 Workflow & Ecosystem
+
+- [ ] **Engine Live Link**:
+  - [ ] `spriteanvil-watcher` CLI tool.
+  - [ ] WebSocket server for instant save-to-Godot-refresh.
+- [ ] **Plugin Architecture**:
+  - [ ] WASM-based plugin sandbox.
+  - [ ] API for custom tools and export headers.
+- [ ] **Time-Lapse Recording**:
+  - [ ] Background delta recorder.
+  - [ ] Replay renderer (headless) for mp4 generation.
+
+### 11.5 Professional Canvas Tools
+
+- [ ] **Reference HUD**:
+  - [ ] Floating reference images (PureRef style) outside canvas bounds.
+  - [ ] Color picker sampling from references.
+- [ ] **Dither-Gradient Tool**:
+  - [ ] Gradient tool with specific Bayer/Noise pattern selection.
+
+---
+
+## Phase 12: Mobile & Tablet Optimization (Secondary Priority)
+
+### 12.1 Touch & Gesture Interface
 
 - [ ] **Pinch-zoom** with **momentum scrolling**.
 - [ ] Document gesture detection + momentum calculation.
@@ -739,7 +794,7 @@ A core principle throughout every phase: **code and architecture must be underst
 - [ ] Timeline scrubbing via finger drag.
 - [ ] Floating toolbox buttons for accessibility.
 
-### 11.2 Mobile Layout Adaptations
+### 12.2 Mobile Layout Adaptations
 
 - [ ] Full-screen canvas mode + floating toolbar.
 - [ ] Simplified mobile tool palette.

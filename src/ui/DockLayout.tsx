@@ -56,8 +56,9 @@ type Props = {
 
   frames: Frame[];
   currentFrameIndex: number;
+  selectedFrameIndices?: Set<number>;
   isPlaying: boolean;
-  onSelectFrame: (index: number) => void;
+  onSelectFrame: (index: number, modifier?: "add" | "range" | null) => void;
   onInsertFrame: () => void;
   onDuplicateFrame: () => void;
   onDeleteFrame: () => void;
@@ -179,6 +180,7 @@ export default function DockLayout({
   canRedo,
   frames,
   currentFrameIndex,
+  selectedFrameIndices,
   isPlaying,
   onSelectFrame,
   onInsertFrame,
@@ -987,6 +989,7 @@ export default function DockLayout({
                 canvasSpec={canvasSpec}
                 frames={frames}
                 currentFrameIndex={currentFrameIndex}
+                selectedFrameIndices={selectedFrameIndices}
                 isPlaying={isPlaying}
                 onSelectFrame={onSelectFrame}
                 onInsertFrame={onInsertFrame}

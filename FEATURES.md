@@ -527,7 +527,15 @@ src/
 - **Advanced Selection Transform**: Rotate, scale, and skew selection marquees without affecting pixels.
 - **Smart Cloning**: Master components and instances (Figma-style symbols).
 
-### Phase 11: Mobile & Tablet Optimization
+### Phase 11: Market Leadership & Ecosystem
+
+- **Intelligent Tile-Engine**: Auto-tiling (Wang/Blobset), Tile Properties & Metadata.
+- **Procedural Pixel-FX**: Live-FX Layers (Shadow/Glow/Outline), Global Index Shader.
+- **Hybrid-Animation**: Pixel-bones & Mesh deformation, Motion Tracking Arcs.
+- **Ecosystem**: Engine Live Link (Godot/Unity), Plugin API, Time-Lapse Recording.
+- **Pro Canvas Tools**: Reference HUD, Dither-Gradient Tool.
+
+### Phase 12: Mobile & Tablet Optimization
 
 - **Touch & Gesture**: Pinch-zoom, two-finger pan, three-finger undo/redo.
 - **Mobile Layout**: Full-screen canvas, simplified palettes, bottom drawer timeline.
