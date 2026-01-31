@@ -37,20 +37,35 @@ export default function ProjectDashboard({
   return (
     <div className="project-dashboard">
       <header className="project-dashboard__header">
-        <div>
-          <h1>SpriteAnvil Projects</h1>
-          <p className="muted">Select a project or start a new canvas.</p>
+        <div className="project-dashboard__header-copy">
+          <div className="project-dashboard__brand">SpriteAnvil</div>
+          <h1>Projects</h1>
+          <p className="muted">Create a new sprite or jump straight into a recent build.</p>
         </div>
-        <button className="uiBtn" onClick={onRefresh} disabled={loading}>
-          Refresh
-        </button>
+        <div className="project-dashboard__header-actions">
+          <button className="uiBtn uiBtn--ghost" onClick={onRefresh} disabled={loading}>
+            Refresh
+          </button>
+        </div>
       </header>
 
       {error && <div className="project-dashboard__error">{error}</div>}
 
-      <section className="project-dashboard__new">
-        <h2>Create New Project</h2>
-        <div className="project-dashboard__new-grid">
+      <section className="project-dashboard__create">
+        <div className="project-dashboard__create-header">
+          <div>
+            <h2>New Sprite</h2>
+            <p className="muted">Start from a clean canvas with the exact size you need.</p>
+          </div>
+          <button
+            className="uiBtn uiBtn--primary"
+            onClick={() => onCreate({ name, width, height })}
+            disabled={loading || !name.trim()}
+          >
+            Create Project
+          </button>
+        </div>
+        <div className="project-dashboard__create-grid">
           <div className="project-dashboard__preview">
             <div
               className="project-dashboard__preview-box"
@@ -91,18 +106,11 @@ export default function ProjectDashboard({
               onChange={(e) => setHeight(Number(e.target.value))}
             />
           </label>
-          <button
-            className="uiBtn uiBtn--primary"
-            onClick={() => onCreate({ name, width, height })}
-            disabled={loading || !name.trim()}
-          >
-            Create Project
-          </button>
         </div>
       </section>
 
       <section className="project-dashboard__gallery">
-        <div className="project-dashboard__title">Your Projects</div>
+        <div className="project-dashboard__title">Recent Projects</div>
         {loading ? (
           <div className="project-dashboard__empty">Loading projects...</div>
         ) : projects.length === 0 ? (
