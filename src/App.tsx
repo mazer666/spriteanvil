@@ -59,6 +59,7 @@ type ConfirmDialog = {
   title: string;
   message: string;
   confirmLabel?: string;
+  isDangerous?: boolean;
   onConfirm: () => Promise<void> | void;
 };
 
@@ -404,6 +405,8 @@ export default function App() {
       rightPanelPosition: { x: 24, y: 84 },
       rightPanelOrder: defaultRightPanelOrder,
     },
+    brushOpacity: 1,
+    selectionMode: "replace",
   }));
 
   const zoomLabel = useMemo(() => `${Math.round(settings.zoom * 100)}%`, [settings.zoom]);
@@ -1438,7 +1441,7 @@ export default function App() {
     setConfirmDialog({
       title: "Delete Frame?",
       message: "Are you sure you want to delete this frame? This action cannot be undone.",
-      confirmText: "Delete",
+      confirmLabel: "Delete",
       isDangerous: true,
       onConfirm: async () => {
         setConfirmBusy(true);
