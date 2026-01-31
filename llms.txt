@@ -1,0 +1,26 @@
+# SpriteAnvil - LLM Overview
+
+## Quick Summary
+SpriteAnvil is a browser-based pixel art editor. It uses a high-performance canvas rendering system decoupled from React's state for pixel data.
+
+## Tech Stack
+- **Framework**: React + Vite
+- **Language**: TypeScript (Strict)
+- **Data Model**: `Uint8ClampedArray` (RGBA) for pixel buffers.
+- **Communication**: Real-time collaboration scaffolding included.
+
+## Core Files to Know
+- `src/editor/pixels.ts`: Low-level pixel manipulation.
+- `src/ui/CanvasStage.tsx`: Main canvas interaction and tool dispatch.
+- `src/editor/history.ts`: Undo/Redo management.
+- `src/lib/ai/providers.ts`: AI model integration points.
+
+## Key Architectures
+- **Tools**: Pure functions in `src/editor/tools/` that mutate buffers.
+- **UI**: Floating, draggable panels (BG3-inspired).
+- **Selection**: 1-bit mask (`Uint8Array`) for pixel-perfect operations.
+
+## AI Assistant Task Guide
+- When creating tools: Focus on `src/editor/tools/` + `CanvasStage.tsx`.
+- When modifying UI: Use the specialized floating UI system in `src/ui/`.
+- Always verify bounds checks and integer math.

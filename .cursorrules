@@ -1,0 +1,23 @@
+# SpriteAnvil Cursor Rules
+
+## Project Identity
+You are assisting with **SpriteAnvil**, a pixel-art and animation editor written in TypeScript and React.
+
+## Core Directives
+1. **No Abbreviations**: Use descriptive names for variables and functions (e.g., `framePixelData` instead of `fpd`).
+2. **400-Line Rule**: React components must not exceed 400 lines. Refactor into hooks or sub-components if this limit is reached.
+3. **Pixel-Perfect Math**: Use integer math for all rasterization algorithms. Avoid floating-point errors.
+4. **Performance First**: 
+    - Never store large pixel buffers in React state. Use `useRef` for `Uint8ClampedArray`.
+    - Mutate buffers in place when possible.
+5. **Documentation is a Feature**: Every exported function must have JSDoc explaining the "why" and "how".
+6. **One Action = One Undo**: Only commit to history on stroke end or tool completion. Never per pointer move.
+
+## Module Map
+- `src/ui/`: React components (CanvasStage is the central bridge).
+- `src/editor/`: Core logic (pixels, history, selection).
+- `src/editor/tools/`: Pure algorithm modules for tools.
+- `docs/`: Ground truth documentation. Always refer to `PROJECT_PLAN.md` for the roadmap.
+
+## Probing Rules
+If you are unsure about the state of a feature, check `STATUS_UPDATE.md` and `FEATURE_INTEGRATION_PLAN.md` before suggesting changes.

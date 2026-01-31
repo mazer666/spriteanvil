@@ -18,8 +18,10 @@ This folder contains **project plans** and **source-of-truth specifications** fo
 6. [`MODULE_GUIDE.md`](./MODULE_GUIDE.md)
 7. [`CODE_STYLE.md`](./CODE_STYLE.md)
 8. [`COMMON_TASKS.md`](./COMMON_TASKS.md)
-9. [`IMPLEMENTATION_CHECKLIST.md`](./IMPLEMENTATION_CHECKLIST.md)
-10. [`STATE_MODEL.md`](./STATE_MODEL.md)
+9. [`AI_DEVELOPMENT_GUIDE.md`](./AI_DEVELOPMENT_GUIDE.md)
+10. [`AI_PROMPT_GALLERY.md`](./AI_PROMPT_GALLERY.md)
+11. [`IMPLEMENTATION_CHECKLIST.md`](./IMPLEMENTATION_CHECKLIST.md)
+12. [`STATE_MODEL.md`](./STATE_MODEL.md)
 
 ---
 

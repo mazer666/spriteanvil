@@ -50,6 +50,8 @@ Start here:
 - UI target vision: [`/docs/UI_SPEC.md`](./docs/UI_SPEC.md)
 - Improvements + asset checklist: [`/docs/IMPROVEMENTS_AND_ASSETS.md`](./docs/IMPROVEMENTS_AND_ASSETS.md)
 - Roadmap: [`/docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md)
+- AI Development: [`/docs/AI_DEVELOPMENT_GUIDE.md`](./docs/AI_DEVELOPMENT_GUIDE.md)
+- AI Prompting: [`/docs/AI_PROMPT_GALLERY.md`](./docs/AI_PROMPT_GALLERY.md)
 - Current integration notes: [`/docs/FEATURE_INTEGRATION_PLAN.md`](./docs/FEATURE_INTEGRATION_PLAN.md)
 - Current status update: [`/STATUS_UPDATE.md`](./STATUS_UPDATE.md)
 - Implementation milestone snapshot: [`/IMPLEMENTATION_COMPLETE.md`](./IMPLEMENTATION_COMPLETE.md)
