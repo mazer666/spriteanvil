@@ -1147,3 +1147,183 @@ body {
     transform: translateY(0);
   }
 }
+/* =========================================
+   FIXES START: Missing Layout Classes
+   ========================================= */
+
+/* Stage (Canvas Area) */
+.stage {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.stage--checker {
+  background-image:
+    linear-gradient(45deg, var(--checkerA) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--checkerA) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--checkerA) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--checkerA) 75%);
+  background-size: var(--checkerSize) var(--checkerSize);
+  background-position: 0 0, 0 calc(var(--checkerSize)/2), calc(var(--checkerSize)/2) calc(-1 * var(--checkerSize)/2), calc(-1 * var(--checkerSize)/2) 0;
+  background-color: var(--checkerB);
+}
+
+.stage--dark {
+  background: #111;
+}
+
+.stage--light {
+  background: #eee;
+}
+
+.stage--green {
+  background: #00ff00;
+}
+
+.stage--blue {
+  background: #0000ff;
+}
+
+.stage__canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  pointer-events: auto;
+}
+
+.stage__hud {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.hudpill {
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--muted);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
+}
+
+/* Tool Rail (Left Sidebar) */
+.toolrail {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 4px;
+}
+
+.toolrail__sectionTitle {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 8px 0 4px 4px;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.toolrail__divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 8px;
+  opacity: 0.5;
+}
+
+.toolrail__spacer {
+  flex: 1;
+}
+
+.toolgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toolgroup summary {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 4px;
+  cursor: pointer;
+  list-style: none;
+  opacity: 0.7;
+}
+
+.toolgroup summary::-webkit-details-marker {
+  display: none;
+}
+
+.toolgroup__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 0;
+}
+
+/* Tool Buttons */
+.toolbtn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; /* Changed to flex-start for label visibility if expanded */
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.1s;
+  text-align: left;
+  font-size: 12px;
+  position: relative;
+}
+
+.dock__left--collapsed .toolbtn {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.dock__left--collapsed .toolbtn span {
+  display: none; /* Hide text label if collapsed */
+}
+
+/* If the button content is just text, we might want to add icons later. 
+   For now, assuming text-only or mixed content from ToolRail.tsx */
+
+.toolbtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--accent);
+}
+
+.toolbtn--active {
+  background: var(--accent) !important;
+  color: #000 !important;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  font-weight: 600;
+}
+
+.toolbtn--active:hover {
+  background: var(--accent-strong) !important;
+}
+
