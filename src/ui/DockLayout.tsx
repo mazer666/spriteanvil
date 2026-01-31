@@ -942,7 +942,8 @@ export default function DockLayout({
                ),
                width: '80%',
                maxWidth: '800px',
-               height: timelineHeight,
+               height: 'auto',
+               maxHeight: 'calc(100vh - 150px)',
                zIndex: 240,
                borderRadius: '8px',
                boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
@@ -993,25 +994,6 @@ export default function DockLayout({
                 onDeleteTag={onDeleteTag}
                 onReorderFrames={onReorderFrames}
                 dragDropEnabled
-             />
-             {/* Corner Resize Handle */}
-             <div 
-               className="resize-handle resize-handle--corner"
-               style={{
-                 position: 'absolute',
-                 right: 0,
-                 bottom: 0,
-                 width: '16px',
-                 height: '16px',
-                 cursor: 'nwse-resize',
-                 background: 'linear-gradient(135deg, transparent 50%, var(--border-strong) 50%)',
-                 borderRadius: '0 0 8px 0'
-               }}
-               onPointerDown={(e) => beginDrag("timeline", e)}
-               onPointerMove={onDragMove}
-               onPointerUp={endDrag}
-               onPointerCancel={endDrag}
-             />
           </div>
         )}
       </div>
