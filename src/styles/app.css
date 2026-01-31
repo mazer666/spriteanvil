@@ -1406,6 +1406,7 @@ body {
   flex: 1;
   height: 4px;
   -webkit-appearance: none;
+  appearance: none;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
   outline: none;
@@ -1413,6 +1414,7 @@ body {
 
 .minimap__zoom::-webkit-slider-thumb {
   -webkit-appearance: none;
+  appearance: none;
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -1530,6 +1532,8 @@ body {
   display: flex;
   flex-direction: column;
   width: 80px;
+  min-width: 80px; /* Force width */
+  flex-shrink: 0; /* Prevent shrinking */
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 6px;

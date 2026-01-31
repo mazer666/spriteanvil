@@ -1492,27 +1492,25 @@ export default function App() {
       onConfirm: async () => {
         setConfirmBusy(true);
         try {
-          // Identify IDs first
           const frameIdsToDelete = indicesToDelete.map(i => frames[i]?.id).filter(Boolean);
           
-          setFrames((prev) => {
-            let next = [...prev];
-            indicesToDelete.forEach(i => {
-                if(i >= 0 && i < next.length) next.splice(i, 1);
-            });
-            
-            // Safety: If all deleted, create one empty
-            if (next.length === 0) {
-               const newFrameId = crypto.randomUUID();
-               next = [{
+          const finalLength = frames.length - indicesToDelete.length;
+          const shouldCreateNew = finalLength <= 0;
+          let newFrame: Frame | null = null;
+          let newLayer: LayerData | null = null;
+          let newFrameId: string | null = null;
+
+          if (shouldCreateNew) {
+               newFrameId = crypto.randomUUID();
+               newFrame = {
                    id: newFrameId,
                    pixels: new Uint8ClampedArray(canvasSpec.width * canvasSpec.height * 4),
                    durationMs: 100,
                    pivot: defaultPivot
-               }];
-               // Initialize layer for new frame
+               };
+               
                const rootLayerId = crypto.randomUUID();
-               const baseLayer: LayerData = {
+               newLayer = {
                   id: rootLayerId,
                   name: "Layer 1",
                   opacity: 1,
@@ -1521,38 +1519,44 @@ export default function App() {
                   is_locked: false,
                   pixels: new Uint8ClampedArray(canvasSpec.width * canvasSpec.height * 4),
                };
-               // We need to update frameLayers state too.
-               // Since we are inside setFrames, we can't synchronously update frameLayers based on *state* here easily.
-               // But we can just issue the update.
-               setTimeout(() => {
-                 setFrameLayers(l => ({ ...l, [newFrameId]: [baseLayer] }));
-                 setFrameActiveLayerIds(ids => ({ ...ids, [newFrameId]: rootLayerId }));
-               }, 0);
+          }
+
+          setFrames((prev) => {
+            const next = [...prev];
+            indicesToDelete.forEach(i => {
+                if(i >= 0 && i < next.length) next.splice(i, 1);
+            });
+
+            if (next.length === 0 && newFrame) {
+                next.push(newFrame);
             }
             return next;
           });
 
-          // Cleanup layers for deleted frames
           setFrameLayers((prev) => {
              const next = { ...prev };
              frameIdsToDelete.forEach(id => delete next[id]);
+             if (shouldCreateNew && newFrameId && newLayer) {
+                 next[newFrameId] = [newLayer];
+             }
              return next;
           });
           
            setFrameActiveLayerIds((prev) => {
              const next = { ...prev };
              frameIdsToDelete.forEach(id => delete next[id]);
+             if (shouldCreateNew && newFrameId && newLayer) {
+                 next[newFrameId] = newLayer.id;
+             }
              return next;
           });
 
-          // Reset selection
-          setTimeout(() => {
-              setCurrentFrameIndex(0);
-              setSelectedFrameIndices(new Set([0]));
-          }, 0);
+          setCurrentFrameIndex(0);
+          setSelectedFrameIndices(new Set([0]));
 
-        } catch (err) {
-          console.error(err);
+        } catch (error) {
+          console.error(error);
+          setProjectError(error instanceof Error ? error.message : "Failed to delete frame.");
         } finally {
           setConfirmBusy(false);
           setConfirmDialog(null);
