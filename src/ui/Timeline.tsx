@@ -207,7 +207,7 @@ export default function Timeline({
           </button>
           <button 
             className="uiBtn uiBtn--icon" 
-            onClick={onTogglePlayback}
+            onClick={(e) => { e.stopPropagation(); onTogglePlayback(); }}
             title={isPlaying ? "Pause (Space)" : "Play (Space)"}
           >
             {isPlaying ? "⏸" : "▶"}
