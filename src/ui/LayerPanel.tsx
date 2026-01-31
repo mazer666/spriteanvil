@@ -5,11 +5,22 @@
  * 
  * This is where you manage your "Transparent Sheets".
  * 
- * 1. THE LIST: You can drag layers to change which ones are on top.
- * 2. VISIBILITY (👁): Click the eye to hide a layer if it's in your way.
- * 3. LOCKING (🔒): Lock a layer to make sure you don't accidentally edit it.
- * 4. BLENDING: The "Blend Mode" dropdown lets you choose how the sheet 
- *    should mix with the ones below (like making it look like a shadow).
+ * ## JARGON GLOSSARY
+ * 1. BLEND MODE: The formula used to mix this layer's color with the 
+ *    layer below it.
+ * 2. OPACITY: Transparency (1.0 = solid, 0.0 = invisible).
+ * 3. FLATTEN: Merging all layers into one single sheet of pixels.
+ * 4. MERGE DOWN: Combining the selected layer with the one directly below it.
+ * 
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph BT
+ *   L3[Top Layer] --> L2[Middle Layer]
+ *   L2 --> L1[Bottom Layer]
+ *   L1 --> OUT[Rendered Image]
+ *   U[UI Interaction] -- Mutate --> L2
+ *   U -- Toggle --> L2(Visibility)
+ * ```
  * 
  * ## VAR TRACE
  * - `layers`: (Origin: App state) The stack of visual sheets for the active frame.

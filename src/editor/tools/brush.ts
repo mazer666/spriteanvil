@@ -5,14 +5,22 @@
  * 
  * Drawing with a digital brush is like "Stamping".
  * 
- * 1. THE STAMP: When you click once, we draw a circle of pixels (a stamp) 
- *    around your mouse. The "Brush Size" is how big that circle is.
+ * ## JARGON GLOSSARY
+ * 1. DDA: Digital Differential Analyzer. A simple way to find which pixels 
+ *    sit on a straight line.
+ * 2. STAMP: A single circle of pixels drawn at a specific coordinate.
+ * 3. SPACING: How often we place a "Stamp" as you move your mouse.
  * 
- * 2. THE LINE: When you drag the mouse, we don't just draw one stamp. 
- *    We draw MANY stamps very close together so they look like a solid line.
- * 
- * 3. TEXTURE: If you have a texture enabled, we only paint the pixels 
- *    where the "Stamp" and the "Texture Pattern" both say it's okay.
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph TD
+ *   A[Start Point] --> B[Calculate Bresenham Steps]
+ *   B --> C{Step Taken?}
+ *   C -- Yes --> D[Draw Stamp at current coord]
+ *   D --> E{Reached End?}
+ *   E -- No --> C
+ *   E -- Yes --> F[Finished Line]
+ * ```
  */
 import { setPixel } from "../pixels";
 import { getSymmetryTransforms } from "../symmetry";

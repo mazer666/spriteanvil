@@ -5,11 +5,19 @@
  * 
  * This is where you pick your "Paint Colors".
  * 
- * 1. PRIMARY vs SECONDARY: You usually have two colors active at once. 
- * 2. RAMPS: You can pick two colors and ask the app to "Fill in the gaps" 
- *    with a smooth line of shades (great for shading characters!).
- * 3. IMPORT/EXPORT: You can save your favorite colors as a file and 
- *    share them with other artists.
+ * ## JARGON GLOSSARY
+ * 1. PRIMARY COLOR: The color used by the Left Mouse Button.
+ * 2. SECONDARY COLOR: The color used by the Right Mouse Button.
+ * 3. RAMPS: A sequence of colors from highlight to shadow.
+ * 4. HEX CODE: A 6-character code (like #FFFFFF) that names a color.
+ * 
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph LR
+ *   Click[Click Palette Swatch] --> Pick[Update Primary Color]
+ *   Pick --> Recent[Push to Recent Colors]
+ *   Recent --> Canvas[Brushes now use new color]
+ * ```
  */
 import React, { useRef, useState } from "react";
 import { PaletteData } from "../lib/projects/snapshot";

@@ -5,15 +5,20 @@
  * 
  * Think of this as the "AI's Cookbook". 
  * 
- * 1. TEMPLATES: Instead of typing long instructions every time, users 
- *    can pick a "Recipe" (template) like "Idle Hero".
- * 2. PROMPT: This is the actual text sent to the AI. We include 
- *    details like "32x32" and "vibrant palette" to make sure the 
- *    AI gives us a pixel-style result.
+ * ## JARGON GLOSSARY
+ * 1. TEMPLATE: A pre-written string with "holes" to be filled (like {character}).
+ * 2. DESCRIPTOR: Adjectives that help the AI (e.g., "vibrant", "crisp").
+ * 3. STYLE INJECTOR: A fixed set of words we add to every prompt to make 
+ *    it look like Pixel Art.
  * 
- * ## VAR TRACE
- * - `PIXEL_ART_PROMPTS`: (Origin: Constant) The master list of all templates.
- * - `label`: (Origin: UI display) The name shown in the dropdown menu.
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph LR
+ *   Pick[User Picks Template] --> Ext[Fetch Prompt String]
+ *   Ext --> Styl[Add Pixel Art Style tags]
+ *   Styl --> Dim[Inject Canvas Size]
+ *   Dim --> Send[Ready to Send to AI]
+ * ```
  */
 export type PromptTemplate = {
   label: string;

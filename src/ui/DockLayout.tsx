@@ -6,15 +6,23 @@
  * Think of the Dock as the "Dashboard" of the app. It holds all the panels 
  * (Tools, Layers, Timeline) and the main drawing area.
  * 
- * 1. FLOATING PANELS: Just like windows on your computer, you can move 
- *    the toolbars around and "Dock" them where you want.
+ * ## JARGON GLOSSARY
+ * 1. DOCK: An area where toolbars are "pinned" to the side of the screen.
+ * 2. ZEN MODE: A distraction-free mode where UI is hidden.
+ * 3. COMPOSITE: The result of squashing all layers together to show them 
+ *    on the canvas.
  * 
- * 2. ZEN MODE: Pressing [Tab] hides everything except the canvas so you 
- *    can focus on your art.
- * 
- * 3. RESPONSIVE: If you use the app on a phone, the Dock automatically 
- *    switches to a "Tabbed" view because there isn't enough space for 
- *    floating windows.
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph TD
+ *   A[App] --> B[DockLayout]
+ *   B --> C[ToolRail]
+ *   B --> D[CanvasStage]
+ *   B --> E[RightPanel]
+ *   E --> F[LayerPanel]
+ *   E --> G[PalettePanel]
+ *   B --> H[Timeline]
+ * ```
  */
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import ToolRail from "./ToolRail";

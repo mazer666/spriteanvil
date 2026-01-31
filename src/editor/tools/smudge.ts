@@ -5,12 +5,20 @@
  * 
  * Smudging is like "Rubbing wet paint with your finger".
  * 
- * 1. THE MIX: When you drag from Pixel A to Pixel B, we take some of the 
- *    color from A and mix it into B.
- * 2. THE STRENGTH: The more "Strength" you have, the more of the original 
- *    color is carried along as you drag.
- * 3. THE EFFECT: It's great for blurring edges or creating smooth 
- *    painterly transitions without using a gradient tool.
+ * ## JARGON GLOSSARY
+ * 1. BLEED: How much color "flows" from the starting point as you smudge.
+ * 2. STRENGTH: The mix ratio. 0.1 is subtle, 0.9 is heavy smearing.
+ * 3. LERP: Mixing the "Finger Color" with the "Canvas Color".
+ * 
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph LR
+ *   A[Mouse Move: A to B] --> B[Sample Color at A]
+ *   B --> C[Mix with color at B]
+ *   C --> D[Write blended color to B]
+ *   D --> E[Move Cursor to B]
+ *   E --> A
+ * ```
  */
 import { getPixel, setPixel } from "../pixels";
 import { getPatternMask, PatternId } from "./patterns";

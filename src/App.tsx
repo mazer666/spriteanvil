@@ -6,21 +6,22 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
  * 
  * Think of App.tsx as the "Brain" or "Conductor" of SpriteAnvil.
  * 
- * 1. STATE (The Memory): 
- *    We keep all the important information here (like which colors are picked, 
- *    what pixels are on each frame, and if the user is currently drawing).
- * 
- * 2. HANDLERS (The Actions): 
- *    When you click a button or draw, a "Handler" function here is called.
- *    It updates the State and tells the rest of the app what changed.
- * 
- * 3. FLOW (The Pipeline):
- *    State flows DOWN to the UI components (DockLayout, RightPanel, etc.).
- *    UI components are "dumb" — they just show what App.tsx tells them to.
- * 
- * 4. COMPOSITING:
- *    Since we have layers, this file handles "squashing" them all together
- *    into one final image that you see on the canvas.
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph TD
+ *   A[App.tsx] --> B[DockLayout]
+ *   B --> C[CanvasStage]
+ *   B --> D[ToolRail]
+ *   B --> E[RightPanel]
+ *   E --> F[LayerPanel]
+ *   E --> G[PalettePanel]
+ *   
+ *   D -- Picks Tool --> A
+ *   C -- Pointer Event --> A
+ *   A -- Algorithm --> H[Pixel Buffer]
+ *   H -- Composites --> C
+ *   A -- Persistence --> I[Supabase]
+ * ```
  */
 import DockLayout from "./ui/DockLayout";
 import ExportPanel from "./ui/ExportPanel";

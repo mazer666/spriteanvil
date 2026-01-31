@@ -5,10 +5,19 @@
  * 
  * This is your "Toolbox". It sits on the left side of the screen.
  * 
- * 1. GROUPS: Tools are organized into groups like "Drawing" or "Select". 
- *    You can collapse these groups if you don't need them.
- * 2. SHORTCUTS: Next to each tool name, you'll see a letter (like 'B' for Pen). 
- *    Pressing that key on your keyboard will automatically pick that tool!
+ * ## JARGON GLOSSARY
+ * 1. TOOL CATALOG: The central list of all tools and their icons.
+ * 2. HOTKEY: A single keyboard key (like 'G') that picks a tool instantly.
+ * 3. COLLAPSIBLE: A section that can be "folded up" to save space.
+ * 
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph LR
+ *   Click[Click Tool] --> Set[Update Global Tool ID]
+ *   Set --> UI[Highlight Button]
+ *   UI --> Cursor[Change Map Cursor]
+ *   Cursor --> Canvas[Ready to Draw]
+ * ```
  */
 import React from "react";
 import { ToolId } from "../types";

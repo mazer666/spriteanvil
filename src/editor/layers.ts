@@ -4,19 +4,21 @@
  * ## LAYER COMPOSITING (Noob Guide)
  * 
  * Think of layers like "Clear Plastic Sheets".
- * Imagine you have three sheets:
- * 1. Bottom Sheet: A background drawing.
- * 2. Middle Sheet: A character.
- * 3. Top Sheet: Shiny highlights.
  * 
- * "Compositing" is the process of looking through all these sheets from the 
- * top and figuring out what color each pixel on your screen should be.
+ * ## JARGON GLOSSARY
+ * 1. ALPHA: Transparency. 0 is clear, 255 is solid.
+ * 2. BLEND MODE: The math rule that picks how two colors mix (e.g., Multiply).
+ * 3. COMPOSITE: The final image made by combining all layers from bottom to top.
+ * 4. OPACITY: How "thick" the sheet is. 1.0 is normal, 0.5 is semi-see-through.
  * 
- * - If the Top Sheet has a red pixel, you see Red.
- * - If the Top Sheet is see-through (transparent), you look through it to 
- *   the Middle Sheet.
- * - "Blend Modes" (like Multiply or Screen) are like "Magic Filters" that 
- *   mix the colors of the sheets together instead of just blocking them.
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph BT
+ *   L1[Bottom Layer] --> L2[Middle Layer]
+ *   L2 --> L3[Top Layer]
+ *   L3 --> OUT[Final Composite Pixel]
+ *   style OUT fill:#f9f,stroke:#333
+ * ```
  */
 import { BlendMode, LayerData } from "../types";
 

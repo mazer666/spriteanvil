@@ -5,15 +5,25 @@
  * 
  * This is the "Magic Repair" tool. 
  * 
- * 1. SELECTION: You pick a part of the image you want the AI to change.
- * 2. PROMPT: You tell the AI what you want (e.g., "Add a fireball").
- * 3. MASKING: We hide the rest of the image so the AI only touches 
- *    the part you selected.
+ * ## JARGON GLOSSARY
+ * 1. INPAINTING: Using AI to fill in a hole or change a specific part of 
+ *    an image while keeping the rest exactly the same.
+ * 2. MASKING: A black-and-white image that tells the AI "Only change the 
+ *    white parts".
+ * 3. PROMPT INFLUENCE: How much the AI should listen to your words vs. 
+ *    the original image.
+ * 4. DENOISE STRENGTH: How much "Noise" or variation the AI adds. Higher 
+ *    values mean it can move further away from your original drawing.
  * 
- * ## VAR TRACE
- * - `prompt`: (Origin: AIPanel) The text instruction for the AI.
- * - `maskImage`: (Origin: selectionMask) Tells the AI "Only look here".
- * - `denoiseStrength`: (Origin: AI Settings) How much the AI can change the original pixels.
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph TD
+ *   A[Canvas Image] --> B[Combine with Mask]
+ *   B --> C[Convert to Base64]
+ *   C --> D[Add Prompt + Settings]
+ *   D --> E[Send to AI Provider]
+ *   E --> F[Receive Result Image]
+ * ```
  */
 import type { CanvasSpec } from "../../types";
 

@@ -5,15 +5,24 @@
  * 
  * "Tweening" comes from the phrase "In Betweening".
  * 
- * If you have Frame A (a red ball on the left) and Frame B (the ball on the right),
- * "Tweening" is the math that automatically creates the frames in the middle
- * so the ball seems to slide smoothly instead of teleporting.
+ * ## JARGON GLOSSARY
+ * 1. EASING: Defining the "Speed Curve". Linear is robotic; Quad is 
+ *    smooth; Elastic bounces like a rubber band.
+ * 2. KEYFRAME: The "Hero" frames that you draw yourself.
+ * 3. TWEEN: The computer-generated frames that fill the gaps between Keyframes.
+ * 4. INTERPOLATION: The math formula that picks colors halfway between two pixels.
  * 
- * 1. EASING: This makes the ball start slow and speed up (like a real car),
- *    instead of moving at a constant, robotic speed.
- * 
- * 2. INTERPOLATION: This is just fancy math for "finding the middle". 
- *    If Frame A is color 0 and Frame B is color 10, the "middle" (0.5) is color 5.
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph TD
+ *   A[Start Frame] --> B[End Frame]
+ *   B --> C[Calculate Step Size: T]
+ *   C --> D{Apply Easing?}
+ *   D --> E[Adjust T via Curve]
+ *   E --> F[Lerp every pixel @ T]
+ *   F --> G[Generate New Frame]
+ *   G --> H[Add to Timeline]
+ * ```
  */
 import { Frame } from "../types";
 

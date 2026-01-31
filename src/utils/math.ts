@@ -3,19 +3,26 @@
  * -----------------------------------------------------------------------------
  * ## MATH UTILITIES (Noob Guide)
  * 
- * This is the "Geometry Teacher". It handles the calculations 
- * for shapes, distances, and angles.
+ * This is the "Geometry Teacher".
  * 
- * 1. CLAMPING: Keeps numbers within bounds (e.g., "Don't go past 100%").
- * 2. LERP: Short for "Linear Interpolation". It finds the point 
- *    exactly "between" two other points.
- * 3. DISTANCE: Real-world geometry (A² + B² = C²) used to check 
- *    if your mouse is inside a circle or near a line.
+ * ## JARGON GLOSSARY
+ * 1. CLAMP: Keeping a number between a Min and a Max (like force-keeping 
+ *    a color between 0 and 255).
+ * 2. LERP: Linear Interpolation. Picking a point at some % between A and B.
+ * 3. DEGREES/RADIANS: Two ways to measure turning. 180 degrees = Pi radians.
+ * 4. DISTANCE: The length of a straight line between two points (Pythagoras).
  * 
- * ## VAR TRACE
- * - `t`: (Origin: Animation tweening) A value from 0 to 1 representing time.
- * - `angleDegrees`: (Origin: Symmetry settings) How much to rotate a point.
- * - `rect`: (Origin: Selection bounds) A box defined by X, Y, Width, Height.
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph LR
+ *   A[Value] --> B{Within Bounds?}
+ *   B -- Too High --> C[Set to Max]
+ *   B -- Too Low --> D[Set to Min]
+ *   B -- OK --> E[Keep Value]
+ *   C --> F[Clamped Result]
+ *   D --> F
+ *   E --> F
+ * ```
  */
 
 /**

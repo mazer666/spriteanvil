@@ -5,10 +5,23 @@
  * 
  * Every tool has "Secret Settings". This panel shows them.
  * 
- * - If you have the PEN, you can change its SIZE or OPACITY.
- * - If you have a SELECTION tool, you can change if it REPLACES or ADDS 
- *   to what you already picked.
- * - If you have the GRADIENT tool, you can choose between LINEAR or RADIAL.
+ * ## JARGON GLOSSARY
+ * 1. DROPDOWN: A list you click to pick one option (like Font size).
+ * 2. SLIDER: A bar you drag to change a number (like Opacity).
+ * 3. TOGGLE: A switch that is either ON or OFF.
+ * 4. OPTION SYNC: When you change a setting here, it immediately tells 
+ *    the drawing engine to update.
+ * 
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph TD
+ *   A[Select Tool] --> B[Identify Tool Settings]
+ *   B --> C[Render Input Controls]
+ *   C --> D[User Adjusts Slider]
+ *   D --> E[onChangeSettings callback]
+ *   E --> F[App state updates]
+ *   F --> G[New Settings affect next stroke]
+ * ```
  */
 import React from "react";
 import { ToolId, UiSettings, GradientType, DitheringType } from "../types";

@@ -1,12 +1,28 @@
 /**
  * src/editor/history.ts
  * -----------------------------------------------------------------------------
- * Simple Undo/Redo history for pixel buffers.
- *
- * We store full snapshots (Uint8ClampedArray) because our pixel canvases are small
- * (typical pixel art sizes). This is the easiest and most reliable approach.
- *
- * Later we could optimize using diffs, but for v0.1 this is perfect.
+ * ## THE HISTORY SYSTEM (Noob Guide)
+ * 
+ * Think of this as your "Time Machine" or a "Stack of Photos".
+ * 
+ * 1. UNDO: You take the photo at the top of the stack and put it back on the 
+ *    canvas.
+ * 2. REDO: If you undo by mistake, you can grab the photo you just took off 
+ *    the stack and put it back.
+ * 
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph TD
+ *   A[User Action] --> B{Canvas Changed?}
+ *   B -- Yes --> C[Commit Snapshot to Undo Stack]
+ *   C --> D[Clear Redo Stack]
+ *   E[Undo Command] --> F[Pop from Undo Stack]
+ *   F --> G[Apply to Canvas]
+ *   G --> H[Push current to Redo Stack]
+ * ```
+ * 
+ * ## VAR TRACE
+ * ...
  */
 
 import type { LayerData } from "../types";

@@ -6,14 +6,17 @@
  * We use a "Uint8ClampedArray". Think of this as a giant list of numbers from 0 to 255.
  * Every pixel on the screen is made of 4 numbers in this list:
  * [Red, Green, Blue, Alpha (transparency)]
- *
- * ## THE MATH
- * index = (y * width + x) * 4
- *
+ * 
+ * ## JARGON GLOSSARY
+ * 1. BUFFER: A chunk of memory (the list of numbers) used to store image data.
+ * 2. RGBA: Red, Green, Blue, and Alpha. The 4 channels for any color.
+ * 3. INDEX: The position in our list. Since we have 4 numbers per pixel, 
+ *    the index is always (y * width + x) * 4.
+ * 4. CLAMPED: If you try to save 300, it "clamps" it to 255. 
+ *    If you try -50, it clamps to 0. It stays within the 0-255 range.
+ * 
  * ## VAR TRACE
- * - `buf`: (Origin: CanvasState) The current raw byte array of pixels.
- * - `width/height`: (Origin: CanvasSpec) The fixed dimensions of our image.
- * - `rgba`: (Origin: PalettePanel) The color we want to paint with.
+ * ...
  */
 
 export type RGBA = { r: number; g: number; b: number; a: number };

@@ -5,11 +5,26 @@
  * 
  * Lasso is a "Freehand" selection tool.
  * 
- * 1. THE PATH: As you move the mouse, we record every point you touch.
- * 2. THE POLYGON: Once you let go, we connect the start and end to create 
- *     a closed shape (a polygon).
- * 3. THE MASK: We check every pixel on the canvas to see if it's "Inside" 
- *    or "Outside" that polygon. If it's inside, it becomes selected!
+ * ## JARGON GLOSSARY
+ * 1. PATH: The list of every mouse coordinate you touched while dragging.
+ * 2. POLYGON: A shape made of many straight lines (or one freehand path).
+ * 3. POINT-IN-POLYGON: The math that checks if a pixel is inside your 
+ *    freehand loop.
+ * 4. MASK: A 1-bit piece of data (0 or 1) per pixel that says it's selected.
+ * 
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph TD
+ *   A[Mouse Drag] --> B[Record Points]
+ *   B --> C[Mouse Up]
+ *   C --> D[Loop Entire Canvas]
+ *   D --> E{Point in Polygon?}
+ *   E -- Yes --> F[Set Mask Bit to 1]
+ *   E -- No --> G[Set Mask Bit to 0]
+ *   G --> H[Next Pixel]
+ *   F --> H
+ *   H --> D
+ * ```
  */
 export function createLassoSelection(
   width: number,

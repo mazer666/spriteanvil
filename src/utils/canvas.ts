@@ -3,21 +3,26 @@
  * -----------------------------------------------------------------------------
  * ## CANVAS UTILITIES (Noob Guide)
  * 
- * This file is the "Art Studio Assistant". It helps translate the 
- * raw numbers (bytes) into actual pictures on your screen using the 
- * browser's "Canvas API".
+ * This file is the "Art Studio Assistant".
  * 
- * 1. THE BRIDGE: Computers store images as long lists of numbers. 
- *    These functions help "Draw" those numbers onto a Canvas element.
- * 2. OFFSCREEN: Sometimes we draw things "in our head" (Offscreen) 
- *    before showing them to the user to keep things smooth.
- * 3. GRID & CHECKER: These helpers draw the patterns behind your art 
- *    so you can see transparency and individual pixels.
+ * ## JARGON GLOSSARY
+ * 1. OFFSCREEN: A canvas that exists in memory but isn't on the page. 
+ *    We use it for fast background drawing.
+ * 2. BLIT: Copying a chunk of pixels (a block of memory) directly to 
+ *    the display.
+ * 3. CONTEXT (ctx): The object that has all the drawing methods (like 
+ *    fillRect or putImageData).
+ * 4. IMAGE DATA: A wrapper for our raw pixel buffers that the browser 
+ *    understands.
  * 
- * ## VAR TRACE
- * - `buffer`: (Origin: App.tsx -> CanvasStage) The raw RGBA byte array.
- * - `ctx`: (Origin: Canvas element) The "Pen" used to draw on the canvas.
- * - `scale`: (Origin: settings.zoom) How big to draw each pixel.
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph TD
+ *   A[Pixel Buffer] --> B[Create ImageData]
+ *   B --> C[Get 2D Context]
+ *   C --> D[putImageData]
+ *   D --> E[Pixels appear on Screen]
+ * ```
  */
 
 import { RGBA } from "../editor/pixels"

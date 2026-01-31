@@ -5,15 +5,23 @@
  * 
  * This is the "Film Strip" for your animation.
  * 
- * 1. FRAMES: Each box is a different picture. When played fast, they 
- *    create the illusion of movement.
+ * ## JARGON GLOSSARY
+ * 1. FRAME: A single image in the animation sequence.
+ * 2. FPS: Frames Per Second. How fast the animation plays.
+ * 3. TWEEN: Short for "In-Betweening". The app automatically generates 
+ *    frames between two pictures to create smooth motion.
+ * 4. ONION SKIN: Seeing a ghost of the previous/next frame while you draw.
  * 
- * 2. FPS (Frames Per Second): This is the speed of your movie. 
- *    12 FPS means the app will show 12 of your pictures every second.
- * 
- * 3. ONION SKINNING: This lets you see a "ghost" of the frame before/after 
- *    the one you are on. It's like tracing through paper to make sure 
- *    your character doesn't jump around!
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * stateDiagram-v2
+ *   [*] --> Stopped
+ *   Stopped --> Playing: Spacebar/Play
+ *   Playing --> Playing: Next Frame (Timer)
+ *   Playing --> Stopped: Pause
+ *   Stopped --> Scrubbing: Drag Timeline
+ *   Scrubbing --> Stopped
+ * ```
  * 
  * ## VAR TRACE
  * - `frames`: (Origin: App state) The ordered list of animation frames.

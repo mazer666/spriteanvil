@@ -6,15 +6,17 @@
  * This file is the "Vault". It handles encrypting and decrypting 
  * your private AI API keys.
  * 
- * 1. ENCRYPTION: We don't store your keys in plain text (where 
- *    hackers could see them). We use "AES-GCM" encryption.
- * 2. PASSPHRASE: Your browser uses a master password (passphrase) 
- *    to "Unlock" (decrypt) the keys only when needed.
+ * ## JARGON GLOSSARY
+ * 1. AES-GCM: A standard way to encrypt data that also checks if the data 
+ *    was tampered with.
+ * 2. IV (Initialization Vector): A random "starting number" added to encryption.
+ *    Even if you encrypt the same key twice, it looks different because of the IV.
+ * 3. SALT: A random piece of data added to your passphrase to make it harder 
+ *    for hackers to guess via "Rainbow Tables" (pre-computed lists).
+ * 4. DERIVE: Creating a formal "Crypto Key" from a simple "Passphrase" string.
  * 
  * ## VAR TRACE
- * - `encrypted`: (Origin: Supabase) The scrambled version of your key.
- * - `passphrase`: (Origin: User Input) The secret word used to unlock the key.
- * - `keyMaterial`: (Origin: Crypto API) The temporary "Key" generated from your passphrase.
+ * ...
  */
 import { supabase } from "../supabase/client";
 import { AIProviderId } from "./providers";

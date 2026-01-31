@@ -5,16 +5,23 @@
  * 
  * Shape tools help you draw perfect Boxes, Circles, and Ovals.
  * 
- * 1. THE MATH: Computers use geometry to decide which pixels to color. 
- *    For a box, it's easy: just color everything between X and Y.
+ * ## JARGON GLOSSARY
+ * 1. BRESENHAM: A clever algorithm that draws curves using only simple 
+ *    math, keeping them smooth at any zoom.
+ * 2. OCTANT: 1/8th of a circle. We calculate one and flip it 7 times!
+ * 3. MIDPOINT: The "Decision Point" that tells us if the next pixel 
+ *    should be closer to the center or further away.
  * 
- * 2. THE CIRCLE (Bresenham): Drawing circles is harder! We use a famous 
- *    algorithm that calculates 1/8th of the circle and then "mirrors" it 
- *    to finish the rest, ensuring it looks perfectly round.
- * 
- * 3. FILL vs OUTLINE: 
- *    - Outline: Only the border is painted.
- *    - Filled: Everything inside the border is also painted.
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph LR
+ *   A[Center Point] --> B[Radius]
+ *   B --> C[Calculate 1/8th Octant]
+ *   C --> D[Mirror horizontally]
+ *   D --> E[Mirror vertically]
+ *   E --> F[Mirror Diagonally]
+ *   F --> G[Full Smooth Circle]
+ * ```
  */
 
 import { RGBA, setPixel, drawLine } from "../pixels"

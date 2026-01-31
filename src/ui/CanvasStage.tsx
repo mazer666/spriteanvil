@@ -6,15 +6,20 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
  * 
  * This is the "Main Screen" where you actually see and draw pixels.
  * 
- * It handles the "Camera" (Zoom and Pan), the "Input" (Mouse, Pen, Touch),
- * and "Compositing" (putting all your layers together so you see them as one).
- * 
- * 1. BUFFER vs PREVIEW: To stay fast, we draw into a "Preview Buffer" while 
- *    you are moving the mouse. Only when you LET GO do we merge that into 
- *    the real Layer pixels.
- * 
- * 2. COORDINATES: We convert your Mouse Position (Screen Pixels) into 
- *    Grid Positions (Canvas Pixels) using Zoom and Pan math.
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * sequenceDiagram
+ *   participant U as User
+ *   participant C as CanvasStage (UI)
+ *   participant B as Pixel Buffer (Editor)
+ *   U->>C: Pointer Down
+ *   C->>C: Calculate Pixel Coords (Zoom/Pan)
+ *   C->>B: setPixel(x, y, color)
+ *   C->>C: Request Draw (requestAnimationFrame)
+ *   C->>U: See Pixel appear!
+ *   U->>C: Pointer Up
+ *   C->>B: commitHistory()
+ * ```
  */
 import { CanvasSpec, ToolId, UiSettings, LayerData, FloatingSelection } from "../types";
 import SelectionTransformOverlay from "./SelectionTransformOverlay";

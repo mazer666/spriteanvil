@@ -5,12 +5,20 @@
  * 
  * This file is the "Color Palette Decoder".
  * 
- * 1. FORMATS: Humans like #FF0000 (Hex), but computers often prefer 
- *    {r:255, g:0, b:0} (RGB). This file converts between them.
- * 2. HSL: This is "Hue, Saturation, Lightness". It's how artists think 
- *    about color (e.g., "Make this color more blue and a bit darker").
- * 3. BLENDING: When you put a semi-transparent color over another, 
- *    this file calculates the "Math" of what the final color should be.
+ * ## JARGON GLOSSARY
+ * 1. HEX: A color code starting with # (e.g., #FF0000).
+ * 2. LUMA: Perceived brightness. Some colors (like Yellow) look 
+ *    brighter than others (like Blue) even if they have the same numbers.
+ * 3. LERP: Linear Interpolation. Picking a color halfway between two others.
+ * 4. ALPHA: Transparency. 0 is clear, 1.0 (or 255) is solid.
+ * 
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph LR
+ *   H[Hex String #FF0000] --> P[Parse 2-char Chunks]
+ *   P --> R[Convert Hex to Int]
+ *   R --> O[RGBA Object {255, 0, 0, 255}]
+ * ```
  * 
  * ## VAR TRACE
  * - `hex`: (Origin: PalettePanel / ColorPicker) The string starting with '#'.

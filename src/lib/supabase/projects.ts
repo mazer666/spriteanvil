@@ -6,12 +6,23 @@
  * This file is the "Librarian". It handles organizing, saving, and 
  * loading your projects from the Supabase cloud.
  * 
- * 1. PERSISTENCE: Every 60 seconds (or when you click save), the 
- *    app takes a "Metadata Snapshot" of your current work.
- * 2. DATABASE: We use SQL-style tables to store project names, 
- *    descriptions, and that big snapshot of pixels.
- * 3. RETRY: If your internet is shaky, we use a "Retry" system to 
- *    keep trying to save so you don't lose progress.
+ * ## JARGON GLOSSARY
+ * 1. UPSERT: Update or Insert. A way to save data where it creates a 
+ *    new row if it doesn't exist, or updates the old one if it does.
+ * 2. PAYLOAD: The actual data we are sending (the project settings).
+ * 3. RLS: Row Level Security. A Supabase feature that makes sure only 
+ *    YOU can edit YOUR projects.
+ * 4. SNAPSHOT: A frozen "copy" of the entire app's state at a point in time.
+ * 
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph TD
+ *   A[App State] --> B[Build Payload]
+ *   B --> C[Serialize Pixel Buffers]
+ *   C --> D[Supabase Client]
+ *   D --> E[Cloud Postgres DB]
+ *   E --> F[Confirmed Save]
+ * ```
  * 
  * ## VAR TRACE
  * - `metadata`: (Origin: Database Row) The JSON snapshot containing frames/layers.

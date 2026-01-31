@@ -5,15 +5,25 @@
  * 
  * Think of this as the "AI Translator".
  * 
- * 1. PLUGS: Different AI services (OpenAI, Stability, etc.) speak 
- *    different languages. This file provides "Plugs" (interfaces) 
- *    that let SpriteAnvil talk to any of them.
- * 2. CAPABILITIES: It tracks which AI can do "Inpaint" (fix parts 
- *    of art) and which can do "Variations" (remix art).
+ * ## JARGON GLOSSARY
+ * 1. PROVIDER: A company that runs AI models (like OpenAI or Stability).
+ * 2. ENDPOINT: The "Address" where we send our requests.
+ * 3. MODEL ID: The name of the specific AI "Worker" (e.g., "dall-e-3").
+ * 4. API KEY: A secret password that tells the provider who is 
+ *    paying for the generated art.
  * 
- * ## VAR TRACE
- * - `PROVIDERS`: (Origin: Constant) The list of all supported AI plugins.
- * - `AIProviderId`: (Origin: Type) The unique name for each AI service.
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph LR
+ *   REQ[Generic AI Request] --> ROUTE{Check Provider ID}
+ *   ROUTE -- OpenAI --> OAPI[Build DALL-E JSON]
+ *   ROUTE -- Stability --> SAPI[Build SDXL JSON]
+ *   ROUTE -- Other --> HAPI[Build Custom JSON]
+ *   OAPI --> FETCH[Fetch API]
+ *   SAPI --> FETCH
+ *   HAPI --> FETCH
+ *   FETCH --> RES[Return Image URL]
+ * ```
  */
 
 export type AIProviderId = "openai-dalle3" | "stability-ai" | "hugging-face" | "openrouter";

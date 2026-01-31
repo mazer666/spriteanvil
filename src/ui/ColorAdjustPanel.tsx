@@ -5,14 +5,25 @@
  * 
  * This panel is for "Filtering" your artwork.
  * 
- * 1. SLIDERS: When you move a slider, we show you a "Preview" layer 
- *    on top of your drawing so you can see the change in real-time.
- * 2. APPLY: The changes aren't permanent until you click the [Apply] button.
- * 3. QUICK EFFECTS: Buttons like "Invert" or "Grayscale" are one-click 
- *    shortcuts for common color changes.
+ * ## JARGON GLOSSARY
+ * 1. PREVIEW LAYER: A temporary "Glow" on the canvas that shows what the 
+ *    filter WILL do, before you commit to it.
+ * 2. HUE SHIFT: Rotating the color wheel (e.g., making Red turn into Blue).
+ * 3. COMMIT/APPLY: Making the change permanent by writing the filtered 
+ *    pixels back into the main layer.
+ * 4. SHORTCUTS: Pre-set filters like "Invert" that don't need sliders.
  * 
- * NOTE FOR DEVS: We use a "Ref" for the preview callback to prevent 
- * React from getting stuck in an infinite update loop!
+ * ## VISUAL FLOW (Mermaid)
+ * ```mermaid
+ * graph TD
+ *   A[User Drags Slider] --> B[Clone Active Layer]
+ *   B --> C[Apply Filter to Clone]
+ *   C --> D[Set Preview Buffer]
+ *   D --> E{Commit Click?}
+ *   E -- No --> A
+ *   E -- Yes --> F[Overwrite Active Layer]
+ *   F --> G[Clear Preview Buffer]
+ * ```
  */
 import React, { useState } from "react";
 
