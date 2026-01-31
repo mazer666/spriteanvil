@@ -34,6 +34,29 @@ It is intentionally written to be **beginner-friendly** while still being a reli
 
 ---
 
+## Component Size Limits (The 400-Line Rule)
+
+> **Cross-Reference**: See [`CODE_STYLE.md` Section 13](./CODE_STYLE.md#13-modularization--file-size-limits) for the full policy and ESLint enforcement.
+
+To ensure maintainability, **React component files must not exceed 400 lines**. Files exceeding this limit require mandatory refactoring before new features can be added.
+
+### Current Refactoring Priority
+
+| File | Lines | Status | Target Hooks |
+|------|-------|--------|--------------|
+| `App.tsx` | 2816 | Critical | `useProjectPersistence`, `useAnimationSystem`, `useLayerManager`, `usePaletteManager`, `useTransformOperations`, `useColorAdjustments`, `useSelectionOperations` |
+| `CanvasStage.tsx` | 1830 | Critical | `useCanvasInput`, `useCanvasRenderer` |
+
+### Refactoring Strategy
+
+1. **Extract state + handlers** into custom hooks in `src/hooks/`
+2. **Split UI sections** into lazy-loaded sub-components
+3. **Move pure logic** to `src/utils/` or `src/editor/`
+
+See [`PROJECT_PLAN.md` Phase 16](./PROJECT_PLAN.md#phase-16-structural-integrity--refactoring) for the detailed refactoring roadmap.
+
+---
+
 ## Current architecture at a glance
 
 ### High-level layers (conceptual)

@@ -551,6 +551,42 @@ src/
 - **Touch & Gesture**: Pinch-zoom, two-finger pan, three-finger undo/redo.
 - **Mobile Layout**: Full-screen canvas, simplified palettes, bottom drawer timeline.
 
+### Phase 14: Core Power & Generation
+
+- **Advanced Project Dashboard (Modul 2)**:
+  - Central gallery view with project thumbnails and sorting
+  - Project presets: 16×16, 32×32, 64×64, GBA (240×160), NES, SNES sizes
+  - Manual tutorial system (never auto-launch, user-initiated only)
+- **High-End Performance (Modul 5)**:
+  - WebGL rendering abstraction (`Renderer` interface pattern)
+  - `WebGLRenderer` for GPU-accelerated layer compositing
+  - Web Worker offloading for PNG/GIF export and selection algorithms
+- **Procedural Texture Generator (Modul 11)**:
+  - Perlin Noise and Worley/Cellular Noise algorithms
+  - Fractal Brownian Motion (FBM) layering
+  - Tileable/seamless texture output
+  - Real-time preview with seed control
+  - "Apply to Canvas" integration as new layer
+
+### Phase 15: Game-Dev Ecosystem
+
+- **Normal Mapping for 2D Sprites**:
+  - Height map extraction from luminance
+  - Sobel operator for gradient calculation
+  - Live lighting preview with adjustable light source
+- **Infinite Workspace (Artboards)**:
+  - Multiple named artboards with independent dimensions
+  - Batch export to folder or combined spritesheet
+- **Skeletal Animation (Pixel-Bones)**:
+  - Bone hierarchy with IK/FK support
+  - Weight painting for mesh deformation
+  - Bezier curve keyframe interpolation
+  - JSON export for game engines
+- **Smart Atlas Packing**:
+  - MaxRects and Guillotine bin packing algorithms
+  - Trim + rotation optimization
+  - Multi-format metadata export (JSON/XML/Binary)
+
 ---
 
 ## 📝 Known Limitations

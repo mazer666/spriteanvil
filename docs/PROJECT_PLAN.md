@@ -32,6 +32,8 @@ A core principle throughout every phase: **code and architecture must be underst
 - [Phase 10: Advanced Creative Suite](#phase-10-advanced-creative-suite)
 - [Phase 11: Market Leadership & Ecosystem](#phase-11-market-leadership--ecosystem)
 - [Phase 12: Mobile and Tablet Optimization](#phase-12-mobile-and-tablet-optimization)
+- [Phase 14: Core Power & Generation](#phase-14-core-power--generation)
+- [Phase 15: Game-Dev Ecosystem](#phase-15-game-dev-ecosystem)
 - [Phase 16: Structural Integrity & Refactoring](#phase-16-structural-integrity--refactoring)
 - [Documentation Best Practices Applied Throughout](#code-documentation-best-practices-applied-throughout-all-phases)
 - [Summary](#summary)
@@ -879,28 +881,182 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ---
 
+## Phase 14: Core Power & Generation
+
+### 14.1 Advanced Project Dashboard (Modul 2)
+
+**Goal:** Transform `ProjectDashboard.tsx` into the central hub of the application.
+
+- [ ] **Gallery View**:
+  - [ ] Grid layout with large project thumbnails.
+  - [ ] Sorting options: Last Modified, Created Date, Name (A-Z/Z-A).
+  - [ ] Hero section highlighting "Recent Project".
+- [ ] **Project Presets**:
+  - [ ] Standard sizes: 16×16, 32×32, 64×64, 128×128.
+  - [ ] Platform presets: GBA (240×160), NES (256×240), SNES (256×224).
+  - [ ] Custom dimension input with aspect ratio lock.
+- [ ] **Manual Tutorial System**:
+  - [ ] "Learning Center" button in Dashboard.
+  - [ ] Tutorial launcher in Settings panel.
+  - [ ] Never auto-launch; always user-initiated.
+  - [ ] Track `tutorial_completed` in `user_settings` table.
+
+### 14.2 High-End Performance (Modul 5)
+
+**Goal:** Achieve 60fps compositing for large canvases (>1024px) and instant exports.
+
+- [ ] **WebGL Migration Blueprint**:
+  - [ ] Abstract `CanvasRenderingContext2D` calls to `Renderer` interface.
+  - [ ] Implement `Canvas2DRenderer` (current behavior).
+  - [ ] Implement `WebGLRenderer` for GPU-accelerated layer compositing.
+  - [ ] Feature flag to switch renderers at runtime.
+- [ ] **Web Worker Offloading**:
+  - [ ] Move PNG/GIF export generation to worker thread.
+  - [ ] Offload magic wand/lasso selection algorithms.
+  - [ ] Implement structured clone for `Uint8ClampedArray` transfer.
+  - [ ] Progress reporting via `postMessage`.
+
+### 14.3 Procedural Texture Generator (Modul 11)
+
+**Goal:** Generate tileable pixel base textures mathematically.
+
+- [ ] **Noise Algorithms**:
+  - [ ] Perlin Noise implementation (gradient noise).
+  - [ ] Worley/Cellular Noise implementation (distance-based).
+  - [ ] Fractal Brownian Motion (layered octaves).
+- [ ] **Generator Panel** (`TextureGeneratorPanel.tsx`):
+  - [ ] Noise type selector.
+  - [ ] Scale, octaves, persistence sliders.
+  - [ ] Seed input for reproducibility.
+  - [ ] Real-time preview on 64×64 canvas.
+- [ ] **Tileable Output**:
+  - [ ] Seamless edge wrapping algorithm.
+  - [ ] "Apply to Canvas" button (inserts as new layer).
+  - [ ] "Save as Preset" for reusable settings.
+
+**Implementation Timeline (6 weeks):**
+
+| Week | Milestone |
+|------|-----------|  
+| 1 | Architecture design + Perlin noise core |
+| 2 | Worley noise + FBM layering |
+| 3 | UI panel integration |
+| 4 | Tileable edge wrapping |
+| 5 | Presets + Apply to Canvas |
+| 6 | Testing + Documentation |
+
+---
+
+## Phase 15: Game-Dev Ecosystem
+
+**Goal:** Position SpriteAnvil as the professional choice for game developers with advanced features.
+
+### 15.1 Normal Mapping for 2D Sprites
+
+- [ ] **Normal Map Generation**:
+  - [ ] Height map extraction from luminance.
+  - [ ] Sobel operator for gradient calculation.
+  - [ ] Export as separate normal map PNG.
+- [ ] **Live Preview**:
+  - [ ] Adjustable light source position.
+  - [ ] Real-time lighting simulation on sprite.
+
+### 15.2 Infinite Workspace (Artboards)
+
+- [ ] **Multi-Artboard Canvas**:
+  - [ ] Create/delete named artboards.
+  - [ ] Independent dimensions per artboard.
+  - [ ] Zoom-to-fit artboard navigation.
+- [ ] **Export Options**:
+  - [ ] Export single artboard.
+  - [ ] Export all artboards to folder.
+  - [ ] Batch spritesheet from multiple artboards.
+
+### 15.3 Skeletal Animation System (Pixel-Bones)
+
+- [ ] **Bone Hierarchy Editor**:
+  - [ ] Create/parent bones visually.
+  - [ ] IK (Inverse Kinematics) chain setup.
+  - [ ] FK (Forward Kinematics) posing.
+- [ ] **Mesh Deformation**:
+  - [ ] Bind pixels to bones with weight painting.
+  - [ ] Preserve pixel grid during deformation.
+- [ ] **Animation Curves**:
+  - [ ] Keyframe bone transforms.
+  - [ ] Bezier curve interpolation.
+  - [ ] Export bone data as JSON for game engines.
+
+### 15.4 Smart Atlas Packing
+
+- [ ] **Packing Algorithms**:
+  - [ ] MaxRects bin packing.
+  - [ ] Guillotine algorithm.
+  - [ ] Power-of-two constraint option.
+- [ ] **Optimization**:
+  - [ ] Trim transparent borders.
+  - [ ] Rotation for better fit.
+  - [ ] Multi-page atlas for large projects.
+- [ ] **Metadata Export**:
+  - [ ] JSON (generic + Godot/Unity formats).
+  - [ ] XML (Starling/Sparrow format).
+  - [ ] Binary (custom compact format).
+
+---
+
 ## Phase 16: Structural Integrity & Refactoring
 
-### 16.1 Decomposition of God-Components (PRIORITY: HIGH)
+> **Cross-Reference**: See [`ARCHITECTURE.md`](./ARCHITECTURE.md#component-size-limits-the-400-line-rule) for the 400-line rule and current file status.
+
+### 16.1 Decomposition of God-Components (PRIORITY: CRITICAL)
 
 **Goal:** Prevent maintainability collapse by breaking down oversized files into specialized modules and hooks.
 
-- [ ] **App.tsx Refactor**:
-  - [ ] Extract project persistence to `useProjectManager`.
-  - [ ] Extract cloud sync/presence to `useCollaboration`.
-  - [ ] Extract keyboard handler logic to `useKeyboardHandlers`.
-  - [ ] **Milestone**: Reduce `App.tsx` lines by >60%.
-- [ ] **CanvasStage.tsx Refactor**:
-  - [ ] Split input handling (Mouse/Pen/Touch) into `useCanvasInput`.
-  - [ ] Extract buffer compositing logic to `useCanvasRenderer`.
-  - [ ] Separate SVG overlays (marching ants, symmetry guides) into sub-components.
-- [ ] **RightPanel.tsx Refactor**:
-  - [ ] Decompose "Accordion" sections into independent lazy-loaded components.
+#### Current Status
+
+| File | Lines | Overage | Target Reduction |
+|------|-------|---------|------------------|
+| `App.tsx` | 2816 | 7× | 1700+ lines (60%) |
+| `CanvasStage.tsx` | 1830 | 4.5× | 1000+ lines (55%) |
+
+#### App.tsx Refactoring (Priority 1-7)
+
+- [ ] **Priority 1: `useProjectPersistence`** (~200 lines)
+  - `loadLocalProjects`, `saveLocalProjects`
+  - `serializeSnapshot`, `deserializeSnapshot`
+  - `buildSnapshot`, `applySnapshot`
+- [ ] **Priority 2: `useAnimationSystem`** (~300 lines)
+  - `handleInsertFrame`, `handleDuplicateFrame`, `handleDeleteFrame`
+  - `handleReorderFrames`, `handleSelectFrame`, `handleUpdateFrameDuration`
+  - `handleTogglePlayback`, `advanceFrame`
+- [ ] **Priority 3: `useLayerManager`** (~200 lines)
+  - `handleCreateLayer`, `handleDeleteLayer`, `handleDuplicateLayer`
+  - `handleToggleLayerVisibility`, `handleToggleLayerLock`
+  - `handleUpdateLayerOpacity`, `handleUpdateLayerBlendMode`
+  - `handleRenameLayer`, `handleReorderLayers`
+  - `handleMergeDown`, `handleFlattenLayers`
+- [ ] **Priority 4: `usePaletteManager`** (~150 lines)
+  - All palette CRUD operations
+  - `handleSwapColors`, `handleExtractPaletteFromImage`
+- [ ] **Priority 5: `useTransformOperations`** (~200 lines)
+  - `handleFlipHorizontal/Vertical`, `handleRotate*`
+  - `handleScale`, selection transform functions
+- [ ] **Priority 6: `useColorAdjustments`** (~100 lines)
+  - HSB adjustment handlers, `handleInvert`, `handleDesaturate`, `handlePosterize`
+- [ ] **Priority 7: `useSelectionOperations`** (~100 lines)
+  - `handleSelectAll`, `handleDeselect`, `handleInvertSelection`
+  - `handleGrowSelection`, `handleShrinkSelection`
+
+#### CanvasStage.tsx Refactoring
+
+- [ ] **`useCanvasInput`**: Mouse/Pen/Touch event handling
+- [ ] **`useCanvasRenderer`**: Buffer compositing and drawing
+- [ ] **Sub-components**: Marching ants overlay, symmetry guides, minimap
 
 ### 16.2 Automated Quality Guards
 
 - [ ] Implement ESLint `max-lines` rule (400 lines limit for components).
 - [ ] Setup CI check to fail PRs that exceed component complexity thresholds.
+- [ ] Add pre-commit hook for line count validation.
 
 ---
 
