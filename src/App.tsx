@@ -79,6 +79,14 @@ import { hexToRgb } from "./utils/colors";
 import { isInputFocused } from "./utils/dom";
 import { buildInpaintPayload } from "./lib/ai/inpaint";
 import { deleteFrame as deleteFrameRecord } from "./lib/supabase/frames";
+import { validateProjects } from "./utils/validation";
+import { 
+  validatePixelUpdate, 
+  validateCursorPosition, 
+  isRateLimited, 
+  clearUserRateLimit,
+  logSecurityEvent 
+} from "./lib/realtime/validation";
 
 type ConfirmDialog = {
   title: string;
@@ -170,12 +178,31 @@ export default function App() {
     return next;
   }, []);
 
+  /**
+   * Load projects from localStorage with VALIDATION
+   * 
+   * SECURITY: This function now validates all data from localStorage
+   * to prevent injection attacks, prototype pollution, and data corruption.
+   * 
+   * WHAT CHANGED: Added Zod schema validation (Security Issue #2 fix)
+   * WHY: Untrusted localStorage data could crash app or enable attacks
+   * HOW: Use validateProjects to validate against ProjectArraySchema
+   */
   function loadLocalProjects(): Project[] {
     try {
       const raw = localStorage.getItem(LOCAL_PROJECTS_KEY);
       if (!raw) return [];
-      const parsed = JSON.parse(raw) as Project[];
-      return Array.isArray(parsed) ? parsed : [];
+      
+      // Parse and validate with schema
+      const parsed = JSON.parse(raw);
+      const validated = validateProjects(parsed);
+      
+      if (validated.length === 0 && Array.isArray(parsed) && parsed.length > 0) {
+        // All projects failed validation - notify user
+        console.error('All projects in localStorage failed validation. Data may be corrupted.');
+      }
+      
+      return validated;
     } catch (error) {
       console.warn("Failed to parse local projects:", error);
       return [];
@@ -623,23 +650,58 @@ export default function App() {
       },
     });
 
+    // SECURITY: Validate cursor position messages (Issue #5 fix)
     channel.on("broadcast", { event: "cursor" }, ({ payload }) => {
-      if (!payload || payload.userId === localUserId) return;
+      const validated = validateCursorPosition(
+        payload, 
+        localUserId, 
+        canvasSpec.width, 
+        canvasSpec.height
+      );
+      
+      if (!validated) {
+        return; // Invalid cursor message, silently ignore
+      }
+      
       setRemoteCursors((prev) => ({
         ...prev,
-        [payload.userId]: { x: payload.x, y: payload.y, color: payload.color || "#4bb8bf" },
+        [validated.userId]: { 
+          x: validated.x, 
+          y: validated.y, 
+          color: validated.color || "#4bb8bf" 
+        },
       }));
     });
 
+    // SECURITY: Validate and rate-limit pixel update messages (Issue #5 fix)
     channel.on("broadcast", { event: "pixel-update" }, ({ payload }) => {
-      if (!payload || payload.userId === localUserId) return;
-      const { frameId, layerId, patch } = payload as {
-        userId: string;
-        frameId: string;
-        layerId: string;
-        patch: number[];
-      };
-      if (!frameId || !layerId || !Array.isArray(patch)) return;
+      // Step 1: Check rate limit first (fastest check)
+      if (payload && typeof payload === 'object' && 'userId' in payload) {
+        const userId = (payload as any).userId;
+        if (typeof userId === 'string' && isRateLimited(userId)) {
+          logSecurityEvent('rate_limit', userId, 'Pixel update rate limit exceeded');
+          return; // Rate limited, drop message
+        }
+      }
+      
+      // Step 2: Validate message structure and content
+      const validated = validatePixelUpdate(
+        payload,
+        localUserId,
+        canvasSpec.width,
+        canvasSpec.height
+      );
+      
+      if (!validated) {
+        // Message failed validation
+        if (payload && typeof payload === 'object' && 'userId' in payload) {
+          logSecurityEvent('invalid_message', (payload as any).userId, 'Invalid pixel update message');
+        }
+        return;
+      }
+      
+      // Step 3: Apply validated update
+      const { frameId, layerId, patch } = validated;
       setFrameLayers((prev) => {
         const layersForFrame = prev[frameId];
         if (!layersForFrame) return prev;

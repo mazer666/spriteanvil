@@ -37,6 +37,17 @@ This folder contains **project plans** and **source-of-truth specifications** fo
 
 ---
 
+## Security & Database
+
+- [`SECURITY_FIXES.md`](./SECURITY_FIXES.md) - Database RLS and function security improvements
+- [`SECURITY_AUDIT_2026-01-31.md`](./SECURITY_AUDIT_2026-01-31.md) - Comprehensive security audit report
+- [`SECURITY_REMEDIATION_PLAN.md`](./SECURITY_REMEDIATION_PLAN.md) - Implementation plan to address security issues
+- [`SECURITY_REMEDIATION_PROGRESS.md`](./SECURITY_REMEDIATION_PROGRESS.md) - Final remediation progress (87% complete)
+- [`DEPLOYMENT_SECURITY.md`](./DEPLOYMENT_SECURITY.md) - Production deployment security guide
+- [`SECURITY_BEST_PRACTICES.md`](./SECURITY_BEST_PRACTICES.md) - Security guidelines for contributors and users
+
+---
+
 ## Status & repo docs (root)
 
 - [`/STATUS_UPDATE.md`](../STATUS_UPDATE.md)
