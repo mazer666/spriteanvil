@@ -365,13 +365,13 @@ export default function App() {
   const [settings, setSettings] = useState<UiSettings>(() => ({
     zoom: 8,
     brushStabilizerEnabled: true,
-    backgroundMode: "solidDark",
-    checkerSize: 24,
-    checkerA: "rgba(255,255,255,0.08)",
-    checkerB: "rgba(0,0,0,0.10)",
+    backgroundMode: "checker", // Default to checker
+    checkerSize: 32, // Larger squares reduce noise
+    checkerA: "#2a2a2a", // Solid dark grey
+    checkerB: "#333333", // Slightly lighter grey (subtle contrast)
     customBackgroundColor: "#2a2a2a",
     showGrid: true,
-    gridSize: 1,
+    gridSize: 32, // Standard tile size, not pixel grid
     showOnionSkin: true,
     onionPrev: 1,
     onionNext: 1,
