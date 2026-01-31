@@ -2379,12 +2379,18 @@ export default function App() {
           onCursorMove={handleCursorMove}
           topBar={
             <div className="topbar">
-              <div className="topbar__main">
+              <div className="topbar__left">
                 <div className="brand">
                   <div className="brand__name">SpriteAnvil</div>
                   <div className="brand__tagline">Forge sprites. Shape motion.</div>
                 </div>
+                <div className="topbar__project">
+                  <div className="topbar__project-label">Project</div>
+                  <div className="topbar__project-name">{activeProject?.name ?? "Untitled"}</div>
+                </div>
+              </div>
 
+              <div className="topbar__center">
                 <div className="topbar__group topbar__group--primary">
                   <button className="uiBtn" onClick={handleUndo} disabled={!canUndo} title="Undo (Cmd+Z)">
                     Undo
@@ -2393,9 +2399,6 @@ export default function App() {
                     Redo
                   </button>
                 </div>
-              </div>
-
-              <div className="topbar__groups">
                 <div className="topbar__group">
                   <button
                     className="uiBtn"
@@ -2404,7 +2407,31 @@ export default function App() {
                   >
                     Commands
                   </button>
+                  <button
+                    className="uiBtn"
+                    onClick={() => setProjectView("dashboard")}
+                    title="Project Dashboard"
+                  >
+                    Projects
+                  </button>
                 </div>
+              </div>
+
+              <div className="topbar__right">
+                <button
+                  className="uiBtn uiBtn--primary"
+                  onClick={() => setShowExportPanel(true)}
+                  title="Export Sprite (Cmd+E)"
+                >
+                  Export
+                </button>
+                <button
+                  className="uiBtn"
+                  onClick={() => setShowSettingsPanel(true)}
+                  title="Workspace Settings"
+                >
+                  Settings
+                </button>
                 <QuickControls showCollaborators />
               </div>
 
