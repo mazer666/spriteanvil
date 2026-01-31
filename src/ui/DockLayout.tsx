@@ -807,11 +807,13 @@ export default function DockLayout({
            <div 
              className="dock__floatingToolRail" 
              ref={toolRailRef}
+             onPointerDown={() => setFocusedPanel('tools')}
              style={{ 
                left: toolRailPosition.x, 
                top: toolRailPosition.y,
                height: 'auto',
-               maxHeight: 'calc(100vh - 100px)'
+               maxHeight: 'calc(100vh - 100px)',
+               zIndex: getZIndex('tools')
              }}
            >
              <div 
@@ -880,6 +882,7 @@ export default function DockLayout({
            <div 
              className="dock__right"
              ref={rightPanelRef}
+             onPointerDown={() => setFocusedPanel('panel')}
              style={{
                position: 'absolute',
                left: rightPanelPosition.x,
@@ -887,7 +890,7 @@ export default function DockLayout({
                width: rightWidth,
                height: 'auto',
                maxHeight: 'calc(100vh - 100px)',
-               zIndex: 250,
+               zIndex: getZIndex('panel'),
                display: 'flex',
                flexDirection: 'column'
              }}
@@ -940,6 +943,7 @@ export default function DockLayout({
         {showTimeline && (
           <div 
              className="dock__bottom"
+             onPointerDown={() => setFocusedPanel('timeline')}
              style={{
                position: 'absolute',
                ...(timelinePosition 
@@ -950,7 +954,7 @@ export default function DockLayout({
                maxWidth: '800px',
                height: 'auto',
                maxHeight: 'calc(100vh - 150px)',
-               zIndex: 240,
+               zIndex: getZIndex('timeline'),
                borderRadius: '8px',
                boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
                border: '1px solid var(--border-strong)',
