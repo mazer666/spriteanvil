@@ -165,7 +165,7 @@ export default function PalettePanel({
         )}
 
         {showSaved && (
-          <div className="palette-panel__section">
+          <div className="palette-panel__section palette-panel__section--saved">
             {savedPalettes.length === 0 ? (
               <div className="palette-panel__empty">
                 No saved palettes yet. Click + New to create one.
@@ -243,7 +243,7 @@ export default function PalettePanel({
         </div>
 
         {showDefault && (
-          <div className="palette-panel__section">
+          <div className="palette-panel__section palette-panel__section--default">
             {defaultPalettes.length === 0 ? (
               <div className="palette-panel__empty">
                 No default palettes available.
