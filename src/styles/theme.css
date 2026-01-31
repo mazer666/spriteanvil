@@ -1,0 +1,131 @@
+:root {
+  /* BG3 / High Fantasy Theme Colors */
+  --bg-deep: #080706;
+  --bg-panel: rgba(18, 16, 14, 0.90);
+  --bg-input: #000000;
+  
+  --ink-primary: #e8e2d2;
+  --ink-secondary: #b3a992;
+  --ink-disabled: #5a554a;
+
+  --accent-gold: #c8a45e;
+  --accent-gold-bright: #eecf8a;
+  --accent-gold-dim: #8c7340;
+  
+  --border-subtle: rgba(140, 115, 64, 0.3);
+  --border-strong: #c8a45e;
+  
+  --glass-blur: blur(16px);
+  --shadow-elevation: 0 8px 32px rgba(0, 0, 0, 0.8);
+}
+
+/* Base Overrides */
+body {
+  background: #050403 !important;
+  color: var(--ink-primary) !important;
+}
+
+/* Premium Panel Styling */
+.panel, .dock__floatingToolRail, .dock__right, .toolbar, .mobile-popover, .modal-content {
+  background: var(--bg-panel) !important;
+  border: 1px solid var(--border-subtle) !important;
+  box-shadow: var(--shadow-elevation), inset 0 0 0 1px rgba(0,0,0,0.5) !important;
+  border-radius: 4px !important; /* Sharper corners for that "forged" feel */
+}
+
+/* Gold Accents for Headers */
+.panel__title, .dock__floatingToolRailHeader, .dock__floatingPanelHeader, h1, h2, h3 {
+  color: var(--accent-gold) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: system-ui, serif; /* Fallback to serif for fantasy feel if system supports it */
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+/* Premium Buttons */
+.uiBtn {
+  background: linear-gradient(180deg, #2a2520 0%, #1a1714 100%) !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--ink-secondary) !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+  border-radius: 2px !important;
+  text-transform: uppercase;
+  font-size: 11px !important;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+}
+
+.uiBtn:hover {
+  border-color: var(--accent-gold) !important;
+  color: var(--accent-gold-bright) !important;
+  background: linear-gradient(180deg, #3a322a 0%, #25201c 100%) !important;
+  box-shadow: 0 0 8px rgba(200, 164, 94, 0.2) !important;
+}
+
+.uiBtn--active, .toolbtn--active {
+  background: var(--accent-gold) !important;
+  color: #0b0a09 !important;
+  font-weight: bold;
+  border-color: var(--accent-gold-bright) !important;
+  box-shadow: 0 0 12px rgba(200, 164, 94, 0.4) !important;
+}
+
+/* Inputs */
+.uiInput, select, .rightpanel input[type="number"], .rightpanel input[type="text"] {
+  background: #000 !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--accent-gold) !important;
+  border-radius: 2px !important;
+  font-family: monospace;
+}
+
+.uiInput:focus {
+  border-color: var(--accent-gold-bright) !important;
+  box-shadow: 0 0 0 1px var(--accent-gold-dim) !important;
+}
+
+/* Mobile Canvas Fix */
+/* Ensure the dock body takes full height minus header */
+.dock--mobile .dock__body {
+  height: calc(100dvh - 52px) !important;
+  /* Ensure canvas is contained */
+  display: flex;
+  overflow: hidden;
+}
+
+.dock--mobile .stage {
+  width: 100%;
+  height: 100%;
+}
+
+/* Project Dashboard Fix */
+.project-dashboard {
+  height: 100dvh;
+  overflow-y: auto;
+  padding-bottom: 80px; /* Space for mobile nav bars */
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30L0 30z' fill='%23110f0d' fill-opacity='0.4'/%3E%3C/svg%3E"), #080706;
+}
+
+/* Zen Mode Exit Button */
+.zen-exit-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--accent-gold);
+  color: var(--accent-gold);
+  padding: 8px 16px;
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  border-radius: 4px;
+  font-family: inherit;
+  font-weight: bold;
+  opacity: 0.3;
+  transition: opacity 0.3s;
+}
+
+.zen-exit-btn:hover {
+  opacity: 1;
+}
+

@@ -127,6 +127,8 @@ type Props = {
     onDesaturate: () => void;
     onPosterize: (levels: number) => void;
   };
+  
+  onNavigateToDashboard?: () => void;
 
   onSelectionOperations?: {
     onSelectAll: () => void;
@@ -245,442 +247,19 @@ export default function DockLayout({
   const [rightPanelPosition, setRightPanelPosition] = useState(
     layout.rightPanelPosition ?? { x: 24, y: 84 }
   );
-  const isPanelFloating = isTablet || isMobile;
+  // Force floating mode for desktop too, as requested
+  const isPanelFloating = true; 
 
-  useEffect(() => {
-    if (layout.rightWidth !== rightWidth) setRightWidth(layout.rightWidth);
-    if (layout.timelineHeight !== timelineHeight) setTimelineHeight(layout.timelineHeight);
-    if (layout.leftCollapsed !== isToolRailCollapsed) setIsToolRailCollapsed(layout.leftCollapsed);
-    if (layout.rightCollapsed !== isRightPanelCollapsed) setIsRightPanelCollapsed(layout.rightCollapsed);
-    if (layout.leftPanelVisible !== showLeftPanel) setShowLeftPanel(layout.leftPanelVisible);
-    if (layout.rightPanelVisible !== showRightPanel) setShowRightPanel(layout.rightPanelVisible);
-    if (layout.timelineVisible !== showTimeline) setShowTimeline(layout.timelineVisible);
-    if (
-      layout.toolRailPosition.x !== toolRailPosition.x ||
-      layout.toolRailPosition.y !== toolRailPosition.y
-    ) {
-      setToolRailPosition(layout.toolRailPosition);
-    }
-    if (layout.rightPanelPosition) {
-      if (
-        layout.rightPanelPosition.x !== rightPanelPosition.x ||
-        layout.rightPanelPosition.y !== rightPanelPosition.y
-      ) {
-        setRightPanelPosition(layout.rightPanelPosition);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout]);
+  // ... (previous effects)
 
-  const sizes = useMemo(() => ({ rightWidth, timelineHeight }), [rightWidth, timelineHeight]);
-  const dockBodyRef = useRef<HTMLDivElement | null>(null);
-  const toolRailRef = useRef<HTMLDivElement | null>(null);
-  const rightPanelRef = useRef<HTMLDivElement | null>(null);
+  // Zen Mode Exit Button
+  const zenExitButton = isZenMode ? (
+    <button className="zen-exit-btn" onClick={() => setIsZenMode(false)}>
+      Exit Zen Mode (Tab)
+    </button>
+  ) : null;
 
-  function updateLayout(patch: Partial<LayoutSettings>) {
-    const currentLayout = settings.layout ?? defaultLayout;
-    const nextLayout: LayoutSettings = {
-      ...currentLayout,
-      ...patch,
-    };
-    const isSame = settings.layout && JSON.stringify(settings.layout) === JSON.stringify(nextLayout);
-    if (isSame) return;
-    onChangeSettings({ ...settings, layout: nextLayout });
-  }
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 767px)");
-    const tabletMedia = window.matchMedia("(max-width: 1024px)");
-    const update = () => {
-      setIsMobile(media.matches);
-      setIsTablet(tabletMedia.matches);
-      if (!media.matches) {
-        setIsToolRailOpen(false);
-        setIsRightPanelOpen(false);
-        setIsMinimapVisible(true);
-      } else {
-        setIsMinimapVisible(false);
-      }
-    };
-    update();
-    media.addEventListener("change", update);
-    tabletMedia.addEventListener("change", update);
-    return () => {
-      media.removeEventListener("change", update);
-      tabletMedia.removeEventListener("change", update);
-    };
-  }, []);
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Tab" && !isInputFocused()) {
-        e.preventDefault();
-        setIsZenMode((prev) => !prev);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    if (!isPanelFloating) {
-      setIsToolRailOpen(false);
-      setIsRightPanelOpen(false);
-      return;
-    }
-    if (isMobile) return;
-    setIsToolRailOpen(showLeftPanel);
-    setIsRightPanelOpen(showRightPanel);
-  }, [isMobile, isPanelFloating, showLeftPanel, showRightPanel]);
-
-  useEffect(() => {
-    if (!isPanelFloating) return;
-    if (settings.layout?.rightPanelPosition) return;
-    const snapped = snapRightPanelPosition({ x: 10000, y: rightPanelPosition.y });
-    setRightPanelPosition(snapped);
-    updateLayout({ rightPanelPosition: snapped });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPanelFloating]);
-
-  const dragStateRef = useRef<
-    | null
-    | {
-      kind: "right" | "timeline";
-      startX: number;
-      startY: number;
-      startRightWidth: number;
-      startTimelineHeight: number;
-    }
-  >(null);
-  const toolRailDragRef = useRef<
-    | null
-    | {
-      startX: number;
-      startY: number;
-      originX: number;
-      originY: number;
-    }
-  >(null);
-  const rightPanelDragRef = useRef<
-    | null
-    | {
-      startX: number;
-      startY: number;
-      originX: number;
-      originY: number;
-    }
-  >(null);
-  const toolRailRafRef = useRef<number | null>(null);
-  const rightPanelRafRef = useRef<number | null>(null);
-  const pendingToolRailRef = useRef<{ x: number; y: number } | null>(null);
-  const pendingRightPanelRef = useRef<{ x: number; y: number } | null>(null);
-
-  function beginDrag(kind: "right" | "timeline", e: React.PointerEvent) {
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-
-    dragStateRef.current = {
-      kind,
-      startX: e.clientX,
-      startY: e.clientY,
-      startRightWidth: rightWidth,
-      startTimelineHeight: timelineHeight
-    };
-  }
-
-  function onDragMove(e: React.PointerEvent) {
-    if (!dragStateRef.current) return;
-    const st = dragStateRef.current;
-
-    if (st.kind === "right") {
-      const dx = st.startX - e.clientX; // drag left increases width
-      const next = clamp(st.startRightWidth + dx, 240, 500);
-      setRightWidth(next);
-      updateLayout({ rightWidth: next });
-    } else {
-      const dy = st.startY - e.clientY; // drag up increases height
-      const next = clamp(st.startTimelineHeight + dy, 120, 350);
-      setTimelineHeight(next);
-      updateLayout({ timelineHeight: next });
-    }
-  }
-
-  function endDrag() {
-    dragStateRef.current = null;
-  }
-
-  function beginToolRailDrag(e: React.PointerEvent) {
-    if (isMobile) return;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    toolRailDragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      originX: toolRailPosition.x,
-      originY: toolRailPosition.y,
-    };
-  }
-
-  function snapToolRailPosition(pos: { x: number; y: number }) {
-    const container = dockBodyRef.current;
-    const tool = toolRailRef.current;
-    if (!container || !tool) return pos;
-    const bounds = container.getBoundingClientRect();
-    const toolRect = tool.getBoundingClientRect();
-    const maxX = bounds.width - toolRect.width - 8;
-    const maxY = bounds.height - toolRect.height - 8;
-    const clamped = {
-      x: clamp(pos.x, 8, Math.max(8, maxX)),
-      y: clamp(pos.y, 8, Math.max(8, maxY)),
-    };
-    const snapTargetsX = [8, Math.max(8, maxX)];
-    if (showRightPanel && rightPanelRef.current) {
-      const rightRect = rightPanelRef.current.getBoundingClientRect();
-      const leftEdge = rightRect.left - bounds.left - toolRect.width - 12;
-      snapTargetsX.push(clamp(leftEdge, 8, Math.max(8, maxX)));
-    }
-    const snapTargetsY = [8, Math.max(8, maxY)];
-    const snapThreshold = 24;
-    const snapValue = (value: number, targets: number[]) => {
-      for (const target of targets) {
-        if (Math.abs(value - target) <= snapThreshold) return target;
-      }
-      return value;
-    };
-    return {
-      x: snapValue(clamped.x, snapTargetsX),
-      y: snapValue(clamped.y, snapTargetsY),
-    };
-  }
-
-  function moveToolRail(e: React.PointerEvent) {
-    if (!toolRailDragRef.current) return;
-    const drag = toolRailDragRef.current;
-    const dx = e.clientX - drag.startX;
-    const dy = e.clientY - drag.startY;
-    pendingToolRailRef.current = { x: drag.originX + dx, y: drag.originY + dy };
-    if (toolRailRafRef.current !== null) return;
-    toolRailRafRef.current = window.requestAnimationFrame(() => {
-      if (pendingToolRailRef.current) {
-        setToolRailPosition(pendingToolRailRef.current);
-      }
-      toolRailRafRef.current = null;
-    });
-  }
-
-  function endToolRailDrag() {
-    if (!toolRailDragRef.current) return;
-    toolRailDragRef.current = null;
-    const snapped = snapToolRailPosition(toolRailPosition);
-    setToolRailPosition(snapped);
-    updateLayout({ toolRailPosition: snapped });
-  }
-
-  function beginRightPanelDrag(e: React.PointerEvent) {
-    if (!isPanelFloating) return;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    rightPanelDragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      originX: rightPanelPosition.x,
-      originY: rightPanelPosition.y,
-    };
-  }
-
-  function snapRightPanelPosition(pos: { x: number; y: number }) {
-    const container = dockBodyRef.current;
-    const panel = rightPanelRef.current;
-    if (!container || !panel) return pos;
-    const bounds = container.getBoundingClientRect();
-    const panelRect = panel.getBoundingClientRect();
-    const maxX = bounds.width - panelRect.width - 8;
-    const maxY = bounds.height - panelRect.height - 8;
-    const clamped = {
-      x: clamp(pos.x, 8, Math.max(8, maxX)),
-      y: clamp(pos.y, 8, Math.max(8, maxY)),
-    };
-    const snapTargetsX = [8, Math.max(8, maxX)];
-    const snapTargetsY = [8, Math.max(8, maxY)];
-    const snapThreshold = 24;
-    const snapValue = (value: number, targets: number[]) => {
-      for (const target of targets) {
-        if (Math.abs(value - target) <= snapThreshold) return target;
-      }
-      return value;
-    };
-    return {
-      x: snapValue(clamped.x, snapTargetsX),
-      y: snapValue(clamped.y, snapTargetsY),
-    };
-  }
-
-  function moveRightPanel(e: React.PointerEvent) {
-    if (!rightPanelDragRef.current) return;
-    const drag = rightPanelDragRef.current;
-    const dx = e.clientX - drag.startX;
-    const dy = e.clientY - drag.startY;
-    pendingRightPanelRef.current = { x: drag.originX + dx, y: drag.originY + dy };
-    if (rightPanelRafRef.current !== null) return;
-    rightPanelRafRef.current = window.requestAnimationFrame(() => {
-      if (pendingRightPanelRef.current) {
-        setRightPanelPosition(pendingRightPanelRef.current);
-      }
-      rightPanelRafRef.current = null;
-    });
-  }
-
-  function endRightPanelDrag() {
-    if (!rightPanelDragRef.current) return;
-    rightPanelDragRef.current = null;
-    const snapped = snapRightPanelPosition(rightPanelPosition);
-    setRightPanelPosition(snapped);
-    updateLayout({ rightPanelPosition: snapped });
-  }
-
-  function handlePointerMove(e: React.PointerEvent) {
-    onDragMove(e);
-    moveToolRail(e);
-    moveRightPanel(e);
-  }
-
-  function handlePointerUp() {
-    endDrag();
-    endToolRailDrag();
-    endRightPanelDrag();
-  }
-
-  function resetLayout() {
-    setRightWidth(defaultLayout.rightWidth);
-    setTimelineHeight(defaultLayout.timelineHeight);
-    setIsToolRailCollapsed(defaultLayout.leftCollapsed);
-    setIsRightPanelCollapsed(defaultLayout.rightCollapsed);
-    setShowLeftPanel(defaultLayout.leftPanelVisible);
-    setShowRightPanel(defaultLayout.rightPanelVisible);
-    setShowTimeline(defaultLayout.timelineVisible);
-    setToolRailPosition(defaultLayout.toolRailPosition);
-    setRightPanelPosition(defaultLayout.rightPanelPosition ?? { x: 24, y: 84 });
-    setIsToolRailOpen(false);
-    setIsRightPanelOpen(false);
-    setIsMinimapVisible(true);
-    updateLayout(defaultLayout);
-  }
-
-  function toggleLeftPanel() {
-    if (isPanelFloating) {
-      setShowLeftPanel(true);
-      updateLayout({ leftPanelVisible: true });
-      setIsToolRailOpen((prev) => !prev);
-      return;
-    }
-    setShowLeftPanel((prev) => {
-      const next = !prev;
-      updateLayout({ leftPanelVisible: next });
-      return next;
-    });
-  }
-
-  function toggleRightPanel() {
-    if (isPanelFloating) {
-      setShowRightPanel(true);
-      updateLayout({ rightPanelVisible: true });
-      setIsRightPanelOpen((prev) => !prev);
-      return;
-    }
-    setShowRightPanel((prev) => {
-      const next = !prev;
-      updateLayout({ rightPanelVisible: next });
-      return next;
-    });
-  }
-
-  function toggleTimeline() {
-    setShowTimeline((prev) => {
-      const next = !prev;
-      updateLayout({ timelineVisible: next });
-      return next;
-    });
-  }
-
-  const leftPanelTitle = isPanelFloating
-    ? isToolRailOpen
-      ? "Hide tools"
-      : "Show tools"
-    : showLeftPanel
-      ? "Hide left panel"
-      : "Show left panel";
-  const rightPanelTitle = isPanelFloating
-    ? isRightPanelOpen
-      ? "Hide panel"
-      : "Show panel"
-    : showRightPanel
-      ? "Hide right panel"
-      : "Show right panel";
-  const leftPanelLabel = isPanelFloating ? "Tools" : "Left";
-  const rightPanelLabel = isPanelFloating ? "Panel" : "Right";
-
-  // Procreate-style Mobile/Tablet Mode
-  if (isMobile || isTablet) {
-    return (
-      <div className="dock dock--mobile">
-        <MobileHeader
-          tool={tool}
-          onChangeTool={onChangeTool}
-          settings={settings}
-          onChangeSettings={onChangeSettings}
-          onUndo={onUndo}
-          onRedo={onRedo}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          layers={layers}
-          activeLayerId={activeLayerId}
-          onLayerOperations={onLayerOperations}
-          palettes={palettes}
-          activePaletteId={activePaletteId}
-          recentColors={recentColors}
-          onPaletteOperations={onPaletteOperations}
-          onColorAdjustOperations={onColorAdjustOperations}
-          onToggleMenu={() => {
-            // Placeholder: Could toggle a sidebar or modal
-            console.log("Toggle Menu");
-          }}
-        />
-
-        <div className="dock__body" style={{ top: 52, height: "calc(100vh - 52px)" }}>
-          <CanvasStage
-            settings={settings}
-            tool={tool}
-            canvasSpec={canvasSpec}
-            buffer={buffer}
-            compositeBuffer={compositeBuffer}
-            previewLayerPixels={previewLayerPixels}
-            layers={layers}
-            activeLayerId={activeLayerId}
-            onStrokeEnd={onStrokeEnd}
-            selection={selection}
-            onChangeSelection={onChangeSelection}
-            floatingBuffer={floatingBuffer}
-            onBeginTransform={onBeginTransform}
-            onUpdateTransform={onUpdateTransform}
-            onChangeZoom={(zoom) => onChangeSettings({ ...settings, zoom })}
-            onColorPick={onColorPick}
-            onCursorMove={onCursorMove}
-            remoteCursors={remoteCursors}
-            frames={frames}
-            currentFrameIndex={currentFrameIndex}
-            showMinimap={!isMobile} // Only show minimap on tablet if desired
-          />
-        </div>
-
-        {/* Floating Tool Rail (Optional for Tablet if space allows) */}
-        {!isMobile && (
-          <div className="dock__floatingToolRail" style={{ left: 12, top: 70, bottom: 'auto', maxHeight: 'calc(100vh - 80px)' }}>
-            <ToolRail tool={tool} onChangeTool={onChangeTool} />
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Desktop Figma-style Mode
+  // Desktop Figma-style Mode (Now Floating)
   return (
     <div
       className={
@@ -698,14 +277,16 @@ export default function DockLayout({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       style={{
-        "--leftPanelWidth": `${!showLeftPanel || isZenMode ? 0 : isToolRailCollapsed ? 52 : 72}px`,
-        "--rightPanelWidth": `${!showRightPanel || isZenMode ? 0 : isRightPanelCollapsed ? 52 : sizes.rightWidth}px`,
-        "--timelineHeight": `${!showTimeline || isZenMode ? 0 : sizes.timelineHeight}px`,
-        "--vSplitterWidth": `${!showRightPanel || isZenMode ? 0 : 4}px`,
-        "--hSplitterHeight": `${!showTimeline || isZenMode ? 0 : 4}px`,
-        ...(isZenMode ? { "--topbarHeight": "0px", "--statusBarHeight": "0px" } : {}),
+        "--leftPanelWidth": "0px", // Floating means no grid space
+        "--rightPanelWidth": "0px",
+        "--timelineHeight": "0px",
+        // Focus the grid entirely on center
+        "--vSplitterWidth": "0px",
+        "--hSplitterHeight": "0px",
       } as React.CSSProperties}
     >
+      {zenExitButton}
+      
       <div className="dock__top">
         <div className="dock__topbar">{topBar}</div>
         <div className="dock__panelControls">
@@ -714,22 +295,25 @@ export default function DockLayout({
             onClick={toggleLeftPanel}
             title={leftPanelTitle}
           >
-            {showLeftPanel ? "⟨" : "⟩"} {leftPanelLabel}
+            {isToolRailOpen ? "Close Tools" : "Tools"}
           </button>
+          
           <button
             className="uiBtn uiBtn--ghost"
             onClick={toggleTimeline}
             title={showTimeline ? "Hide timeline" : "Show timeline"}
           >
-            {showTimeline ? "⌄" : "⌃"} Timeline
+            Timeline
           </button>
+
           <button
             className="uiBtn uiBtn--ghost"
             onClick={toggleRightPanel}
             title={rightPanelTitle}
           >
-            {showRightPanel ? "⟩" : "⟨"} {rightPanelLabel}
+            {isRightPanelOpen ? "Close Panel" : "Panel"}
           </button>
+          
           <button
             className="uiBtn uiBtn--ghost"
             onClick={() => setIsZenMode((prev) => !prev)}
@@ -737,17 +321,32 @@ export default function DockLayout({
           >
             {isZenMode ? "◼" : "◻"} Zen
           </button>
-          <button className="uiBtn uiBtn--ghost" onClick={resetLayout} title="Reset layout">
-            ↺ Reset
-          </button>
         </div>
       </div>
 
       <div className="dock__body" ref={dockBodyRef}>
+        
+        {/* Floating Tool Rail */}
         {showLeftPanel && (
-          <div className="dock__left">
-            <ToolRail tool={tool} onChangeTool={onChangeTool} />
-          </div>
+           <div 
+             className="dock__floatingToolRail" 
+             ref={toolRailRef}
+             style={{ 
+               left: toolRailPosition.x, 
+               top: toolRailPosition.y,
+               height: 'auto',
+               maxHeight: 'calc(100vh - 100px)'
+             }}
+           >
+             <div 
+               className="dock__floatingToolRailHeader"
+               onPointerDown={beginToolRailDrag}
+             >
+               <span className="dock__floatingToolRailGrip">:::</span>
+               <span className="dock__floatingToolRailTitle">Tools</span>
+             </div>
+             <ToolRail tool={tool} onChangeTool={onChangeTool} />
+           </div>
         )}
 
         <div className="dock__center">
@@ -777,28 +376,112 @@ export default function DockLayout({
           />
         </div>
 
+        {/* Floating Right Panel */}
         {showRightPanel && (
-          <>
-            <div
-              className="splitter splitter--v"
-              title="Drag to resize panel"
-              onPointerDown={(e) => beginDrag("right", e)}
-            />
+           <div 
+             className="dock__right"
+             ref={rightPanelRef}
+             style={{
+               position: 'absolute',
+               left: rightPanelPosition.x,
+               top: rightPanelPosition.y,
+               width: rightWidth,
+               height: 'auto',
+               maxHeight: 'calc(100vh - 100px)',
+               zIndex: 250,
+               display: 'flex',
+               flexDirection: 'column'
+             }}
+           >
+             <div 
+               className="dock__floatingPanelHeader"
+               onPointerDown={beginRightPanelDrag}
+             >
+               <span className="dock__floatingPanelGrip">:::</span>
+               <span className="dock__floatingPanelTitle">Panel</span>
+               <div 
+                 className="splitter splitter--v" 
+                 style={{ width: '12px', right: 0, position: 'absolute', height: '100%', cursor: 'ew-resize', opacity: 0 }}
+                 onPointerDown={(e) => beginDrag("right", e)}
+               />
+             </div>
+             
+             <RightPanel
+               tool={tool}
+               settings={settings}
+               onChangeSettings={onChangeSettings}
+               canvasSpec={canvasSpec}
+               previewBuffer={previewLayerPixels ?? undefined}
+               selectionMask={selectionMask}
+               layerPixels={layerPixels}
+               onInpaint={onInpaint}
+               onImageToImage={onImageToImage}
+               collapsed={isRightPanelCollapsed}
+               layers={layers}
+               activeLayerId={activeLayerId}
+               palettes={palettes}
+               activePaletteId={activePaletteId}
+               recentColors={recentColors}
+               onLayerOperations={onLayerOperations}
+               onPaletteOperations={onPaletteOperations}
+               onTransformOperations={onTransformOperations}
+               onColorAdjustOperations={onColorAdjustOperations}
+               onSelectionOperations={onSelectionOperations}
+             />
+           </div>
+        )}
 
-            <RightPanel
-              tool={tool}
-              settings={settings}
-              onChangeSettings={onChangeSettings}
-              canvasSpec={canvasSpec}
-              previewBuffer={previewLayerPixels ?? undefined}
-              selectionMask={selectionMask}
-              layerPixels={layerPixels}
-              onInpaint={onInpaint}
-              onImageToImage={onImageToImage}
-              collapsed={isRightPanelCollapsed}
-              layers={layers}
-              activeLayerId={activeLayerId}
-              onLayerOperations={onLayerOperations}
+        {/* Floating Timeline */}
+        {showTimeline && (
+          <div 
+             className="dock__bottom"
+             style={{
+               position: 'absolute',
+               left: '50%',
+               bottom: '20px',
+               transform: 'translateX(-50%)',
+               width: '80%',
+               maxWidth: '800px',
+               height: timelineHeight,
+               zIndex: 240,
+               borderRadius: '8px',
+               boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+               border: '1px solid var(--border-strong)',
+               display: 'flex',
+               flexDirection: 'column'
+             }}
+          >
+             {/* Simple drag handle for timeline could be added here if needed, or drag via header */}
+             <div className="dock__floatingPanelHeader" style={{ justifyContent: 'center', background: 'var(--bg-1)' }}>
+                <span>Timeline</span>
+             </div>
+             <Timeline
+                settings={settings}
+                onChangeSettings={onChangeSettings}
+                frames={frames}
+                currentFrameIndex={currentFrameIndex}
+                isPlaying={isPlaying}
+                onSelectFrame={onSelectFrame}
+                onInsertFrame={onInsertFrame}
+                onDuplicateFrame={onDuplicateFrame}
+                onDeleteFrame={onDeleteFrame}
+                onTogglePlayback={onTogglePlayback}
+                onGenerateTweens={onGenerateTweens}
+                animationTags={animationTags}
+                activeTagId={activeTagId}
+                loopTagOnly={loopTagOnly}
+                onToggleLoopTagOnly={onToggleLoopTagOnly}
+                onSelectTag={onSelectTag}
+                onCreateTag={onCreateTag}
+                onUpdateTag={onUpdateTag}
+                onDeleteTag={onDeleteTag}
+                onReorderFrames={onReorderFrames}
+             />
+          </div>
+        )}
+      </div>
+    </div>
+  );              onLayerOperations={onLayerOperations}
               palettes={palettes}
               activePaletteId={activePaletteId}
               recentColors={recentColors}
