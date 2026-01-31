@@ -456,6 +456,8 @@ export default function DockLayout({
         "--leftPanelWidth": `${0}px`,
         "--rightPanelWidth": `${!showRightPanel || isZenMode ? 0 : isRightPanelCollapsed ? 52 : sizes.rightWidth}px`,
         "--timelineHeight": `${!showTimeline || isZenMode ? 0 : sizes.timelineHeight}px`,
+        "--vSplitterWidth": `${!showRightPanel || isZenMode ? 0 : 4}px`,
+        "--hSplitterHeight": `${!showTimeline || isZenMode ? 0 : 4}px`,
         ...(isZenMode ? { "--topbarHeight": "0px", "--statusBarHeight": "0px" } : {}),
       } as React.CSSProperties}
     >
@@ -698,6 +700,11 @@ export default function DockLayout({
         <Timeline
           settings={settings}
           onChangeSettings={onChangeSettings}
+          timelineVisible={showTimeline}
+          onToggleTimeline={(next) => {
+            setShowTimeline(next);
+            updateLayout({ timelineVisible: next });
+          }}
           canvasSpec={canvasSpec}
           frames={frames}
           currentFrameIndex={currentFrameIndex}
