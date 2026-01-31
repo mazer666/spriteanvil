@@ -1,4 +1,5 @@
 # SpriteAnvil Code Style Guide
+
 ## Related docs
 
 - Docs index: [`/docs/README.md`](./README.md)
@@ -7,8 +8,7 @@
 
 ---
 
-
-This document defines the **coding standards** for SpriteAnvil.  
+This document defines the **coding standards** for SpriteAnvil.
 It exists for two reasons:
 
 1. **Consistency**: the codebase should read like it was written by one person.
@@ -21,19 +21,23 @@ It exists for two reasons:
 ## 1) Core principles
 
 ### 1.1 Documentation is a feature
+
 - Every non-trivial function must be explainable to a beginner.
 - Prefer a slightly longer, clearer implementation over a clever one-liner.
 
 ### 1.2 Separation of concerns
+
 - **UI** orchestrates interactions and rendering.
 - **Editor / tools** implement reusable logic and algorithms.
 
 ### 1.3 Pixel-perfect by default
+
 - Integer math for rasterization.
 - Never introduce accidental anti-aliasing.
 - Always document rounding behavior.
 
 ### 1.4 Predictable performance
+
 - Avoid React state for large/rapidly-changing data (pixel buffers).
 - Note algorithm complexity when it matters.
 
@@ -75,29 +79,39 @@ Any file with algorithmic or architectural weight should start with:
 ## 3) Naming conventions
 
 ### 3.1 No abbreviations (beginner-friendly)
+
 Bad:
+
 - `fpd`, `ctx2`, `calcZoom`, `tmp`
 
 Good:
+
 - `framePixelData`
 - `canvasContext2D`
 - `calculateZoomToFitCanvas`
 - `temporarySelectionMask`
 
 ### 3.2 Functions describe *exact purpose*
+
 Prefer:
+
 - `calculateScreenToPixelCoordinates()`
+
 over:
+
 - `convertCoords()`
 
 ### 3.3 Types and interfaces
+
 - `PascalCase` for types: `ToolId`, `Frame`, `SelectionMask`
 - `camelCase` for values: `currentTool`, `activeFrameIndex`
 
 ### 3.4 Booleans: name as a question
+
 - `isDragging`, `hasSelection`, `shouldSnapToGrid`
 
 ### 3.5 Constants
+
 - `UPPER_SNAKE_CASE` for module-level constants:
   - `DEFAULT_BRUSH_SIZE`
   - `MAX_ONION_SKIN_FRAMES`
@@ -107,13 +121,16 @@ over:
 ## 4) TypeScript rules
 
 ### 4.1 Strict mode
+
 - Keep TypeScript in **strict** mode.
 - Avoid `any`. If necessary, use `unknown` and narrow via type guards.
 
 ### 4.2 Prefer explicit return types for public functions
+
 Especially for tool algorithms and editor core utilities.
 
 Good:
+
 ```ts
 export function floodFill(
   buffer: Uint8ClampedArray,
@@ -128,6 +145,7 @@ export function floodFill(
 ```
 
 ### 4.3 Type guards for safety
+
 When reading from unknown sources (imports, storage, network):
 
 ```ts
@@ -141,6 +159,7 @@ export function isToolId(value: unknown): value is ToolId {
 ## 5) JSDoc standards
 
 ### 5.1 When to use JSDoc
+
 - Any exported function
 - Any complex internal function
 - Any algorithmic section
@@ -170,19 +189,23 @@ export function isToolId(value: unknown): value is ToolId {
 ## 6) Comments: “why” beats “what”
 
 ### 6.1 What to comment
+
 - Intent: why we chose this approach
 - Edge cases
 - Performance-sensitive loops
 - Rounding rules
 
 ### 6.2 Avoid obvious comments
+
 Bad:
+
 ```ts
 // Increment x
 x++;
 ```
 
 Good:
+
 ```ts
 // We step horizontally because scanline fill avoids deep recursion and is faster on large regions.
 x++;
@@ -193,15 +216,18 @@ x++;
 ## 7) Error handling
 
 ### 7.1 Fail loudly in dev
+
 - Use clear error messages.
 - Prefer `throw new Error("...")` for invariant violations.
 
 ### 7.2 Guard inputs at boundaries
+
 - UI-to-editor boundaries
 - import/export boundaries
 - storage boundaries
 
 Example:
+
 ```ts
 if (width <= 0 || height <= 0) {
   throw new Error("Canvas dimensions must be positive.");
@@ -213,6 +239,7 @@ if (width <= 0 || height <= 0) {
 ## 8) Performance rules (must-follow)
 
 ### 8.1 No pixel buffers in React state
+
 - Use `useRef` for `Uint8ClampedArray` and mutate in place.
 - React state should hold:
   - tool selection
@@ -221,10 +248,12 @@ if (width <= 0 || height <= 0) {
   - small “preview config” objects
 
 ### 8.2 Avoid re-render loops during drawing
+
 - Do not call `setState` on every pointer move for pen strokes.
 - Render pixels via canvas draw calls, not via React DOM.
 
 ### 8.3 Algorithm notes
+
 For anything heavier than O(n) over pixels, add:
 
 - Big-O note
@@ -236,16 +265,19 @@ For anything heavier than O(n) over pixels, add:
 ## 9) Formatting and linting
 
 ### 9.1 Formatting
+
 - Use consistent formatting (prefer Prettier defaults).
 - Keep lines readable (avoid 200-char lines).
 
 ### 9.2 Imports
+
 - Group imports:
   1) external libs
   2) internal modules
   3) types
 
 Example:
+
 ```ts
 import React from "react";
 
@@ -254,7 +286,9 @@ import type { ToolId } from "../types";
 ```
 
 ### 9.3 File organization
+
 Within a file:
+
 1) constants
 2) types (if local)
 3) helpers (private)
@@ -271,6 +305,7 @@ Even early, try to keep code testable:
 - Prefer small deterministic helpers (easy unit tests)
 
 Minimum expectations:
+
 - Flood fill correctness on small test buffers
 - Shape algorithms produce expected outlines/fills
 - Selection boolean ops correct on toy masks
@@ -296,14 +331,49 @@ Before merging:
 ### Example: clear helper naming
 
 Bad:
+
 ```ts
 function calc(x: number) { return x * 2; }
 ```
 
 Good:
+
 ```ts
 function calculateNearestNeighborScaleFactor(scale: number): number {
   // Pixel art should scale in integer steps for crisp results.
   return Math.max(1, Math.round(scale));
 }
 ```
+
+---
+
+## 13) Modularization & File Size Limits
+
+### 13.1 The 400-Line Rule
+
+To ensure maintainability, testability, and a clean Git history, **React component files must not exceed 400 lines.**
+
+- **Mandatory Refactoring**: Once a file reaches the 400-line threshold, developers are **prohibited** from adding new features to that file.
+- **Action**: Existing logic must be refactored before merging new code. Logic should be extracted into:
+  - **Custom Hooks**: For state management and complex side effects.
+  - **Sub-components**: For distinct UI sections.
+  - **Utility Libraries**: For pure helper functions.
+
+### 13.2 Automated Enforcement
+
+We use ESLint to enforce this standard. Exceeding the limit will trigger a CI failure.
+
+```json
+// .eslintrc.json
+{
+  "rules": {
+    "max-lines": ["error", { "max": 400, "skipBlankLines": true, "skipComments": true }]
+  }
+}
+```
+
+### 13.3 Rationale
+
+- **Cognitive Load**: Smaller files are easier to understand for new contributors.
+- **Merge Conflicts**: Highly modular code significantly reduces the risk of complex merge conflicts.
+- **Unit Testing**: Hooks and smaller components allow for more granular and reliable testing.

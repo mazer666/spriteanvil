@@ -21,7 +21,7 @@ A core principle throughout every phase: **code and architecture must be underst
 - [Guiding Principles](#guiding-principles)
 - [Phase 0: Code Organization & Documentation Standards](#phase-0-code-organization--documentation-standards-apply-across-all-phases)
 - [Phase 1: Responsive Foundation & Core Architecture](#phase-1-responsive-foundation--core-architecture)
-- [Phase 2: Complete Drawing & Selection Toolset](#phase-2-complete-drawing--selection-toolset-parity--improvements)
+- [Phase 2: Drawing and Selection Tools](#phase-2-drawing-and-selection-tools)
 - [Phase 3: Animation & Timeline Mastery](#phase-3-animation--timeline-mastery)
 - [Phase 4: Layers, Palette & Color Management](#phase-4-layers-palette--color-management)
 - [Phase 5: AI-Powered Features](#phase-5-ai-powered-features)
@@ -31,7 +31,8 @@ A core principle throughout every phase: **code and architecture must be underst
 - [Phase 9: Market Leadership - Procreate Power + Figma Minimalism](#phase-9-market-leadership-procreate-power--figma-minimalism)
 - [Phase 10: Advanced Creative Suite](#phase-10-advanced-creative-suite)
 - [Phase 11: Market Leadership & Ecosystem](#phase-11-market-leadership--ecosystem)
-- [Phase 12: Mobile & Tablet Optimization](#phase-12-mobile--tablet-optimization-secondary-priority)
+- [Phase 12: Mobile and Tablet Optimization](#phase-12-mobile-and-tablet-optimization)
+- [Phase 16: Structural Integrity & Refactoring](#phase-16-structural-integrity--refactoring)
 - [Documentation Best Practices Applied Throughout](#code-documentation-best-practices-applied-throughout-all-phases)
 - [Summary](#summary)
 
@@ -66,6 +67,7 @@ A core principle throughout every phase: **code and architecture must be underst
 - [ ] Maintain meaningful `TODO` / `FIXME` with rationale and intended fix.
 
 **/docs folder must contain:**
+
 - [ ] `ARCHITECTURE.md` — overall application structure
 - [ ] `MODULE_GUIDE.md` — breakdown of each feature module
 - [ ] `CODE_STYLE.md` — naming conventions and organization patterns
@@ -156,7 +158,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ---
 
-## Phase 2: Complete Drawing & Selection Toolset (Best in Class Solution Parity + Improvements)
+## Phase 2: Drawing and Selection Tools
 
 ### 2.1 Advanced Selection Tools
 
@@ -848,7 +850,7 @@ A core principle throughout every phase: **code and architecture must be underst
 
 ---
 
-## Phase 13: Mobile & Tablet Optimization (Secondary Priority)
+## Phase 12: Mobile and Tablet Optimization
 
 ### 12.1 Touch & Gesture Interface
 
@@ -874,6 +876,31 @@ A core principle throughout every phase: **code and architecture must be underst
 - [ ] Touch target sizing (min 44×44px).
 - [ ] Orientation change handling with layout preservation.
 - [ ] `/src/mobile/TOUCH_GUIDE.md` gesture strategy + pitfalls.
+
+---
+
+## Phase 16: Structural Integrity & Refactoring
+
+### 16.1 Decomposition of God-Components (PRIORITY: HIGH)
+
+**Goal:** Prevent maintainability collapse by breaking down oversized files into specialized modules and hooks.
+
+- [ ] **App.tsx Refactor**:
+  - [ ] Extract project persistence to `useProjectManager`.
+  - [ ] Extract cloud sync/presence to `useCollaboration`.
+  - [ ] Extract keyboard handler logic to `useKeyboardHandlers`.
+  - [ ] **Milestone**: Reduce `App.tsx` lines by >60%.
+- [ ] **CanvasStage.tsx Refactor**:
+  - [ ] Split input handling (Mouse/Pen/Touch) into `useCanvasInput`.
+  - [ ] Extract buffer compositing logic to `useCanvasRenderer`.
+  - [ ] Separate SVG overlays (marching ants, symmetry guides) into sub-components.
+- [ ] **RightPanel.tsx Refactor**:
+  - [ ] Decompose "Accordion" sections into independent lazy-loaded components.
+
+### 16.2 Automated Quality Guards
+
+- [ ] Implement ESLint `max-lines` rule (400 lines limit for components).
+- [ ] Setup CI check to fail PRs that exceed component complexity thresholds.
 
 ---
 
