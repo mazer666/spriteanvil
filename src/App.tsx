@@ -1367,20 +1367,18 @@ export default function App() {
   }
 
   function handleDuplicateFrame() {
-    const currentLayers = frameLayers[currentFrame.id] || [];
-    const duplicatedLayers = currentLayers.map((layer) => ({
-      ...layer,
     if (frames.length === 0) return;
     const current = frames[currentFrameIndex];
+    if (!current) return;
+
+    // 1. Create new frame object
     const nextFrame: Frame = {
       ...current,
       id: crypto.randomUUID(),
       pixels: cloneBuffer(current.pixels),
     };
-    const nextFrames = [...frames];
-    nextFrames.splice(currentFrameIndex + 1, 0, nextFrame);
 
-    // Also duplicate layers
+    // 2. Clone all layers for this frame
     const currentLayers = frameLayers[current.id] || [];
     const nextLayers = currentLayers.map(l => ({
       ...l,
@@ -1388,16 +1386,23 @@ export default function App() {
       pixels: cloneBuffer(l.pixels!)
     }));
 
+    // 3. Update state
+    setFrames((prev) => {
+       const next = [...prev];
+       next.splice(currentFrameIndex + 1, 0, nextFrame);
+       return next;
+    });
+
     setFrameLayers(prev => ({
       ...prev,
       [nextFrame.id]: nextLayers
     }));
+
     setFrameActiveLayerIds(prev => ({
        ...prev,
-       [nextFrame.id]: nextLayers[0]?.id || activeLayerId || ""
+       [nextFrame.id]: nextLayers[0]?.id || ""
     }));
 
-    setFrames(nextFrames);
     setCurrentFrameIndex(currentFrameIndex + 1);
   }
 
@@ -1413,6 +1418,7 @@ export default function App() {
       return next;
     });
 
+
     // Update current frame index if necessary to follow the selected frame
     if (currentFrameIndex === fromIndex) {
       setCurrentFrameIndex(toIndex);
@@ -1425,16 +1431,38 @@ export default function App() {
 
   function handleDeleteFrame() {
     if (frames.length <= 1) return;
+
+    const frameToDelete = frames[currentFrameIndex];
+    if (!frameToDelete) return;
+
+    setConfirmDialog({
+      title: "Delete Frame?",
+      message: "Are you sure you want to delete this frame? This action cannot be undone.",
+      confirmText: "Delete",
+      isDangerous: true,
+      onConfirm: async () => {
+        setConfirmBusy(true);
+        try {
+          const frameId = frameToDelete.id;
+          
+          setFrames((prev) => {
+            const next = [...prev];
+            next.splice(currentFrameIndex, 1);
+            return next;
+          });
+
+          setFrameLayers((prev) => {
             const { [frameId]: _, ...rest } = prev;
             return rest;
           });
+
           setFrameActiveLayerIds((prev) => {
             const { [frameId]: _, ...rest } = prev;
             return rest;
           });
 
-          if (frameIndex >= frames.length - 1) {
-            setCurrentFrameIndex(Math.max(0, frames.length - 2));
+          if (currentFrameIndex >= frames.length - 1) {
+             setCurrentFrameIndex(Math.max(0, frames.length - 2));
           }
         } catch (error) {
           console.error(error);
@@ -2286,6 +2314,9 @@ export default function App() {
           canvasSpec={canvasSpec}
           buffer={buffer}
           compositeBuffer={compositePreviewBuffer}
+          onStrokeEnd={onStrokeEnd}
+          selection={selection}
+          onChangeSelection={setSelection}
           onUndo={handleUndo}
           onRedo={handleRedo}
           canUndo={canUndo}
