@@ -185,10 +185,26 @@ export default function Timeline({
   return (
     <div 
       className={`timeline ${!timelineVisible ? "timeline--hidden" : ""}`} 
-      style={{ height: timelineVisible ? settings.timelineHeight : 0 }}
+      style={{ height: timelineVisible ? settings.layout.timelineHeight : 0 }}
     >
       <div className="timeline__header">
+        <div className="timeline__title">Timeline</div>
         <div className="timeline__controls">
+          <button 
+            className="uiBtn uiBtn--ghost"
+            onClick={() => onToggleTimeline(!timelineVisible)}
+            title={timelineVisible ? "Minimize timeline" : "Show timeline"}
+          >
+           {timelineVisible ? "▁ Minimize" : "▔ Show"}
+          </button>
+          <button
+            className="uiBtn"
+            onClick={() => onSelectFrame(Math.max(0, currentFrameIndex - 1))}
+            disabled={currentFrameIndex <= 0}
+            title="Previous frame (Alt+Left)"
+          >
+            ⟨
+          </button>
           <button 
             className="uiBtn uiBtn--icon" 
             onClick={onTogglePlayback}
@@ -196,6 +212,14 @@ export default function Timeline({
           >
             {isPlaying ? "⏸" : "▶"}
           </button>
+          <button
+             className="uiBtn"
+             onClick={() => onSelectFrame(Math.min(frames.length - 1, currentFrameIndex + 1))}
+             disabled={currentFrameIndex >= frames.length - 1}
+             title="Next frame (Alt+Right)"
+           >
+             ⟩
+           </button>
           
           <div className="timeline__fps">
             <label>FPS</label>
@@ -471,415 +495,6 @@ export default function Timeline({
             </>
           )}
         </div>
-    </div>
-  );
-}
-
-  return (
-    <div className="timeline">
-      <div className="timeline__header">
-        <div className="timeline__title">Timeline</div>
-
-        <div className="timeline__controls">
-          <button
-            className="uiBtn uiBtn--ghost"
-            onClick={() => onToggleTimeline(!timelineVisible)}
-            title={timelineVisible ? "Minimize timeline" : "Show timeline"}
-          >
-            {timelineVisible ? "▁ Minimize" : "▔ Show"}
-          </button>
-          <button
-            className="uiBtn"
-            onClick={() => onSelectFrame(Math.max(0, currentFrameIndex - 1))}
-            disabled={currentFrameIndex <= 0}
-            title="Previous frame (Alt+Left)"
-          >
-            ⟨
-          </button>
-          <button
-            className={isPlaying ? "uiBtn uiBtn--active" : "uiBtn"}
-            onClick={onTogglePlayback}
-            title={isPlaying ? "Stop (Space)" : "Play (Space)"}
-          >
-            {isPlaying ? "⏸" : "▶"}
-          </button>
-          <button
-            className="uiBtn"
-            onClick={() => onSelectFrame(Math.min(frames.length - 1, currentFrameIndex + 1))}
-            disabled={currentFrameIndex >= frames.length - 1}
-            title="Next frame (Alt+Right)"
-          >
-            ⟩
-          </button>
-          <button
-            className={showTags ? "uiBtn uiBtn--active" : "uiBtn"}
-            onClick={() => setShowTags((prev) => !prev)}
-            title="Toggle animation tags"
-          >
-            Tags
-          </button>
-          <button
-            className={showTween ? "uiBtn uiBtn--active" : "uiBtn"}
-            onClick={() => setShowTween((prev) => !prev)}
-            title="Toggle tween generator"
-          >
-            Tween
-          </button>
-
-          <label className="timeline__fps">
-            <span>FPS</span>
-            <input
-              type="number"
-              min="1"
-              max="60"
-              value={fpsInput}
-              onChange={(e) => handleFpsChange(e.target.value)}
-            />
-          </label>
-        </div>
-
-        <div className="timeline__controls">
-          <button
-            className="uiBtn"
-            onClick={onInsertFrame}
-            title="Insert new frame after current"
-          >
-            + Insert
-          </button>
-          <button
-            className="uiBtn"
-            onClick={onDuplicateFrame}
-            title="Duplicate current frame"
-          >
-            Duplicate
-          </button>
-          <button
-            className="uiBtn"
-            onClick={onDeleteFrame}
-            disabled={frames.length <= 1}
-            title="Delete current frame"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-
-      <div className="timeline__body">
-        <span className="timeline__info">
-          {frames.length} frame{frames.length !== 1 ? "s" : ""} · {totalDuration}ms · ~{fps} FPS
-        </span>
-
-        {showTags && (
-          <div className="timeline__tags" style={{ padding: "8px", borderBottom: "1px solid #333" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-              <strong style={{ fontSize: "12px" }}>Animation Tags</strong>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "#aaa" }}>
-                <input
-                  type="checkbox"
-                  checked={loopTagOnly}
-                  onChange={(e) => onToggleLoopTagOnly(e.target.checked)}
-                />
-                Loop selected tag only
-              </label>
-            </div>
-
-            <div style={{ position: "relative", height: "18px", background: "#1a1a1a", border: "1px solid #333", borderRadius: "3px" }}>
-              {animationTags.map((tag) => {
-                const total = Math.max(1, frames.length);
-                const left = (tag.start_frame / total) * 100;
-                const width = ((tag.end_frame - tag.start_frame + 1) / total) * 100;
-                return (
-                  <button
-                    key={tag.id}
-                    onClick={() => onSelectTag(tag.id)}
-                    title={`${tag.name}: ${tag.start_frame + 1}-${tag.end_frame + 1}`}
-                    style={{
-                      position: "absolute",
-                      left: `${left}%`,
-                      width: `${width}%`,
-                      height: "100%",
-                      background: tag.color,
-                      border: tag.id === activeTagId ? "2px solid #fff" : "1px solid #111",
-                      cursor: "pointer",
-                      borderRadius: "2px",
-                    }}
-                  />
-                );
-              })}
-            </div>
-
-            <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "1fr auto auto auto auto", gap: "6px", alignItems: "center" }}>
-              <input
-                type="text"
-              onBlur={() => {
-                if (!fpsInput || fpsInput <= 0) handleFpsChange("12");
-              }}
-              min="1" 
-              max="60" 
-            />
-          </div>
-
-          <div className="timeline__actions">
-            <button className="uiBtn uiBtn--icon" onClick={onInsertFrame} title="New Frame (N)">
-              +
-            </button>
-            <button className="uiBtn uiBtn--icon" onClick={onDuplicateFrame} title="Duplicate Frame (D)">
-              ❐
-            </button>
-            <button className="uiBtn uiBtn--icon" onClick={onDeleteFrame} title="Delete Frame (Backspace)">
-              🗑
-            </button>
-          </div>
-          
-          <div className="timeline__divider" />
-          
-          <div className="timeline__tween">
-             <button 
-              className={`uiBtn uiBtn--icon ${showTween ? "uiBtn--active" : ""}`}
-              onClick={() => setShowTween(!showTween)}
-              title="Tweening"
-            >
-              ∿
-            </button>
-            {showTween && (
-              <div className="timeline__popover">
-                <h4>Generate Tweens</h4>
-                <div className="ui-row">
-                  <label>Start Frame</label>
-                  <input 
-                    type="number" 
-                    value={tweenStart + 1} 
-                    onChange={e => setTweenStart(Math.max(0, parseInt(e.target.value) - 1))}
-                  />
-                </div>
-                <div className="ui-row">
-                  <label>End Frame</label>
-                  <input 
-                    type="number" 
-                    value={tweenEnd + 1} 
-                    onChange={e => setTweenEnd(Math.max(0, parseInt(e.target.value) - 1))}
-                  />
-                </div>
-                <div className="ui-row">
-                  <label>Count</label>
-                  <input 
-                    type="number" 
-                    value={tweenCount} 
-                    onChange={e => setTweenCount(Math.max(1, parseInt(e.target.value)))}
-                  />
-                </div>
-                <div className="ui-row">
-                  <label>Easing</label>
-                  <select 
-                    value={tweenEasing} 
-                    onChange={e => setTweenEasing(e.target.value as EasingCurve)}
-                  >
-                    <option value="linear">Linear</option>
-                    <option value="easeInQuad">Ease In Quad</option>
-                    <option value="easeOutQuad">Ease Out Quad</option>
-                    <option value="elastic">Elastic</option>
-                  </select>
-                </div>
-                <button className="uiBtn uiBtn--primary" onClick={() => {
-                  handleGenerateTweens();
-                  setShowTween(false);
-                }}>
-                  Generate
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="timeline__tags">
-             <button 
-              className={`uiBtn uiBtn--icon ${showTags ? "uiBtn--active" : ""}`}
-              onClick={() => setShowTags(!showTags)}
-              title="Animation Tags"
-            >
-              🏷
-            </button>
-             {showTags && (
-              <div className="timeline__popover">
-                <h4>Animation Tags</h4>
-                <div className="ui-list">
-                  {animationTags.map(tag => (
-                    <div key={tag.id} className="tag-item">
-                      <span className="tag-color" style={{ backgroundColor: tag.color }} />
-                      <span className="tag-name">{tag.name}</span>
-                       <button className="uiBtn uiBtn--small uiBtn--ghost" onClick={() => onDeleteTag(tag.id)}>✕</button>
-                    </div>
-                  ))}
-                  {animationTags.length === 0 && <div className="ui-empty">No tags</div>}
-                </div>
-                <div className="ui-divider" />
-                <div className="ui-row">
-                  <input 
-                    placeholder="Tag Name" 
-                    value={newTagName}
-                    onChange={e => setNewTagName(e.target.value)}
-                  />
-                  <input 
-                    type="color" 
-                    value={newTagColor}
-                    onChange={e => setNewTagColor(e.target.value)}
-                    style={{ width: 32, padding: 0 }}
-                  />
-                </div>
-                <div className="ui-row">
-                   <label>Start</label>
-                   <input 
-                    type="number" 
-                    value={newTagStart + 1} 
-                    onChange={e => setNewTagStart(Math.max(0, parseInt(e.target.value) - 1))}
-                    style={{ width: 60 }}
-                   />
-                   <label>End</label>
-                   <input 
-                    type="number" 
-                    value={newTagEnd + 1} 
-                    onChange={e => setNewTagEnd(Math.max(0, parseInt(e.target.value) - 1))}
-                    style={{ width: 60 }}
-                   />
-                </div>
-                <button 
-                  className="uiBtn uiBtn--primary uiBtn--full"
-                  disabled={!newTagName.trim()}
-                  onClick={() => {
-                    handleCreateTag();
-                    setShowTags(false);
-                  }}
-                >
-                  Create Tag
-                </button>
-              </div>
-            )}
-            
-            <label className="ui-checkbox" title="Loop only active tag">
-              <input 
-                type="checkbox" 
-                checked={loopTagOnly} 
-                onChange={(e) => onToggleLoopTagOnly(e.target.checked)} 
-              />
-              <span>Loop Tag</span>
-            </label>
-
-            <select 
-              className="tag-select"
-              value={activeTagId || ""}
-              onChange={(e) => onSelectTag(e.target.value || null)}
-            >
-              <option value="">All Frames</option>
-              {animationTags.map(tag => (
-                <option key={tag.id} value={tag.id}>{tag.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="timeline__track">
-        <div className="timeline__frames">
-          {frames.map((frame, index) => (
-            <div
-              key={frame.id}
-              className={`timeline-frame ${index === currentFrameIndex ? "timeline-frame--active" : ""}`}
-              onClick={() => onSelectFrame(index)}
-              title={`Frame ${index + 1}`}
-              draggable={dragDropEnabled}
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDrop={(e) => handleDrop(e, index)}
-            >
-              <div className="timeline-frame__canvas-wrapper">
-                <canvas
-                  ref={(el) => {
-                    if (el) canvasRefs.current.set(frame.id, el);
-                    else canvasRefs.current.delete(frame.id);
-                  }}
-                  width={canvasSpec.width}
-                  height={canvasSpec.height}
-                />
-              </div>
-              <div className="timeline-frame__footer">
-                <span className="timeline-frame__index">{index + 1}</span>
-                <input
-                  className="timeline-frame__duration"
-                  value={frame.durationMs}
-                  onChange={(e) => handleDurationChange(index, e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <span className="timeline-frame__unit">ms</span>
-              </div>
-              {/* Render tag indicators */}
-              <div className="timeline-frame__tags">
-                {animationTags
-                  .filter(tag => index >= tag.start_frame && index <= tag.end_frame)
-                  .map(tag => (
-                    <div 
-                      key={tag.id} 
-                      className="frame-tag-dot" 
-                      style={{ backgroundColor: tag.color }} 
-                      title={tag.name}
-                    />
-                  ))}
-              </div>
-            </div>
-          ))}
-          <div 
-            className="timeline-frame timeline-frame--add"
-            onClick={onInsertFrame}
-            title="Add Frame"
-          >
-            <span>+</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="timeline__settings">
-          <label className="timeline__setting">
-            <input
-              type="checkbox"
-              checked={settings.showOnionSkin}
-              onChange={(e) =>
-                onChangeSettings({ ...settings, showOnionSkin: e.target.checked })
-              }
-            />
-            <span>Onion Skin</span>
-          </label>
-
-          {settings.showOnionSkin && (
-            <>
-              <label className="timeline__setting">
-                <span>Previous</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="5"
-                  value={settings.onionPrev}
-                  onChange={(e) =>
-                    onChangeSettings({ ...settings, onionPrev: Number(e.target.value) })
-                  }
-                  className="timeline__setting__input"
-                />
-              </label>
-
-              <label className="timeline__setting">
-                <span>Next</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="5"
-                  value={settings.onionNext}
-                  onChange={(e) =>
-                    onChangeSettings({ ...settings, onionNext: Number(e.target.value) })
-                  }
-                  className="timeline__setting__input"
-                />
-              </label>
-            </>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
