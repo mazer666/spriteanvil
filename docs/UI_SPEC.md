@@ -131,7 +131,7 @@ This is already a good modular structure.
 **Target vision:** Tabs can later move to icon tabs, but:
 - The structure stays
 - Panels stay as framed sections/accordions
-- Sections should be **reorderable** by drag & drop and offer a compact density toggle.
+- Sections should be **reorderable** by drag & drop (no compact/expanded density toggle).
 
 ---
 
@@ -172,8 +172,14 @@ Current global tokens in `src/styles/app.css` (updated to match the reference go
 
 ---
 
-## 8) What this doc does NOT define
+## 8) Mobile & tablet layout expectations
+
+- **Floating panels on touch devices:** the Tool Rail and Right Panel float above the canvas on tablets/phones.
+- **Snap behavior:** floating panels snap to the viewport edges when released after dragging.
+- **Scroll-first panels:** tool rail + right panel content must remain vertically scrollable on tablets/phones.
+- **No compact density toggle:** panel sections remain in the standard spacing mode.
+
+## 9) What this doc does NOT define
 
 - Exact icon sets (emoji vs SVG)
 - Final color palette (token structure only)
-- Mobile/tablet layout (later)

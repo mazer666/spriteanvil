@@ -401,6 +401,7 @@ export default function App() {
       rightWidth: 280,
       timelineHeight: 160,
       toolRailPosition: { x: 18, y: 84 },
+      rightPanelPosition: { x: 24, y: 84 },
       rightPanelOrder: defaultRightPanelOrder,
     },
   }));

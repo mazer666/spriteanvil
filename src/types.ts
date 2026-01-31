@@ -63,6 +63,7 @@ export type LayoutSettings = {
   rightWidth: number;
   timelineHeight: number;
   toolRailPosition: { x: number; y: number };
+  rightPanelPosition?: { x: number; y: number };
   rightPanelOrder: string[];
 };
 
