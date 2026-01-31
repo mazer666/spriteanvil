@@ -1747,3 +1747,96 @@ body {
 .dock--right-hidden .dock__right { display: none; }
 .dock--timeline-collapsed .dock__bottom { display: none; }
 
+
+/* Fix Scrollbars on Mobile/Panel Lists */
+.toolrail, .tool-grid, .rightpanel, .mobile-popover__content {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.toolrail::-webkit-scrollbar, .tool-grid::-webkit-scrollbar, .rightpanel::-webkit-scrollbar, .mobile-popover__content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ensure Settings Panel is above everything */
+.modal-overlay {
+  z-index: 99999 !important;
+}
+
+/* Ensure floating panels don't cover Zen button if possible, but Zen button should be high */
+.zen-exit-btn {
+  z-index: 100000 !important;
+}
+
+/* Tool Group Indicator */
+.toolgroup__header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--ink-secondary);
+  font-size: 10px;
+  text-transform: uppercase;
+  padding: 8px 4px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.toolgroup__header:hover {
+  opacity: 1;
+  color: var(--accent-gold);
+}
+
+.toolgroup__indicator {
+  margin-right: 4px;
+  font-size: 8px;
+}
+
+/* Topbar Color Picker Button */
+.ui-color-picker-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-2);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.ui-color-picker-btn input[type="color"] {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.color-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.topbar__center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar__sep {
+  width: 1px;
+  height: 16px;
+  background-color: var(--border-subtle);
+  margin: 0 4px;
+}
+
+/* Ensure Settings Modal z-index */
+.modal-overlay {
+  z-index: 10000;
+}

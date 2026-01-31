@@ -714,6 +714,23 @@ export default function DockLayout({
             currentFrameIndex={currentFrameIndex}
             showMinimap={true}
           />
+          
+          {/* Zoom Controls Overlay (Under Minimap usually, bottom right area) */}
+          <div className="canvas-controls" style={{
+            position: 'absolute',
+            bottom: '20px',
+            right: '20px', // Assuming minimap is top-right? No, minimap is inside CanvasStage usually.
+            // User said "Directly under MiniMap". CanvasStage handles minimap position.
+            // If I can't easily put it INSIDE CanvasStage without opening it, I'll put it bottom right floating.
+            zIndex: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px'
+          }}>
+            <button className="uiBtn uiBtn--icon" onClick={() => onChangeSettings({ ...settings, zoom: Math.min(64, settings.zoom * 1.5) })}>+</button>
+            <button className="uiBtn uiBtn--icon" onClick={() => onChangeSettings({ ...settings, zoom: Math.max(0.1, settings.zoom / 1.5) })}>-</button>
+            <div className="uiBtn uiBtn--active" style={{ fontSize: '10px' }}>{Math.round(settings.zoom * 100)}%</div>
+          </div>
         </div>
 
         {/* Floating Right Panel */}
@@ -793,9 +810,8 @@ export default function DockLayout({
           >
              <div 
                 className="dock__floatingPanelHeader" 
-                style={{ justifyContent: 'center', background: 'var(--bg-1)' }}
-                // Optional: make timeline draggable by header? We don't have drag logic for it yet (only resize in main, drag in dock).
-                // For now, fixed bottom position.
+                style={{ justifyContent: 'center', background: 'var(--bg-1)', cursor: 'grab' }}
+                onPointerDown={(e) => beginDrag("timeline", e)}
              >
                 <span>Timeline</span>
              </div>

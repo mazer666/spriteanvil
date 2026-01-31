@@ -2413,57 +2413,58 @@ export default function App() {
               <div className="topbar__left">
                 <div className="brand">
                   <div className="brand__name">SpriteAnvil</div>
-                  <div className="brand__tagline">Forge sprites. Shape motion.</div>
+                  {/* Tagline hidden on smaller screens via CSS likely, or just keep it */}
                 </div>
+                <div className="topbar__sep" />
                 <div className="topbar__project">
-                  <div className="topbar__project-label">Project</div>
-                  <div className="topbar__project-name">{activeProject?.name ?? "Untitled"}</div>
+                  <span className="topbar__project-label" style={{ opacity: 0.5, fontSize: '10px', textTransform: 'uppercase' }}>Project</span>
+                  <span className="topbar__project-name">{activeProject?.name ?? "Untitled"}</span>
                 </div>
               </div>
 
               <div className="topbar__center">
-                <div className="topbar__group topbar__group--primary">
-                  <button className="uiBtn" onClick={handleUndo} disabled={!canUndo} title="Undo (Cmd+Z)">
-                    Undo
-                  </button>
-                  <button className="uiBtn" onClick={handleRedo} disabled={!canRedo} title="Redo (Cmd+Y)">
-                    Redo
-                  </button>
-                </div>
-                <div className="topbar__group">
-                  <button
-                    className="uiBtn"
-                    onClick={() => setShowCommandPalette(true)}
-                    title="Command Palette (Cmd+K)"
-                  >
+                  <button className="uiBtn uiBtn--ghost" onClick={handleUndo} disabled={!canUndo} title="Undo (Cmd+Z)">↩</button>
+                  <button className="uiBtn uiBtn--ghost" onClick={handleRedo} disabled={!canRedo} title="Redo (Cmd+Y)">↪</button>
+                  
+                  <div className="topbar__sep" />
+                  
+                  <button className="uiBtn" onClick={() => setShowCommandPalette(true)} title="Command Palette (Cmd+K)">
                     Commands
                   </button>
-                  <button
-                    className="uiBtn"
-                    onClick={() => setProjectView("dashboard")}
-                    title="Project Dashboard"
-                  >
+                  
+                  <button className="uiBtn" onClick={() => setProjectView("dashboard")} title="Project Dashboard">
                     Projects
                   </button>
-                </div>
+
+                  <div className="topbar__sep" />
+
+                  {/* Color Picker Integration */}
+                  <label className="ui-color-picker-btn" title="Primary Color">
+                    <input 
+                      type="color" 
+                      value={settings.primaryColor}
+                      onChange={(e) => handleSelectColor(e.target.value)}
+                    />
+                    <div className="color-swatch" style={{ backgroundColor: settings.primaryColor }} />
+                  </label>
               </div>
 
               <div className="topbar__right">
-                <button
-                  className="uiBtn uiBtn--primary"
-                  onClick={() => setShowExportPanel(true)}
-                  title="Export Sprite (Cmd+E)"
-                >
+                <button className="uiBtn" onClick={() => setShowExportPanel(true)} title="Export Sprite (Cmd+E)">
                   Export
                 </button>
-                <button
-                  className="uiBtn"
-                  onClick={() => setShowSettingsPanel(true)}
-                  title="Workspace Settings"
-                >
+                <button className="uiBtn" onClick={() => setShowSettingsPanel(true)} title="Workspace Settings">
                   Settings
                 </button>
-                <QuickControls showCollaborators />
+                
+                {/* User Avatars / QuickControls simplified */}
+                 {activeCollaborators.length > 0 && (
+                  <div style={{ display: "flex", gap: "4px", marginLeft: "8px" }}>
+                    {activeCollaborators.slice(0, 3).map(u => (
+                      <div key={u.id} style={{ width: 20, height: 20, background: u.color, borderRadius: '50%' }} title={u.id} />
+                    ))}
+                  </div>
+                 )}
               </div>
 
               <button
@@ -2477,86 +2478,19 @@ export default function App() {
               {showTopbarMenu && (
                 <div className="topbar__menu">
                   <div className="topbar__menu-header">
-                    <span>Workspace</span>
-                    <button
-                      className="uiBtn uiBtn--ghost"
-                      onClick={() => setShowTopbarMenu(false)}
-                      title="Close menu"
-                    >
-                      ✕
-                    </button>
+                    <span>Menu</span>
+                    <button className="uiBtn uiBtn--ghost" onClick={() => setShowTopbarMenu(false)}>✕</button>
                   </div>
                   <div className="topbar__menu-body">
-                    <div className="topbar__group">
-                      <button
-                        className="uiBtn"
-                        onClick={() => {
-                          setShowCommandPalette(true);
-                          setShowTopbarMenu(false);
-                        }}
-                        title="Command Palette (Cmd+K)"
-                      >
-                        Commands
-                      </button>
-                      <button
-                        className="uiBtn"
-                        onClick={() => {
-                          setProjectView("dashboard");
-                          setShowTopbarMenu(false);
-                        }}
-                        title="Project Dashboard"
-                      >
-                        Projects
-                      </button>
-                      <button
-                        className="uiBtn uiBtn--primary"
-                        onClick={() => {
-                          setShowExportPanel(true);
-                          setShowTopbarMenu(false);
-                        }}
-                        title="Export Sprite (Cmd+E)"
-                      >
-                        Export
-                      </button>
-                      <button
-                        className="uiBtn"
-                        onClick={() => {
-                          setShowSettingsPanel(true);
-                          setShowTopbarMenu(false);
-                        }}
-                        title="Workspace Settings"
-                      >
-                        Settings
-                      </button>
-                    </div>
-
-                    <div className="topbar__group">
-                      <label className="ui-row">
-                        <span>Background</span>
-                        <select
-                          value={settings.backgroundMode}
-                          onChange={(e) =>
-                            setSettings((s) => ({ ...s, backgroundMode: e.target.value as any }))
-                          }
-                        >
-                          <option value="checker">Checkerboard</option>
-                          <option value="solidDark">Solid (Dark)</option>
-                          <option value="solidLight">Solid (Light)</option>
-                          <option value="greenscreen">Greenscreen</option>
-                          <option value="bluescreen">Bluescreen</option>
-                        </select>
-                      </label>
-                    </div>
-
-                    <QuickControls />
+                      <button className="uiBtn" onClick={() => { setShowCommandPalette(true); setShowTopbarMenu(false); }}>Commands</button>
+                      <button className="uiBtn" onClick={() => { setProjectView("dashboard"); setShowTopbarMenu(false); }}>Projects</button>
+                      <button className="uiBtn" onClick={() => { setShowExportPanel(true); setShowTopbarMenu(false); }}>Export</button>
+                      <button className="uiBtn" onClick={() => { setShowSettingsPanel(true); setShowTopbarMenu(false); }}>Settings</button>
                   </div>
                 </div>
               )}
             </div>
           }
-          statusBar={<StatusBar info={statusInfo} />}
-        />
-      )}
 
       <input
         ref={paletteImportRef}
