@@ -1,21 +1,28 @@
 /**
  * src/hooks/useLayerManager.ts
  * -----------------------------------------------------------------------------
- * ## LAYER MANAGER HOOK
+ * ## THE LAYER MANAGER (Noob Guide)
  * 
- * This hook encapsulates all layer management logic including:
- * - Layer CRUD (create, delete, duplicate)
- * - Layer properties (visibility, lock, opacity, blend mode, name)
- * - Layer ordering and merging
+ * Imagine your drawing as a **Stack of Transparent Plastic Sheets**.
+ * Each sheet is a "Layer". You can draw on one sheet, and see through it to the ones below.
  * 
- * WHY THIS EXISTS:
- * Extracted from App.tsx to reduce complexity and improve testability.
- * Part of the Phase 16 refactoring initiative.
+ * This hook handles:
+ * - **Creating/Deleting** sheets (Layers).
+ * - **Visibility**: Hiding a sheet so you can't see it for a moment.
+ * - **Locking**: Protecting a sheet so you don't accidentally draw on it.
+ * - **Merging**: Gluing two sheets together permanently.
+ * - **Reordering**: Moving a sheet to the top or bottom of the stack.
  * 
- * USED BY:
- * - src/App.tsx
+ * ### 📑 Layer Composition (Mermaid)
+ *
+ * ```mermaid
+ * graph TD
+ *   L1[Layer 1 - Top] --> C[Composite Engine]
+ *   L2[Layer 2] --> C
+ *   L3[Layer 3 - Bottom] --> C
+ *   C --> Final[Single Frame Image]
+ * ```
  */
-
 import { useCallback } from "react";
 import { Frame, LayerData, CanvasSpec, BlendMode } from "../types";
 import { cloneBuffer, createBuffer } from "../editor/pixels";
@@ -93,7 +100,9 @@ export function useLayerManager(
   const { setFrameLayers, setFrameActiveLayerIds, setFrames } = actions;
   const { canvasSpec } = config;
 
-  // Helper to update frame composite after layer changes
+  // WHAT: Glues all the transparent sheets (layers) together into one image.
+  // WHY: To show the final result on the canvas.
+  // HOW: It looks at every layer from the bottom up and stacks the colors.
   const updateCurrentFrameComposite = useCallback(
     (frameId: string, nextLayers: LayerData[]) => {
       setFrames((prev) =>
@@ -107,6 +116,8 @@ export function useLayerManager(
     [canvasSpec.height, canvasSpec.width, setFrames]
   );
 
+  // WHAT: Adds a new blank transparent sheet to the stack.
+  // WHY: So you can draw different parts of your art (like "Background" and "Character") separately.
   const handleCreateLayer = useCallback(() => {
     if (!currentFrame) return;
     const newLayer = createLayer(`Layer ${layers.length + 1}`, canvasSpec.width, canvasSpec.height);
@@ -117,6 +128,8 @@ export function useLayerManager(
     updateCurrentFrameComposite(frameId, nextLayers);
   }, [currentFrame, layers, canvasSpec, setFrameLayers, setFrameActiveLayerIds, updateCurrentFrameComposite]);
 
+  // WHAT: Removes a sheet from the stack.
+  // WHY: If you don't need that part of your drawing anymore.
   const handleDeleteLayer = useCallback(
     (id: string) => {
       if (layers.length === 1 || !currentFrame) return;
@@ -222,6 +235,8 @@ export function useLayerManager(
     [currentFrame, layers, setFrameLayers, updateCurrentFrameComposite]
   );
 
+  // WHAT: Glues a layer into the one directly below it.
+  // WHY: To simplify your stack once you're happy with two layers.
   const handleMergeDown = useCallback(
     (id: string) => {
       if (!currentFrame) return;

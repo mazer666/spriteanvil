@@ -1,3 +1,29 @@
+/**
+ * useProjectManagement.ts
+ * -----------------------------------------------------------------------------
+ * ## THE PROJECT MANAGER (Noob Guide)
+ *
+ * This hook is like the **Librarian** of SpriteAnvil.
+ * It handles everything related to your projects:
+ * - Listing all your saved projects.
+ * - Loading a project from the Cloud or Local Storage.
+ * - Creating new projects, renaming, or deleting them.
+ * - Periodic "Auto-saving" so you never lose your work.
+ *
+ * ### 🔄 Logic Flow (Mermaid)
+ *
+ * ```mermaid
+ * graph TD
+ *   A[Start App] --> B{Last Project ID?}
+ *   B -- Yes --> C[Load Cache]
+ *   B -- No --> D[Show Dashboard]
+ *   C -- Not in Cache --> E[Load from Cloud]
+ *   E -- Found --> F[Apply Snapshot]
+ *   E -- Not Found --> G[Create Default Canvas]
+ *   F --> H[Enter Editor]
+ *   G --> H
+ * ```
+ */
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Project, ProjectSnapshotPayload } from "../lib/supabase/projects";
 import { ProjectSnapshot } from "../lib/projects/snapshot";
@@ -51,13 +77,22 @@ export function useProjectManagement({
   recentColors,
   settings,
 }: ProjectManagementConfig) {
+  // USAGE: Array of all projects available to the user.
   const [projects, setProjects] = useState<Project[]>([]);
+  
+  // USAGE: The project currently being edited.
   const [activeProject, setActiveProject] = useState<Project | null>(null);
+  
+  // USAGE: Controls if we see the "Grid of Projects" (dashboard) or the "Drawing Board" (editor).
   const [projectView, setProjectView] = useState<"dashboard" | "editor">("dashboard");
+  
+  // USAGE: Shows a spinner when talking to the database.
   const [projectLoading, setProjectLoading] = useState(false);
+  
+  // USAGE: Stores error messages to show the user if something goes wrong.
   const [projectError, setProjectError] = useState<string | null>(null);
   
-  // Dialog state
+  // USAGE: Used to show "Are you sure?" popups.
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
 
@@ -79,6 +114,8 @@ export function useProjectManagement({
   };
 
   // --- Initial Load ---
+  // WHAT: Fetches the list of projects from the DB or LocalStorage.
+  // WHY: To show the user their work history in the Dashboard.
   const refreshProjects = useCallback(async () => {
     setProjectLoading(true);
     try {
@@ -98,6 +135,9 @@ export function useProjectManagement({
 
   // --- Actions ---
 
+  // WHAT: Opens a specific project.
+  // WHY: When a user clicks a project thumbnail in the Dashboard.
+  // HOW: Checks browser cache first (fastest), then Cloud (fallback).
   const selectProject = useCallback(async (project: Project) => {
     setProjectLoading(true);
     setProjectError(null);
@@ -112,7 +152,7 @@ export function useProjectManagement({
           onApplySnapshot(snapshot);
           await cacheProjectSnapshot(project.id, snapshot);
         } else {
-          // Fallback Default
+          // Fallback Default: If project exists in DB but has no drawing data yet.
           const fallbackSnapshot: ProjectSnapshot = {
             version: 1,
             canvas: { width: 64, height: 64 },
@@ -185,6 +225,8 @@ export function useProjectManagement({
     }
   }, [hasSupabaseConfig, onApplySnapshot, palettes, activePaletteId, recentColors, settings]);
 
+  // WHAT: Creates a brand new project entry.
+  // WHY: To start a fresh artwork with a custom name and size.
   const createNewProject = useCallback(async (request: NewProjectRequest) => {
     setProjectLoading(true);
     setProjectError(null);
@@ -219,6 +261,7 @@ export function useProjectManagement({
       newSnapshot.activeLayerIds[frame0.id] = activeLayerId;
 
       if (!hasSupabaseConfig) {
+        // Local Mode: Just save to Browser Storage.
         const now = new Date().toISOString();
         const localProject: Project = {
           id: crypto.randomUUID(),
@@ -242,6 +285,7 @@ export function useProjectManagement({
         return;
       }
 
+      // Cloud Mode: Save to Supabase.
       const cloudPayload = serializeSnapshot(newSnapshot);
       const created = await createProject({
         name: request.name,
@@ -398,6 +442,9 @@ export function useProjectManagement({
     }
   }, [hasSupabaseConfig]);
 
+  // WHAT: Saves the current project state.
+  // WHY: To prevent data loss if the browser crashes or the user leaves.
+  // USE: Called automatically every 60 seconds.
   const autoSave = useCallback(async () => {
     const currentProject = autoSaveStateRef.current.activeProject;
     if (!currentProject) return;

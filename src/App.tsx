@@ -10,23 +10,56 @@ import React, {
  * -----------------------------------------------------------------------------
  * ## THE ORCHESTRATOR (Noob Guide)
  *
- * Think of App.tsx as the "Brain" or "Conductor" of SpriteAnvil.
+ * Think of `App.tsx` as the **Brain** or **Conductor** of SpriteAnvil.
+ * It holds the "Source of Truth" for your artwork and tells all other parts
+ * (the Canvas, the Timeline, the Tools) what to show and do.
  *
- * ## VISUAL FLOW (Mermaid)
+ * ### 🟢 Data Flow Legend:
+ * 1. **User Action**: You click the canvas or pick a tool.
+ * 2. **State Update**: `App.tsx` updates a variable (like `tool` or `pixels`).
+ * 3. **Re-render**: React sees the change and updates the screen.
+ * 4. **Persistence**: The "Conductor" saves the changes to your browser or the Cloud (Supabase).
+ *
+ * ### 🗺️ Application Map (Mermaid)
+ * This diagram shows how data flows through the different components of the app.
+ *
  * ```mermaid
  * graph TD
- *   A[App.tsx] --> B[DockLayout]
- *   B --> C[CanvasStage]
- *   B --> D[ToolRail]
- *   B --> E[RightPanel]
- *   E --> F[LayerPanel]
- *   E --> G[PalettePanel]
+ *   subgraph UI_Layer [User Interface]
+ *     TP[Topbar] -- "Save/Export" --> App
+ *     TR[ToolRail] -- "Select Tool" --> App
+ *     CS[CanvasStage] -- "Draw Events" --> App
+ *     TL[Timeline] -- "Select/Move Frame" --> App
+ *     RP[RightPanel] -- "Change Layers/Colors" --> App
+ *   end
  *
- *   D -- Picks Tool --> A
- *   C -- Pointer Event --> A
- *   A -- Algorithm --> H[Pixel Buffer]
- *   H -- Composites --> C
- *   A -- Persistence --> I[Supabase]
+ *   subgraph Logic_Layer [The Conductor: App.tsx]
+ *     App{App.tsx}
+ *     H[HistoryStack] -- "Undo/Redo" --> App
+ *     K[Keyboard] -- "Shortcuts" --> App
+ *   end
+ *
+ *   subgraph Data_Layer [State & Storage]
+ *     App -- "Update Pixels" --> PM[ProjectSnapshot]
+ *     PM -- "Auto-save" --> LS[Local Storage]
+ *     PM -- "Sync" --> SB[Supabase Cloud]
+ *   end
+ *
+ *   App -- "Drive UI" --> UI_Layer
+ * ```
+ *
+ * ### 🧠 State Management (Mermaid)
+ * How we handle pixels and layers across different frames.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   P[Project] --> F1[Frame 1]
+ *   P --> F2[Frame 2]
+ *   F1 --> L1[Layer 1]
+ *   F1 --> L2[Layer 2]
+ *   L1 -- "Uint8ClampedArray" --> B[Pixel Buffer]
+ *   B -- "Algorithm" --> C[Composite Image]
+ *   C -- "Render" --> Canvas
  * ```
  */
 import DockLayout from "./ui/DockLayout";
@@ -135,22 +168,38 @@ type ConfirmDialog = {
 };
 
 export default function App() {
-  // ORIGIN: New Project Dialog. USAGE: Used to initialize buffers and scale UI. PURPOSE: The "Paper Size" of the art.
+  // --- 🎨 CANVAS & TOOLS ---
+  // ORIGIN: New Project Dialog or Default. 
+  // USAGE: Defines the width/height of the drawing area.
+  // PURPOSE: The "Paper Size" of your art.
   const [canvasSpec, setCanvasSpec] = useState<CanvasSpec>(() => ({
     width: 64,
     height: 64,
   }));
-  // ORIGIN: ToolRail 클릭. USAGE: Switches brush math (Pen vs Eraser). PURPOSE: Current active tool.
+
+  // ORIGIN: ToolRail clicks.
+  // USAGE: Determines what happens when you click on the canvas (Draw, Erase, Fill).
+  // PURPOSE: Tracks which tool you are currently holding.
   const [tool, setTool] = useState<ToolId>("pen");
 
+  // ORIGIN: Internal.
+  // USAGE: Shows a helper screen with all the buttons you can press on your keyboard.
   const [showShortcutOverlay, setShowShortcutOverlay] = useState(false);
-  // ORIGIN: CanvasStage Mouse Move. USAGE: Passed to StatusBar. PURPOSE: Shows current pixel coordinates.
+
+  // ORIGIN: Mouse movement on the CanvasStage.
+  // USAGE: Displayed in the bottom Status Bar.
+  // PURPOSE: Shows exactly which pixel (X, Y) your mouse is over.
   const [cursorPosition, setCursorPosition] = useState<{
     x: number;
     y: number;
   } | null>(null);
 
+  // --- 🎞️ ANIMATION & FRAMES ---
+  // Frames are like pages in a flipbook.
   const initialFrameId = useMemo(() => crypto.randomUUID(), []);
+
+  // WHAT: Creates a clear, transparent sheet of pixels.
+  // WHY: To start a new layer or frame from scratch.
   const createEmptyPixels = () =>
     createBuffer(canvasSpec.width, canvasSpec.height, {
       r: 0,
@@ -158,11 +207,16 @@ export default function App() {
       b: 0,
       a: 0,
     });
+
+  // USAGE: The default "Spin Center" for rotating or mirroring your art.
   const defaultPivot = useMemo(
     () => ({ x: Math.floor(canvasSpec.width / 2), y: canvasSpec.height - 1 }),
     [canvasSpec.width, canvasSpec.height],
   );
 
+  // ORIGIN: Project initialization or loading.
+  // USAGE: An array of Frame objects. Each frame has timing and pivot info.
+  // PURPOSE: The entire flipbook of your animation.
   const [frames, setFrames] = useState<Frame[]>(() => [
     {
       id: initialFrameId,
@@ -172,28 +226,45 @@ export default function App() {
     },
   ]);
 
+  // ORIGIN: Timeline clicks.
+  // USAGE: Tells the renderer which frame to show on the main stage.
+  // PURPOSE: Tracks which page of the flipbook we are currently looking at.
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
+
+  // USAGE: For bulk actions like "Delete selected frames" or "Move selected frames".
   const [selectedFrameIndices, setSelectedFrameIndices] = useState<Set<number>>(
     new Set([0]),
   );
+
+  // --- ✨ SELECTION & CLIPBOARD ---
+  // USAGE: Mask that says "only draw here".
+  // PURPOSE: Tracks the "Dancing Ants" marquee area.
   const [selection, setSelection] = useState<Uint8Array | null>(null);
-  /* State removed: floatingBuffer, isTransforming */
+
+  // USAGE: Stores copied pixels so you can paste them later.
   const clipboardRef = useRef<ClipboardData | null>(null);
   const paletteImportRef = useRef<HTMLInputElement | null>(null);
 
+  // --- ▶️ PLAYBACK ---
+  // USAGE: Toggles the animation loop on/off.
   const [isPlaying, setIsPlaying] = useState(false);
   const playbackTimerRef = useRef<number | null>(null);
 
+  // --- 🖼️ UI VISIBILITY ---
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showTopbarMenu, setShowTopbarMenu] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
 
+  // --- 🏷️ TAGS & COLLABORATION ---
+  // Tags are named sections of the timeline (e.g., "Run", "Jump").
   const [animationTags, setAnimationTags] = useState<AnimationTag[]>([]);
   const [activeAnimationTagId, setActiveAnimationTagId] = useState<
     string | null
   >(null);
   const [loopTagOnly, setLoopTagOnly] = useState(false);
+
+  // USAGE: Tracks where other people's mice are in Multi-player mode.
   const [remoteCursors, setRemoteCursors] = useState<
     Record<string, { x: number; y: number; color: string }>
   >({});
@@ -201,9 +272,12 @@ export default function App() {
     Array<{ id: string; color: string }>
   >([]);
 
+  // --- ⏪ HISTORY (UNDO/REDO) ---
+  // USAGE: A stack of "Snapshots" from previous actions.
   const historyRef = useRef<HistoryStack>(new HistoryStack());
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+
   /* State removed: transformBeforeRef */
 
   const currentFrame = frames[currentFrameIndex];
@@ -232,6 +306,11 @@ export default function App() {
   // Note: loadLocalProjects, saveLocalProjects, encodePixels, decodePixels,
   // serializeSnapshot, and deserializeSnapshot are now imported from useProjectPersistence
 
+  // --- 🛠️ PIXEL UTILITIES ---
+
+  // WHAT: Finds the differences between two pixel buffers.
+  // WHY: To send only the *changed* pixels over the network, making collaboration fast.
+  // HOW: It loops through every pixel and records any that are different.
   function buildPixelPatch(
     before: Uint8ClampedArray,
     after: Uint8ClampedArray,
@@ -250,6 +329,8 @@ export default function App() {
     return changes;
   }
 
+  // WHAT: Applies a "Patch" (set of changes) to a pixel buffer.
+  // WHY: To update your drawing based on what a collaborator did.
   function applyPixelPatch(
     layerPixels: Uint8ClampedArray,
     patch: number[],
@@ -267,12 +348,20 @@ export default function App() {
 
 
 
+
+  // --- 📚 LAYER DATA ---
+  // USAGE: A map where the Key is the Frame ID and the Value is an array of Layers.
+  // PURPOSE: Stores all layers for every frame in the project.
   const [frameLayers, setFrameLayers] = useState<Record<string, LayerData[]>>(
     {},
   );
+
+  // USAGE: A map where Key is Frame ID and Value is the ID of the currently selected layer.
+  // PURPOSE: Remembers which layer you were working on for each frame.
   const [frameActiveLayerIds, setFrameActiveLayerIds] = useState<
     Record<string, string>
   >({});
+
 
   useEffect(() => {
     const baseLayer = createLayer(canvasSpec.width, canvasSpec.height, "Layer 1");

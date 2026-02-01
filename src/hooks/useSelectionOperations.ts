@@ -1,3 +1,18 @@
+/**
+ * src/hooks/useSelectionOperations.ts
+ * -----------------------------------------------------------------------------
+ * ## THE SELECTION TOOLKIT (Noob Guide)
+ * 
+ * Think of a "Selection" as a **Stencil**. 
+ * When you select an area, you're saying "only allow changes inside this shape".
+ * 
+ * This hook handles:
+ * - **Selecting All**: Covering the whole canvas with your stencil.
+ * - **Deselecting**: Throwing the stencil away.
+ * - **Inverting**: Flipping the stencil so everything *except* what you picked is now picked.
+ * - **Growing/Shrinking**: Making the stencil slightly bigger or smaller (Expand/Contract).
+ * - **Auto-Detect**: Finding a solid shape and wrapping the stencil around it.
+ */
 import { useCallback } from "react";
 import { CanvasSpec } from "../types";
 import { invertSelection, selectConnectedOpaque } from "../editor/selection";
@@ -33,6 +48,8 @@ export function useSelectionOperations({
     setSelection(next);
   }, [floatingBuffer, onCommitTransform, setSelection]);
 
+  // WHAT: Selects every single pixel on the canvas.
+  // WHY: Usually done before inverting or if you want to apply a color adjust to the whole image.
   const handleSelectAll = useCallback(() => {
     const sel = new Uint8Array(canvasSpec.width * canvasSpec.height);
     sel.fill(1);
@@ -43,6 +60,8 @@ export function useSelectionOperations({
     changeSelection(null);
   }, [changeSelection]);
 
+  // WHAT: Flips the selection stencil. 
+  // WHY: If you want to delete everything *around* your character, you select the character and then "Invert".
   const handleInvertSelection = useCallback(() => {
     if (!selection) {
       handleSelectAll();
@@ -53,6 +72,9 @@ export function useSelectionOperations({
     changeSelection(inverted);
   }, [selection, handleSelectAll, changeSelection]);
 
+  // WHAT: Makes the selection 1 pixel wider in all directions.
+  // WHY: To give your selection a bit of "breathing room" or an outline.
+  // HOW: It checks every selected pixel and also selects its neighbors.
   const handleGrowSelection = useCallback(() => {
     if (!selection) return;
     const width = canvasSpec.width;
@@ -102,6 +124,9 @@ export function useSelectionOperations({
     changeSelection(shrunk);
   }, [selection, canvasSpec.width, canvasSpec.height, changeSelection]);
 
+  // WHAT: Automatically selects an entire object (group of pixels).
+  // WHY: To quickly pick up a character or item without drawing a box around it.
+  // HOW: It uses a "Flood Fill" logic starting from your mouse cursor.
   const handleDetectObjectSelection = useCallback(() => {
     if (!cursorPosition) {
       setProjectError("Move the cursor over a sprite pixel to detect an object.");

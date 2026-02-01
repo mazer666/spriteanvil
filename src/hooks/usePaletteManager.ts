@@ -1,23 +1,33 @@
 /**
  * src/hooks/usePaletteManager.ts
  * -----------------------------------------------------------------------------
- * ## PALETTE MANAGER HOOK
+ * ## THE PALETTE MANAGER (Noob Guide)
  * 
- * This hook encapsulates palette management logic including:
- * - Palette CRUD (create, delete)
- * - Color operations (add, remove)
- * - Import/Export functionality
- * - Palette generation (extract from image, color ramp)
- * - Color swapping across the project
+ * Think of this hook as your **Box of Crayons**.
+ * Designing a pixel art game usually requires a limited set of colors to look consistent.
  * 
- * WHY THIS EXISTS:
- * Extracted from App.tsx to reduce complexity and improve testability.
- * Part of the Phase 16 refactoring initiative.
+ * This hook handles:
+ * - **Creating/Deleting** crayon boxes (Palettes).
+ * - **Adding/Removing** specific colors.
+ * - **Importing/Exporting**: Getting palettes from professional artists or saving your own.
+ * - **Extraction**: Automatically finding all colors used in your drawing.
+ * - **Color Swapping**: Changing "Every Red pixel to Blue" across the whole project.
  * 
- * USED BY:
- * - src/App.tsx
+ * ### 🎨 Color Swapping Flow (Mermaid)
+ *
+ * ```mermaid
+ * graph LR
+ *   A[Start Swap] --> B[Pick Old Color]
+ *   B --> C[Pick New Color]
+ *   C --> D[Loop Every Frame]
+ *   D --> E[Loop Every Layer]
+ *   E --> F[Check Every Pixel]
+ *   F -- Match Found --> G[Update Pixel]
+ *   F -- No Match --> H[Skip]
+ *   G --> I[Done]
+ *   H --> I
+ * ```
  */
-
 import { useCallback } from "react";
 import { LayerData, CanvasSpec, UiSettings } from "../types";
 import { PaletteData } from "../lib/projects/snapshot";
@@ -137,6 +147,8 @@ export function usePaletteManager(
     [palettes, activePaletteId]
   );
 
+  // WHAT: Finds every unique color currently visible on your canvas.
+  // WHY: To quickly build a palette based on what you've already drawn.
   const handleExtractPaletteFromImage = useCallback(() => {
     const colors = extractPaletteFromPixels(
       compositeBuffer,
@@ -208,6 +220,9 @@ export function usePaletteManager(
     [setPalettes]
   );
 
+  // WHAT: Replaces all instances of one color with another across ALL layers and frames.
+  // WHY: If you decide a character's red shirt should actually be blue, you can change it everywhere at once.
+  // HOW: It scans every single pixel in the entire project and swaps the RGB values.
   const handleSwapColors = useCallback(
     (fromColor: string, toColor: string) => {
       if (isActiveLayerLocked) return;

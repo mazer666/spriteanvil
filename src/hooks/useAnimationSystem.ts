@@ -1,22 +1,29 @@
 /**
  * src/hooks/useAnimationSystem.ts
  * -----------------------------------------------------------------------------
- * ## ANIMATION SYSTEM HOOK
+ * ## THE ANIMATION SYSTEM (Noob Guide)
  * 
- * This hook encapsulates all animation/timeline logic including:
- * - Frame CRUD operations (insert, duplicate, delete, reorder)
- * - Playback control (play/pause, frame advancement)
- * - Multi-frame selection
- * - Frame duration management
+ * Think of this hook as the **Flipbook Engine**.
+ * An animation is just a series of pictures (Frames) shown one after another quickly.
  * 
- * WHY THIS EXISTS:
- * Extracted from App.tsx to reduce complexity and improve testability.
- * Part of the Phase 16 refactoring initiative.
+ * This hook handles:
+ * - **Frame CRUD**: Create, Duplicate, Delete, or Move pages in your flipbook.
+ * - **Playback**: Running through the pages (Play/Pause).
+ * - **Timing**: Deciding how long each page stays on screen.
  * 
- * USED BY:
- * - src/App.tsx
+ * ### 🔄 Playback Loop (Mermaid)
+ *
+ * ```mermaid
+ * graph TD
+ *   A[Start Playback] --> B[Show Current Frame]
+ *   B --> C{Wait Duration}
+ *   C --> D[Go to Next Frame]
+ *   D --> E{Is at End?}
+ *   E -- Yes --> F[Reset to Start]
+ *   E -- No --> B
+ *   F --> B
+ * ```
  */
-
 import { useCallback, useEffect, useRef } from "react";
 import { Frame, LayerData, CanvasSpec, BlendMode } from "../types";
 import { cloneBuffer, createBuffer } from "../editor/pixels";
@@ -139,7 +146,8 @@ export function useAnimationSystem(
   const isPlayingRef = useRef(isPlaying); // Track playing state for timer callback
   const currentFrame = frames[currentFrameIndex];
   
-  // Use refs for values needed in the timer to avoid stale closures and re-triggering effects
+  // USAGE: These "Refs" are like post-it notes that the playback timer can read
+  // without needing to restart the whole component. This keeps the animation smooth.
   const framesRef = useRef(frames);
   const activeTagRef = useRef(activeTag);
   const loopTagOnlyRef = useRef(loopTagOnly);
@@ -166,7 +174,9 @@ export function useAnimationSystem(
   // PLAYBACK EFFECT
   // ============================================================================
   
-  // Track current frame index in a ref for the timer to use
+  // WHAT: The actual engine that flips the pages.
+  // WHY: To create the illusion of movement.
+  // HOW: It uses `setTimeout` to wait, then updates the frame index and schedules the next flip.
   const currentFrameIndexRef = useRef(currentFrameIndex);
   useEffect(() => {
     currentFrameIndexRef.current = currentFrameIndex;
@@ -228,6 +238,8 @@ export function useAnimationSystem(
   // FRAME OPERATIONS
   // ============================================================================
 
+  // WHAT: Adds a blank new frame after the current one.
+  // WHY: To extend your animation with a new blank canvas.
   const handleInsertFrame = useCallback(() => {
     const newLayer = createLayer("Layer 1", canvasSpec.width, canvasSpec.height);
     const composite = compositeLayers([newLayer], canvasSpec.width, canvasSpec.height);
@@ -248,6 +260,8 @@ export function useAnimationSystem(
     setCurrentFrameIndex(currentFrameIndex + 1);
   }, [canvasSpec, currentFrameIndex, defaultPivot, setFrames, setFrameLayers, setFrameActiveLayerIds, setCurrentFrameIndex]);
 
+  // WHAT: Copies the current frame and inserts it right after.
+  // WHY: To continue a movement from the previous drawing without redrawing everything.
   const handleDuplicateFrame = useCallback(() => {
     if (frames.length === 0) return;
     const current = frames[currentFrameIndex];
@@ -285,6 +299,8 @@ export function useAnimationSystem(
     setCurrentFrameIndex(currentFrameIndex + 1);
   }, [frames, currentFrameIndex, frameLayers, setFrames, setFrameLayers, setFrameActiveLayerIds, setCurrentFrameIndex]);
 
+  // WHAT: Changes the order of frames in the timeline.
+  // WHY: To rearrange your animation sequence.
   const handleReorderFrames = useCallback((fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return;
     if (fromIndex < 0 || fromIndex >= frames.length) return;
@@ -332,6 +348,9 @@ export function useAnimationSystem(
     }
   }, [currentFrameIndex, setSelectedFrameIndices, setCurrentFrameIndex]);
 
+  // WHAT: Removes the selected frame(s).
+  // WHY: To get rid of mistakes or unwanted parts of the animation.
+  // HOW: It asks "Are you sure?" before deleting permanently.
   const handleDeleteFrame = useCallback(() => {
     let indicesToDelete = Array.from(selectedFrameIndices);
     if (indicesToDelete.length === 0) indicesToDelete = [currentFrameIndex];
