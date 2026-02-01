@@ -2,17 +2,17 @@
  * src/ui/RightPanel.tsx
  * -----------------------------------------------------------------------------
  * ## RIGHT PANEL (Noob Guide)
- * 
+ *
  * This is the "Stack of Drawers" on the right side of the screen.
- * 
- * 1. ACCORDIONS: Each section (Layers, Colors, etc.) can be opened 
+ *
+ * 1. ACCORDIONS: Each section (Layers, Colors, etc.) can be opened
  *    or closed by clicking its header.
- * 2. REORDERING: See those ☰ icons? You can grab them and drag the 
+ * 2. REORDERING: See those ☰ icons? You can grab them and drag the
  *    sections to change which "Drawer" is on top.
- * 3. DYNAMIC: The panel changes what it shows based on which tool 
+ * 3. DYNAMIC: The panel changes what it shows based on which tool
  *    you have selected.
  */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { UiSettings, ToolId, LayerData, BlendMode, CanvasSpec } from "../types";
 import LayerPanel from "./LayerPanel";
 import PalettePanel from "./PalettePanel";
@@ -32,8 +32,16 @@ type Props = {
   previewBuffer?: Uint8ClampedArray;
   selectionMask?: Uint8Array | null;
   layerPixels?: Uint8ClampedArray | null;
-  onInpaint?: (payload: { prompt: string; denoiseStrength: number; promptInfluence: number }) => Promise<string>;
-  onImageToImage?: (payload: { prompt: string; denoiseStrength: number; promptInfluence: number }) => Promise<string>;
+  onInpaint?: (payload: {
+    prompt: string;
+    denoiseStrength: number;
+    promptInfluence: number;
+  }) => Promise<string>;
+  onImageToImage?: (payload: {
+    prompt: string;
+    denoiseStrength: number;
+    promptInfluence: number;
+  }) => Promise<string>;
   collapsed?: boolean;
 
   layers?: LayerData[];
@@ -85,7 +93,11 @@ type Props = {
     onAdjustHue: (hueShift: number) => void;
     onAdjustSaturation: (saturationDelta: number) => void;
     onAdjustBrightness: (brightnessDelta: number) => void;
-    onPreviewAdjust: (preview: { hueShift: number; saturationDelta: number; brightnessDelta: number }) => void;
+    onPreviewAdjust: (preview: {
+      hueShift: number;
+      saturationDelta: number;
+      brightnessDelta: number;
+    }) => void;
     onClearPreview: () => void;
     onInvert: () => void;
     onDesaturate: () => void;
@@ -104,7 +116,15 @@ type Props = {
   };
 };
 
-const DEFAULT_SECTION_ORDER = ["tools", "layers", "colors", "adjustments", "transform", "selection", "ai"];
+const DEFAULT_SECTION_ORDER = [
+  "tools",
+  "layers",
+  "colors",
+  "adjustments",
+  "transform",
+  "selection",
+  "ai",
+];
 
 export default function RightPanel({
   tool,
@@ -132,9 +152,12 @@ export default function RightPanel({
   const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
     const initial = settings.layout?.rightPanelOrder ?? DEFAULT_SECTION_ORDER;
     const present = new Set(initial);
-    const missing = DEFAULT_SECTION_ORDER.filter(id => !present.has(id));
+    const missing = DEFAULT_SECTION_ORDER.filter((id) => !present.has(id));
     // Remove unknown keys, keep existing order, append new keys
-    const normalized = [...initial.filter(id => DEFAULT_SECTION_ORDER.includes(id)), ...missing];
+    const normalized = [
+      ...initial.filter((id) => DEFAULT_SECTION_ORDER.includes(id)),
+      ...missing,
+    ];
     return normalized;
   });
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -148,27 +171,38 @@ export default function RightPanel({
   });
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
+  // Ref to access valid settings inside effect without triggering it on every setting change (color, etc)
+  const settingsRef = useRef(settings);
   useEffect(() => {
-    const normalized = sectionOrder.filter((id) => DEFAULT_SECTION_ORDER.includes(id));
-    if (
-      JSON.stringify(normalized) !==
-      JSON.stringify(settings.layout?.rightPanelOrder ?? DEFAULT_SECTION_ORDER)
-    ) {
+    settingsRef.current = settings;
+  }, [settings]);
+
+  useEffect(() => {
+    const normalized = sectionOrder.filter((id) =>
+      DEFAULT_SECTION_ORDER.includes(id),
+    );
+    const currentOrder =
+      settingsRef.current.layout?.rightPanelOrder ?? DEFAULT_SECTION_ORDER;
+
+    if (JSON.stringify(normalized) !== JSON.stringify(currentOrder)) {
       onChangeSettings({
-        ...settings,
+        ...settingsRef.current,
         layout: {
-          ...settings.layout,
+          ...settingsRef.current.layout,
           rightPanelOrder: normalized,
         },
       });
     }
-  }, [onChangeSettings, sectionOrder, settings]);
+  }, [onChangeSettings, sectionOrder, settings.layout?.rightPanelOrder]);
 
   useEffect(() => {
     const initial = settings.layout?.rightPanelOrder ?? DEFAULT_SECTION_ORDER;
     const present = new Set(initial);
-    const missing = DEFAULT_SECTION_ORDER.filter(id => !present.has(id));
-    const normalized = [...initial.filter(id => DEFAULT_SECTION_ORDER.includes(id)), ...missing];
+    const missing = DEFAULT_SECTION_ORDER.filter((id) => !present.has(id));
+    const normalized = [
+      ...initial.filter((id) => DEFAULT_SECTION_ORDER.includes(id)),
+      ...missing,
+    ];
     setSectionOrder(normalized);
   }, [settings.layout?.rightPanelOrder]);
 
@@ -182,7 +216,11 @@ export default function RightPanel({
         title: "Tools",
         content: (
           <>
-            <ToolOptionsPanel tool={tool} settings={settings} onChangeSettings={onChangeSettings} />
+            <ToolOptionsPanel
+              tool={tool}
+              settings={settings}
+              onChangeSettings={onChangeSettings}
+            />
             {canvasSpec && previewBuffer && (
               <MipmapPreview canvasSpec={canvasSpec} pixels={previewBuffer} />
             )}
@@ -193,7 +231,11 @@ export default function RightPanel({
         title: "Layers",
         content:
           layers && activeLayerId && onLayerOperations ? (
-            <LayerPanel layers={layers} activeLayerId={activeLayerId} {...onLayerOperations} />
+            <LayerPanel
+              layers={layers}
+              activeLayerId={activeLayerId}
+              {...onLayerOperations}
+            />
           ) : null,
       },
       colors: {
@@ -215,16 +257,23 @@ export default function RightPanel({
       },
       adjustments: {
         title: "Color Adjustments",
-        content: onColorAdjustOperations ? <ColorAdjustPanel {...onColorAdjustOperations} /> : null,
+        content: onColorAdjustOperations ? (
+          <ColorAdjustPanel {...onColorAdjustOperations} />
+        ) : null,
       },
       transform: {
         title: "Transform",
-        content: onTransformOperations ? <TransformPanel {...onTransformOperations} /> : null,
+        content: onTransformOperations ? (
+          <TransformPanel {...onTransformOperations} />
+        ) : null,
       },
       selection: {
         title: "Selection",
         content: onSelectionOperations ? (
-          <SelectionPanel hasSelection={!!hasSelection} {...onSelectionOperations} />
+          <SelectionPanel
+            hasSelection={!!hasSelection}
+            {...onSelectionOperations}
+          />
         ) : null,
       },
       ai: {
@@ -261,7 +310,7 @@ export default function RightPanel({
       settings,
       tool,
       layerPixels,
-    ]
+    ],
   );
 
   const handleDragStart = (id: string) => (e: React.DragEvent) => {
@@ -305,7 +354,7 @@ export default function RightPanel({
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop(sectionId)}
             >
-              <div 
+              <div
                 className="accordion-section__header"
                 draggable
                 onDragStart={handleDragStart(sectionId)}
@@ -316,18 +365,25 @@ export default function RightPanel({
                   onClick={() => toggleSection(sectionId)}
                   aria-expanded={isOpen}
                   type="button"
-                  onPointerDown={(e) => e.stopPropagation()} 
+                  onPointerDown={(e) => e.stopPropagation()}
                 >
                   <span>{section.title}</span>
-                  <span className="accordion-section__icon">{isOpen ? "−" : "+"}</span>
+                  <span className="accordion-section__icon">
+                    {isOpen ? "−" : "+"}
+                  </span>
                 </button>
                 <div className="accordion-section__tools">
-                  <span className="accordion-section__drag" title="Drag to reorder">
+                  <span
+                    className="accordion-section__drag"
+                    title="Drag to reorder"
+                  >
                     ☰
                   </span>
                 </div>
               </div>
-              {isOpen && <div className="accordion-section__body">{section.content}</div>}
+              {isOpen && (
+                <div className="accordion-section__body">{section.content}</div>
+              )}
             </section>
           );
         })}
