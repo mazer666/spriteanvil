@@ -21,6 +21,19 @@
  * ```
  */
 import { BlendMode, LayerData } from "../types";
+import { createBuffer } from "./pixels";
+
+export function createLayer(width: number, height: number, name: string, pixels?: Uint8ClampedArray): LayerData & { pixels: Uint8ClampedArray } {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    opacity: 1,
+    blend_mode: "normal",
+    is_visible: true,
+    is_locked: false,
+    pixels: pixels ?? createBuffer(width, height, { r: 0, g: 0, b: 0, a: 0 }),
+  };
+}
 
 type LayerCompositeInput = Pick<LayerData, "opacity" | "blend_mode" | "is_visible" | "pixels">;
 

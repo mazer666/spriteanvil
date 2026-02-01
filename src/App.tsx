@@ -56,7 +56,7 @@ import {
   pasteClipboard,
   ClipboardData,
 } from "./editor/clipboard";
-import { compositeLayers, mergeDown, flattenImage } from "./editor/layers";
+import { compositeLayers, mergeDown, flattenImage, createLayer } from "./editor/layers";
 import { PaletteData, ProjectSnapshot } from "./lib/projects/snapshot";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import {
@@ -76,6 +76,7 @@ import { usePaletteManager } from "./hooks/usePaletteManager";
 import { useTransformOperations } from "./hooks/useTransformOperations";
 import { useColorAdjustments } from "./hooks/useColorAdjustments";
 import { useSelectionOperations } from "./hooks/useSelectionOperations";
+import { useProjectManagement } from "./hooks/useProjectManagement";
 import { AnimationTag } from "./lib/supabase/animation_tags";
 import {
   flipHorizontal,
@@ -141,14 +142,7 @@ export default function App() {
   }));
   // ORIGIN: ToolRail 클릭. USAGE: Switches brush math (Pen vs Eraser). PURPOSE: Current active tool.
   const [tool, setTool] = useState<ToolId>("pen");
-  const [projectView, setProjectView] = useState<"dashboard" | "editor">(
-    "dashboard",
-  );
-  // ORIGIN: Supabase / Dashboard. USAGE: Loads all frames and layers. PURPOSE: The current active project.
-  const [activeProject, setActiveProject] = useState<Project | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [projectLoading, setProjectLoading] = useState(false);
-  const [projectError, setProjectError] = useState<string | null>(null);
+
   const [showShortcutOverlay, setShowShortcutOverlay] = useState(false);
   // ORIGIN: CanvasStage Mouse Move. USAGE: Passed to StatusBar. PURPOSE: Shows current pixel coordinates.
   const [cursorPosition, setCursorPosition] = useState<{
@@ -194,10 +188,7 @@ export default function App() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showTopbarMenu, setShowTopbarMenu] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
-  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(
-    null,
-  );
-  const [confirmBusy, setConfirmBusy] = useState(false);
+
   const [animationTags, setAnimationTags] = useState<AnimationTag[]>([]);
   const [activeAnimationTagId, setActiveAnimationTagId] = useState<
     string | null
@@ -274,20 +265,7 @@ export default function App() {
     return next;
   }
 
-  function createLayer(
-    name: string,
-    pixels?: Uint8ClampedArray,
-  ): LayerData & { pixels: Uint8ClampedArray } {
-    return {
-      id: crypto.randomUUID(),
-      name,
-      opacity: 1,
-      blend_mode: "normal",
-      is_visible: true,
-      is_locked: false,
-      pixels: pixels ?? createEmptyPixels(),
-    };
-  }
+
 
   const [frameLayers, setFrameLayers] = useState<Record<string, LayerData[]>>(
     {},
@@ -297,7 +275,7 @@ export default function App() {
   >({});
 
   useEffect(() => {
-    const baseLayer = createLayer("Layer 1");
+    const baseLayer = createLayer(canvasSpec.width, canvasSpec.height, "Layer 1");
     setFrameLayers({ [initialFrameId]: [baseLayer] });
     setFrameActiveLayerIds({ [initialFrameId]: baseLayer.id });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -415,6 +393,38 @@ export default function App() {
     brushOpacity: 1,
     selectionMode: "replace",
   }));
+
+  const projectManager = useProjectManagement({
+    onApplySnapshot: applySnapshot,
+    onBuildSnapshot: buildSnapshot,
+    palettes,
+    activePaletteId,
+    recentColors,
+    settings,
+  });
+
+  const {
+      projects,
+      activeProject,
+      setActiveProject,
+      projectView,
+      setProjectView,
+      projectLoading,
+      projectError,
+      setProjectError,
+      confirmDialog,
+      setConfirmDialog,
+      confirmBusy,
+      setConfirmBusy,
+      refreshProjects,
+      selectProject: handleSelectProject,
+      createProject: handleCreateProject,
+      deleteProject: handleDeleteProject,
+      renameProject: handleRenameProject,
+      duplicateProject: handleDuplicateProject,
+      reloadProject: handleReloadProject,
+      autoSave: handleAutoSave,
+  } = projectManager;
 
   const zoomLabel = useMemo(
     () => `${Math.round(settings.zoom * 100)}%`,
@@ -583,28 +593,7 @@ export default function App() {
     [],
   );
 
-  async function refreshProjects() {
-    setProjectLoading(true);
-    setProjectError(null);
-    try {
-      if (!hasSupabaseConfig) {
-        setProjects(loadLocalProjects());
-        return;
-      }
-      const list = await getProjects();
-      setProjects(list);
-    } catch (error) {
-      setProjectError(
-        error instanceof Error ? error.message : "Failed to load projects.",
-      );
-    } finally {
-      setProjectLoading(false);
-    }
-  }
 
-  useEffect(() => {
-    refreshProjects();
-  }, []);
 
   useEffect(() => {
     if (!hasSupabaseConfig || !activeProject) {
@@ -812,7 +801,7 @@ export default function App() {
   useEffect(() => {
     setFrameLayers((prev) => {
       if (prev[currentFrame.id]) return prev;
-      const baseLayer = createLayer("Layer 1");
+      const baseLayer = createLayer(canvasSpec.width, canvasSpec.height, "Layer 1");
       setFrameActiveLayerIds((activePrev) => ({
         ...activePrev,
         [currentFrame.id]: baseLayer.id,
@@ -1115,237 +1104,7 @@ export default function App() {
     transformOperations.setFloatingBuffer(null);
   }
 
-  async function handleSelectProject(project: Project) {
-    setProjectLoading(true);
-    setProjectError(null);
-    try {
-      const cached = await getCachedProjectSnapshot(project.id);
-      if (cached) {
-        applySnapshot(cached);
-      } else if (hasSupabaseConfig) {
-        const cloudSnapshot = await loadProjectSnapshot(project.id);
-        if (cloudSnapshot) {
-          const snapshot = deserializeSnapshot(cloudSnapshot);
-          applySnapshot(snapshot);
-          await cacheProjectSnapshot(project.id, snapshot);
-        } else {
-          const fallbackSnapshot: ProjectSnapshot = {
-            version: 1,
-            canvas: { width: 64, height: 64 },
-            frames: [
-              {
-                id: crypto.randomUUID(),
-                durationMs: 100,
-                pivot: { x: 32, y: 63 },
-                layers: [
-                  createLayer(
-                    "Layer 1",
-                    createBuffer(64, 64, { r: 0, g: 0, b: 0, a: 0 }),
-                  ),
-                ],
-              },
-            ],
-            currentFrameIndex: 0,
-            activeLayerIds: {},
-            palettes,
-            activePaletteId,
-            recentColors,
-            settings,
-          };
-          const frameId = fallbackSnapshot.frames[0].id;
-          fallbackSnapshot.activeLayerIds[frameId] =
-            fallbackSnapshot.frames[0].layers[0].id;
-          applySnapshot(fallbackSnapshot);
-        }
-      } else {
-        const fallbackSnapshot: ProjectSnapshot = {
-          version: 1,
-          canvas: { width: 64, height: 64 },
-          frames: [
-            {
-              id: crypto.randomUUID(),
-              durationMs: 100,
-              pivot: { x: 32, y: 63 },
-              layers: [
-                createLayer(
-                  "Layer 1",
-                  createBuffer(64, 64, { r: 0, g: 0, b: 0, a: 0 }),
-                ),
-              ],
-            },
-          ],
-          currentFrameIndex: 0,
-          activeLayerIds: {},
-          palettes,
-          activePaletteId,
-          recentColors,
-          settings,
-        };
-        const frameId = fallbackSnapshot.frames[0].id;
-        fallbackSnapshot.activeLayerIds[frameId] =
-          fallbackSnapshot.frames[0].layers[0].id;
-        applySnapshot(fallbackSnapshot);
-      }
-      setActiveProject(project);
-      setProjectView("editor");
-      localStorage.setItem("spriteanvil:lastProjectId", project.id);
-    } catch (error) {
-      setProjectError(
-        error instanceof Error ? error.message : "Failed to load project.",
-      );
-    } finally {
-      setProjectLoading(false);
-    }
-  }
 
-  async function handleCreateProject(request: NewProjectRequest) {
-    setProjectLoading(true);
-    setProjectError(null);
-    try {
-      const newSnapshot: ProjectSnapshot = {
-        version: 1,
-        canvas: { width: request.width, height: request.height },
-        frames: [
-          {
-            id: crypto.randomUUID(),
-            durationMs: 100,
-            pivot: { x: Math.floor(request.width / 2), y: request.height - 1 },
-            layers: [
-              createLayer(
-                "Layer 1",
-                createBuffer(request.width, request.height, {
-                  r: 0,
-                  g: 0,
-                  b: 0,
-                  a: 0,
-                }),
-              ),
-            ],
-          },
-        ],
-        currentFrameIndex: 0,
-        activeLayerIds: {},
-        palettes,
-        activePaletteId,
-        recentColors,
-        settings,
-      };
-      const activeLayerId = newSnapshot.frames[0].layers[0].id;
-      newSnapshot.activeLayerIds[newSnapshot.frames[0].id] = activeLayerId;
-
-      if (!hasSupabaseConfig) {
-        const now = new Date().toISOString();
-        const localProject: Project = {
-          id: crypto.randomUUID(),
-          user_id: "local",
-          name: request.name,
-          description: null,
-          thumbnail_url: null,
-          metadata: null,
-          created_at: now,
-          updated_at: now,
-          is_archived: false,
-        };
-        const nextProjects = [localProject, ...loadLocalProjects()];
-        saveLocalProjects(nextProjects);
-        setProjects(nextProjects);
-        applySnapshot(newSnapshot);
-        await cacheProjectSnapshot(localProject.id, newSnapshot);
-        setActiveProject(localProject);
-        setProjectView("editor");
-        localStorage.setItem("spriteanvil:lastProjectId", localProject.id);
-        return;
-      }
-
-      const cloudPayload = serializeSnapshot(newSnapshot);
-      const created = await createProject({
-        name: request.name,
-        metadata: cloudPayload,
-      });
-
-      if (!created) throw new Error("Failed to create project.");
-
-      setProjects((prev) => [created, ...prev]);
-      applySnapshot(newSnapshot);
-      await cacheProjectSnapshot(created.id, newSnapshot);
-      setActiveProject(created);
-      setProjectView("editor");
-      localStorage.setItem("spriteanvil:lastProjectId", created.id);
-    } catch (error) {
-      setProjectError(
-        error instanceof Error ? error.message : "Failed to create project.",
-      );
-    } finally {
-      setProjectLoading(false);
-    }
-  }
-
-  const autoSaveStateRef = useRef({
-    buildSnapshot,
-    activeProject,
-    saveProjectSnapshot,
-    cacheProjectSnapshot,
-    serializeSnapshot,
-  });
-  autoSaveStateRef.current = {
-    buildSnapshot,
-    activeProject,
-    saveProjectSnapshot,
-    cacheProjectSnapshot,
-    serializeSnapshot,
-  };
-
-  const handleAutoSave = useCallback(async () => {
-    const currentProject = autoSaveStateRef.current.activeProject;
-    if (!currentProject) return;
-    const snapshot = autoSaveStateRef.current.buildSnapshot();
-    await autoSaveStateRef.current.cacheProjectSnapshot(
-      currentProject.id,
-      snapshot,
-    );
-    if (hasSupabaseConfig) {
-      const payload = autoSaveStateRef.current.serializeSnapshot(snapshot);
-      await autoSaveStateRef.current.saveProjectSnapshot(
-        currentProject.id,
-        payload,
-      );
-    }
-  }, []);
-
-  const handleReloadProject = useCallback(async () => {
-    if (!activeProject) return;
-    setProjectLoading(true);
-    setProjectError(null);
-    try {
-      if (hasSupabaseConfig) {
-        const cloudSnapshot = await loadProjectSnapshot(activeProject.id);
-        if (cloudSnapshot) {
-          const snapshot = deserializeSnapshot(cloudSnapshot);
-          applySnapshot(snapshot);
-          await cacheProjectSnapshot(activeProject.id, snapshot);
-        }
-      } else {
-        const cached = await getCachedProjectSnapshot(activeProject.id);
-        if (cached) {
-          applySnapshot(cached);
-        }
-      }
-    } catch (error) {
-      setProjectError(
-        error instanceof Error ? error.message : "Failed to reload project.",
-      );
-    } finally {
-      setProjectLoading(false);
-    }
-  }, [activeProject, applySnapshot]);
-
-  useEffect(() => {
-    if (!activeProject) return;
-    const id = window.setInterval(() => {
-      handleAutoSave();
-    }, 60000);
-    return () => window.clearInterval(id);
-  }, [activeProject, handleAutoSave]);
 
   function onStrokeEnd(before: Uint8ClampedArray, after: Uint8ClampedArray) {
     historyRef.current.commit(before);
@@ -1373,137 +1132,7 @@ export default function App() {
     }
   }
 
-  function handleDeleteProject(project: Project) {
-    setConfirmDialog({
-      title: "Delete Project",
-      message: `Are you sure you want to permanently delete "${project.name}"? This cannot be undone.`,
-      confirmLabel: "Delete Project",
-      onConfirm: async () => {
-        setConfirmBusy(true);
-        try {
-          if (hasSupabaseConfig) {
-            const ok = await deleteProject(project.id);
-            if (!ok) throw new Error("Failed to delete project.");
-          } else {
-            const nextProjects = loadLocalProjects().filter(
-              (p) => p.id !== project.id,
-            );
-            saveLocalProjects(nextProjects);
-          }
-          setProjects((prev) => prev.filter((p) => p.id !== project.id));
-          if (activeProject?.id === project.id) {
-            setActiveProject(null);
-            setProjectView("dashboard");
-          }
-        } catch (error) {
-          setProjectError(
-            error instanceof Error
-              ? error.message
-              : "Failed to delete project.",
-          );
-        } finally {
-          setConfirmBusy(false);
-          setConfirmDialog(null);
-        }
-      },
-    });
-  }
 
-  async function handleRenameProject(project: Project) {
-    const nextName = window.prompt("Rename project", project.name);
-    if (!nextName || !nextName.trim() || nextName.trim() === project.name)
-      return;
-    try {
-      if (hasSupabaseConfig) {
-        const updated = await updateProject(project.id, {
-          name: nextName.trim(),
-        });
-        if (!updated) throw new Error("Failed to rename project.");
-      } else {
-        const nextProjects = loadLocalProjects().map((p) =>
-          p.id === project.id
-            ? {
-                ...p,
-                name: nextName.trim(),
-                updated_at: new Date().toISOString(),
-              }
-            : p,
-        );
-        saveLocalProjects(nextProjects);
-      }
-      setProjects((prev) =>
-        prev.map((p) =>
-          p.id === project.id ? { ...p, name: nextName.trim() } : p,
-        ),
-      );
-      if (activeProject?.id === project.id) {
-        setActiveProject((prev) =>
-          prev ? { ...prev, name: nextName.trim() } : prev,
-        );
-      }
-    } catch (error) {
-      setProjectError(
-        error instanceof Error ? error.message : "Failed to rename project.",
-      );
-    }
-  }
-
-  async function handleDuplicateProject(project: Project) {
-    const nextName = window.prompt(
-      "Duplicate project as",
-      `${project.name} Copy`,
-    );
-    if (!nextName || !nextName.trim()) return;
-    setProjectLoading(true);
-    setProjectError(null);
-    try {
-      let snapshot: ProjectSnapshot | null = null;
-      const cached = await getCachedProjectSnapshot(project.id);
-      if (cached) {
-        snapshot = cached;
-      } else if (hasSupabaseConfig) {
-        const cloudSnapshot = await loadProjectSnapshot(project.id);
-        snapshot = cloudSnapshot ? deserializeSnapshot(cloudSnapshot) : null;
-      }
-
-      if (!hasSupabaseConfig) {
-        const now = new Date().toISOString();
-        const localProject: Project = {
-          id: crypto.randomUUID(),
-          user_id: "local",
-          name: nextName.trim(),
-          description: project.description,
-          thumbnail_url: project.thumbnail_url,
-          metadata: null,
-          created_at: now,
-          updated_at: now,
-          is_archived: false,
-        };
-        const nextProjects = [localProject, ...loadLocalProjects()];
-        saveLocalProjects(nextProjects);
-        setProjects(nextProjects);
-        if (snapshot) {
-          await cacheProjectSnapshot(localProject.id, snapshot);
-        }
-        return;
-      }
-
-      const created = await createProject({
-        name: nextName.trim(),
-        description: project.description || undefined,
-        thumbnail_url: project.thumbnail_url || undefined,
-        metadata: snapshot ? serializeSnapshot(snapshot) : undefined,
-      });
-      if (!created) throw new Error("Failed to duplicate project.");
-      setProjects((prev) => [created, ...prev]);
-    } catch (error) {
-      setProjectError(
-        error instanceof Error ? error.message : "Failed to duplicate project.",
-      );
-    } finally {
-      setProjectLoading(false);
-    }
-  }
 
   /**
    * Animation handlers - delegated to useAnimationSystem hook
@@ -1599,6 +1228,8 @@ export default function App() {
     floatingBuffer: transformOperations.floatingBuffer,
     onCommitTransform: transformOperations.onCommitTransform,
   });
+
+
 
   function handleCreateAnimationTag(
     tag: Omit<AnimationTag, "id" | "created_at">,
@@ -1728,7 +1359,7 @@ export default function App() {
       });
     } else {
       newFrames.forEach((frame) => {
-        const layer = createLayer("Tween Frame", frame.pixels);
+        const layer = createLayer(canvasSpec.width, canvasSpec.height, "Tween Frame", frame.pixels);
         nextFrameLayers[frame.id] = [layer];
         nextActiveLayerIds[frame.id] = layer.id;
       });
