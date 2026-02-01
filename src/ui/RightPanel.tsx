@@ -104,7 +104,7 @@ type Props = {
   };
 };
 
-const DEFAULT_SECTION_ORDER = ["tools", "layers", "colors", "transform", "selection", "ai"];
+const DEFAULT_SECTION_ORDER = ["tools", "layers", "colors", "adjustments", "transform", "selection", "ai"];
 
 export default function RightPanel({
   tool,
@@ -131,13 +131,17 @@ export default function RightPanel({
 }: Props) {
   const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
     const initial = settings.layout?.rightPanelOrder ?? DEFAULT_SECTION_ORDER;
-    const normalized = initial.filter((id) => DEFAULT_SECTION_ORDER.includes(id));
-    return normalized.length ? normalized : DEFAULT_SECTION_ORDER;
+    const present = new Set(initial);
+    const missing = DEFAULT_SECTION_ORDER.filter(id => !present.has(id));
+    // Remove unknown keys, keep existing order, append new keys
+    const normalized = [...initial.filter(id => DEFAULT_SECTION_ORDER.includes(id)), ...missing];
+    return normalized;
   });
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     tools: true,
     layers: true,
     colors: true,
+    adjustments: true,
     transform: true,
     selection: true,
     ai: true,
@@ -161,10 +165,11 @@ export default function RightPanel({
   }, [onChangeSettings, sectionOrder, settings]);
 
   useEffect(() => {
-    const normalized = (settings.layout?.rightPanelOrder ?? DEFAULT_SECTION_ORDER).filter((id) =>
-      DEFAULT_SECTION_ORDER.includes(id)
-    );
-    setSectionOrder(normalized.length ? normalized : DEFAULT_SECTION_ORDER);
+    const initial = settings.layout?.rightPanelOrder ?? DEFAULT_SECTION_ORDER;
+    const present = new Set(initial);
+    const missing = DEFAULT_SECTION_ORDER.filter(id => !present.has(id));
+    const normalized = [...initial.filter(id => DEFAULT_SECTION_ORDER.includes(id)), ...missing];
+    setSectionOrder(normalized);
   }, [settings.layout?.rightPanelOrder]);
 
   const toggleSection = (key: string) => {
@@ -205,9 +210,12 @@ export default function RightPanel({
                 {...onPaletteOperations}
               />
             )}
-            {onColorAdjustOperations && <ColorAdjustPanel {...onColorAdjustOperations} />}
           </>
         ),
+      },
+      adjustments: {
+        title: "Color Adjustments",
+        content: onColorAdjustOperations ? <ColorAdjustPanel {...onColorAdjustOperations} /> : null,
       },
       transform: {
         title: "Transform",

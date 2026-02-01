@@ -324,7 +324,7 @@ export default function App() {
   const [activePaletteId, setActivePaletteId] = useState<string>("default");
   const [recentColors, setRecentColors] = useState<string[]>([]);
 
-  const defaultRightPanelOrder = ["tools", "layers", "colors", "transform", "selection", "ai"];
+  const defaultRightPanelOrder = ["tools", "layers", "colors", "adjustments", "transform", "selection", "ai"];
   const [settings, setSettings] = useState<UiSettings>(() => ({
     zoom: 8,
     brushStabilizerEnabled: true,
