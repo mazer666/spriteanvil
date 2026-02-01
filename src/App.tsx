@@ -1440,11 +1440,13 @@ export default function App() {
       currentProject.id,
       snapshot,
     );
-    const payload = autoSaveStateRef.current.serializeSnapshot(snapshot);
-    await autoSaveStateRef.current.saveProjectSnapshot(
-      currentProject.id,
-      payload,
-    );
+    if (hasSupabaseConfig) {
+      const payload = autoSaveStateRef.current.serializeSnapshot(snapshot);
+      await autoSaveStateRef.current.saveProjectSnapshot(
+        currentProject.id,
+        payload,
+      );
+    }
   }, []);
 
   const handleReloadProject = useCallback(async () => {
@@ -2324,6 +2326,7 @@ export default function App() {
           canvasSpec={canvasSpec}
           buffer={buffer}
           compositeBuffer={compositePreviewBuffer}
+          previewLayerPixels={previewLayerPixels}
           onStrokeEnd={onStrokeEnd}
           selection={selection}
           onChangeSelection={setSelection}
