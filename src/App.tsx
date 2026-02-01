@@ -1,11 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 /**
  * src/App.tsx
  * -----------------------------------------------------------------------------
  * ## THE ORCHESTRATOR (Noob Guide)
- * 
+ *
  * Think of App.tsx as the "Brain" or "Conductor" of SpriteAnvil.
- * 
+ *
  * ## VISUAL FLOW (Mermaid)
  * ```mermaid
  * graph TD
@@ -15,7 +21,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
  *   B --> E[RightPanel]
  *   E --> F[LayerPanel]
  *   E --> G[PalettePanel]
- *   
+ *
  *   D -- Picks Tool --> A
  *   C -- Pointer Event --> A
  *   A -- Algorithm --> H[Pixel Buffer]
@@ -27,12 +33,29 @@ import DockLayout from "./ui/DockLayout";
 import ExportPanel from "./ui/ExportPanel";
 import SettingsPanel from "./ui/SettingsPanel";
 import CommandPalette, { Command } from "./ui/CommandPalette";
-import { CanvasSpec, ToolId, UiSettings, Frame, LayerData, BlendMode, FloatingSelection } from "./types";
+import {
+  CanvasSpec,
+  ToolId,
+  UiSettings,
+  Frame,
+  LayerData,
+  BlendMode,
+  FloatingSelection,
+} from "./types";
 import { HistoryStack } from "./editor/history";
 import { cloneBuffer, createBuffer } from "./editor/pixels";
 import { applySmartOutline, OutlineMode } from "./editor/outline";
-import { generateTweenFrames, interpolatePixelBuffers, EasingCurve } from "./editor/animation";
-import { copySelection, cutSelection, pasteClipboard, ClipboardData } from "./editor/clipboard";
+import {
+  generateTweenFrames,
+  interpolatePixelBuffers,
+  EasingCurve,
+} from "./editor/animation";
+import {
+  copySelection,
+  cutSelection,
+  pasteClipboard,
+  ClipboardData,
+} from "./editor/clipboard";
 import { compositeLayers, mergeDown, flattenImage } from "./editor/layers";
 import { PaletteData, ProjectSnapshot } from "./lib/projects/snapshot";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -44,7 +67,10 @@ import {
   loadLocalProjects,
   saveLocalProjects,
 } from "./hooks/useProjectPersistence";
-import { useAnimationSystem, ConfirmDialogConfig } from "./hooks/useAnimationSystem";
+import {
+  useAnimationSystem,
+  ConfirmDialogConfig,
+} from "./hooks/useAnimationSystem";
 import { useLayerManager } from "./hooks/useLayerManager";
 import { usePaletteManager } from "./hooks/usePaletteManager";
 import { AnimationTag } from "./lib/supabase/animation_tags";
@@ -82,7 +108,10 @@ import {
 import { hasSupabaseConfig } from "./lib/supabase/client";
 import { supabase } from "./lib/supabase/client";
 
-import { cacheProjectSnapshot, getCachedProjectSnapshot } from "./lib/storage/frameCache";
+import {
+  cacheProjectSnapshot,
+  getCachedProjectSnapshot,
+} from "./lib/storage/frameCache";
 import ProjectDashboard, { NewProjectRequest } from "./ui/ProjectDashboard";
 import ShortcutOverlay, { ShortcutGroup } from "./ui/ShortcutOverlay";
 import StatusBar from "./ui/StatusBar";
@@ -92,12 +121,12 @@ import { isInputFocused } from "./utils/dom";
 import { buildInpaintPayload } from "./lib/ai/inpaint";
 import { deleteFrame as deleteFrameRecord } from "./lib/supabase/frames";
 import { validateProjects } from "./utils/validation";
-import { 
-  validatePixelUpdate, 
-  validateCursorPosition, 
-  isRateLimited, 
+import {
+  validatePixelUpdate,
+  validateCursorPosition,
+  isRateLimited,
   clearUserRateLimit,
-  logSecurityEvent 
+  logSecurityEvent,
 } from "./lib/realtime/validation";
 
 type ConfirmDialog = {
@@ -110,10 +139,15 @@ type ConfirmDialog = {
 
 export default function App() {
   // ORIGIN: New Project Dialog. USAGE: Used to initialize buffers and scale UI. PURPOSE: The "Paper Size" of the art.
-  const [canvasSpec, setCanvasSpec] = useState<CanvasSpec>(() => ({ width: 64, height: 64 }));
+  const [canvasSpec, setCanvasSpec] = useState<CanvasSpec>(() => ({
+    width: 64,
+    height: 64,
+  }));
   // ORIGIN: ToolRail 클릭. USAGE: Switches brush math (Pen vs Eraser). PURPOSE: Current active tool.
   const [tool, setTool] = useState<ToolId>("pen");
-  const [projectView, setProjectView] = useState<"dashboard" | "editor">("dashboard");
+  const [projectView, setProjectView] = useState<"dashboard" | "editor">(
+    "dashboard",
+  );
   // ORIGIN: Supabase / Dashboard. USAGE: Loads all frames and layers. PURPOSE: The current active project.
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -121,14 +155,22 @@ export default function App() {
   const [projectError, setProjectError] = useState<string | null>(null);
   const [showShortcutOverlay, setShowShortcutOverlay] = useState(false);
   // ORIGIN: CanvasStage Mouse Move. USAGE: Passed to StatusBar. PURPOSE: Shows current pixel coordinates.
-  const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
+  const [cursorPosition, setCursorPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   const initialFrameId = useMemo(() => crypto.randomUUID(), []);
   const createEmptyPixels = () =>
-    createBuffer(canvasSpec.width, canvasSpec.height, { r: 0, g: 0, b: 0, a: 0 });
+    createBuffer(canvasSpec.width, canvasSpec.height, {
+      r: 0,
+      g: 0,
+      b: 0,
+      a: 0,
+    });
   const defaultPivot = useMemo(
     () => ({ x: Math.floor(canvasSpec.width / 2), y: canvasSpec.height - 1 }),
-    [canvasSpec.width, canvasSpec.height]
+    [canvasSpec.width, canvasSpec.height],
   );
 
   const [frames, setFrames] = useState<Frame[]>(() => [
@@ -136,14 +178,17 @@ export default function App() {
       id: initialFrameId,
       pixels: createEmptyPixels(),
       durationMs: 100,
-      pivot: defaultPivot
-    }
+      pivot: defaultPivot,
+    },
   ]);
 
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
-  const [selectedFrameIndices, setSelectedFrameIndices] = useState<Set<number>>(new Set([0]));
+  const [selectedFrameIndices, setSelectedFrameIndices] = useState<Set<number>>(
+    new Set([0]),
+  );
   const [selection, setSelection] = useState<Uint8Array | null>(null);
-  const [floatingBuffer, setFloatingBuffer] = useState<FloatingSelection | null>(null);
+  const [floatingBuffer, setFloatingBuffer] =
+    useState<FloatingSelection | null>(null);
   const [isTransforming, setIsTransforming] = useState(false);
   const clipboardRef = useRef<ClipboardData | null>(null);
   const paletteImportRef = useRef<HTMLInputElement | null>(null);
@@ -155,13 +200,21 @@ export default function App() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showTopbarMenu, setShowTopbarMenu] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
-  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(
+    null,
+  );
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [animationTags, setAnimationTags] = useState<AnimationTag[]>([]);
-  const [activeAnimationTagId, setActiveAnimationTagId] = useState<string | null>(null);
+  const [activeAnimationTagId, setActiveAnimationTagId] = useState<
+    string | null
+  >(null);
   const [loopTagOnly, setLoopTagOnly] = useState(false);
-  const [remoteCursors, setRemoteCursors] = useState<Record<string, { x: number; y: number; color: string }>>({});
-  const [activeCollaborators, setActiveCollaborators] = useState<Array<{ id: string; color: string }>>([]);
+  const [remoteCursors, setRemoteCursors] = useState<
+    Record<string, { x: number; y: number; color: string }>
+  >({});
+  const [activeCollaborators, setActiveCollaborators] = useState<
+    Array<{ id: string; color: string }>
+  >([]);
 
   const historyRef = useRef<HistoryStack>(new HistoryStack());
   const [canUndo, setCanUndo] = useState(false);
@@ -169,7 +222,9 @@ export default function App() {
   const transformBeforeRef = useRef<Uint8ClampedArray | null>(null);
 
   const currentFrame = frames[currentFrameIndex];
-  const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(
+    null,
+  );
   const lastCursorBroadcastRef = useRef(0);
   const localUserId = useMemo(() => {
     const key = "spriteanvil:collabUserId";
@@ -189,10 +244,13 @@ export default function App() {
     return next;
   }, []);
 
-  // Note: loadLocalProjects, saveLocalProjects, encodePixels, decodePixels, 
+  // Note: loadLocalProjects, saveLocalProjects, encodePixels, decodePixels,
   // serializeSnapshot, and deserializeSnapshot are now imported from useProjectPersistence
 
-  function buildPixelPatch(before: Uint8ClampedArray, after: Uint8ClampedArray) {
+  function buildPixelPatch(
+    before: Uint8ClampedArray,
+    after: Uint8ClampedArray,
+  ) {
     const changes: number[] = [];
     for (let i = 0; i < after.length; i += 4) {
       if (
@@ -209,7 +267,7 @@ export default function App() {
 
   function applyPixelPatch(
     layerPixels: Uint8ClampedArray,
-    patch: number[]
+    patch: number[],
   ): Uint8ClampedArray {
     const next = cloneBuffer(layerPixels);
     for (let i = 0; i < patch.length; i += 5) {
@@ -224,7 +282,7 @@ export default function App() {
 
   function createLayer(
     name: string,
-    pixels?: Uint8ClampedArray
+    pixels?: Uint8ClampedArray,
   ): LayerData & { pixels: Uint8ClampedArray } {
     return {
       id: crypto.randomUUID(),
@@ -237,8 +295,12 @@ export default function App() {
     };
   }
 
-  const [frameLayers, setFrameLayers] = useState<Record<string, LayerData[]>>({});
-  const [frameActiveLayerIds, setFrameActiveLayerIds] = useState<Record<string, string>>({});
+  const [frameLayers, setFrameLayers] = useState<Record<string, LayerData[]>>(
+    {},
+  );
+  const [frameActiveLayerIds, setFrameActiveLayerIds] = useState<
+    Record<string, string>
+  >({});
 
   useEffect(() => {
     const baseLayer = createLayer("Layer 1");
@@ -248,8 +310,10 @@ export default function App() {
   }, []);
 
   const layers = frameLayers[currentFrame.id] || [];
-  const activeLayerId = frameActiveLayerIds[currentFrame.id] || layers[0]?.id || null;
-  const activeLayer = layers.find((layer) => layer.id === activeLayerId) || layers[0] || null;
+  const activeLayerId =
+    frameActiveLayerIds[currentFrame.id] || layers[0]?.id || null;
+  const activeLayer =
+    layers.find((layer) => layer.id === activeLayerId) || layers[0] || null;
   const buffer = activeLayer?.pixels || createEmptyPixels();
   const compositeBuffer = useMemo(() => {
     if (!layers.length) return currentFrame.pixels;
@@ -273,14 +337,19 @@ export default function App() {
     }
     let preview = buffer;
     if (colorAdjustPreview.hueShift !== 0) {
-      preview = adjustHue(preview, canvasSpec.width, canvasSpec.height, colorAdjustPreview.hueShift);
+      preview = adjustHue(
+        preview,
+        canvasSpec.width,
+        canvasSpec.height,
+        colorAdjustPreview.hueShift,
+      );
     }
     if (colorAdjustPreview.saturationDelta !== 0) {
       preview = adjustSaturation(
         preview,
         canvasSpec.width,
         canvasSpec.height,
-        colorAdjustPreview.saturationDelta
+        colorAdjustPreview.saturationDelta,
       );
     }
     if (colorAdjustPreview.brightnessDelta !== 0) {
@@ -288,7 +357,7 @@ export default function App() {
         preview,
         canvasSpec.width,
         canvasSpec.height,
-        colorAdjustPreview.brightnessDelta
+        colorAdjustPreview.brightnessDelta,
       );
     }
     return preview;
@@ -305,26 +374,57 @@ export default function App() {
     if (!previewLayerPixels) return compositeBuffer;
     if (!layers.length) return previewLayerPixels;
     const previewLayers = layers.map((layer) =>
-      layer.id === activeLayerId ? { ...layer, pixels: previewLayerPixels } : layer
+      layer.id === activeLayerId
+        ? { ...layer, pixels: previewLayerPixels }
+        : layer,
     );
     return compositeLayers(previewLayers, canvasSpec.width, canvasSpec.height);
-  }, [activeLayerId, canvasSpec.height, canvasSpec.width, compositeBuffer, layers, previewLayerPixels]);
+  }, [
+    activeLayerId,
+    canvasSpec.height,
+    canvasSpec.width,
+    compositeBuffer,
+    layers,
+    previewLayerPixels,
+  ]);
 
   const [palettes, setPalettes] = useState<PaletteData[]>([
     {
       id: "default",
       name: "Default Palette",
       colors: [
-        "#000000", "#1a1c2c", "#5d275d", "#b13e53", "#ef7d57", "#ffcd75", "#a7f070", "#38b764",
-        "#257179", "#29366f", "#3b5dc9", "#41a6f6", "#73eff7", "#f4f4f4", "#94b0c2", "#566c86",
+        "#000000",
+        "#1a1c2c",
+        "#5d275d",
+        "#b13e53",
+        "#ef7d57",
+        "#ffcd75",
+        "#a7f070",
+        "#38b764",
+        "#257179",
+        "#29366f",
+        "#3b5dc9",
+        "#41a6f6",
+        "#73eff7",
+        "#f4f4f4",
+        "#94b0c2",
+        "#566c86",
       ],
       is_default: true,
-    }
+    },
   ]);
   const [activePaletteId, setActivePaletteId] = useState<string>("default");
   const [recentColors, setRecentColors] = useState<string[]>([]);
 
-  const defaultRightPanelOrder = ["tools", "layers", "colors", "adjustments", "transform", "selection", "ai"];
+  const defaultRightPanelOrder = [
+    "tools",
+    "layers",
+    "colors",
+    "adjustments",
+    "transform",
+    "selection",
+    "ai",
+  ];
   const [settings, setSettings] = useState<UiSettings>(() => ({
     zoom: 8,
     brushStabilizerEnabled: true,
@@ -374,7 +474,10 @@ export default function App() {
     selectionMode: "replace",
   }));
 
-  const zoomLabel = useMemo(() => `${Math.round(settings.zoom * 100)}%`, [settings.zoom]);
+  const zoomLabel = useMemo(
+    () => `${Math.round(settings.zoom * 100)}%`,
+    [settings.zoom],
+  );
   const colorRgbLabel = useMemo(() => {
     const rgb = hexToRgb(settings.primaryColor);
     if (!rgb) return "rgb(0, 0, 0)";
@@ -384,14 +487,19 @@ export default function App() {
     const totalBytes = Object.values(frameLayers).reduce((sum, layers) => {
       return (
         sum +
-        layers.reduce((layerSum, layer) => layerSum + (layer.pixels?.length ?? 0), 0)
+        layers.reduce(
+          (layerSum, layer) => layerSum + (layer.pixels?.length ?? 0),
+          0,
+        )
       );
     }, 0);
     const kb = totalBytes / 1024;
     if (kb < 1024) return `${kb.toFixed(1)} KB`;
     return `${(kb / 1024).toFixed(2)} MB`;
   }, [frameLayers]);
-  const cursorLabel = cursorPosition ? `${cursorPosition.x}, ${cursorPosition.y}` : "--";
+  const cursorLabel = cursorPosition
+    ? `${cursorPosition.x}, ${cursorPosition.y}`
+    : "--";
   const statusInfo = useMemo(
     () => ({
       colorHex: settings.primaryColor.toUpperCase(),
@@ -400,10 +508,20 @@ export default function App() {
       memoryUsage: memoryUsageLabel,
       cursor: cursorLabel,
     }),
-    [settings.primaryColor, colorRgbLabel, zoomLabel, memoryUsageLabel, cursorLabel]
+    [
+      settings.primaryColor,
+      colorRgbLabel,
+      zoomLabel,
+      memoryUsageLabel,
+      cursorLabel,
+    ],
   );
 
-  function QuickControls({ showCollaborators = false }: { showCollaborators?: boolean }) {
+  function QuickControls({
+    showCollaborators = false,
+  }: {
+    showCollaborators?: boolean;
+  }) {
     return (
       <div className="topbar__group">
         {showCollaborators && activeCollaborators.length > 0 && (
@@ -451,7 +569,9 @@ export default function App() {
           <input
             type="checkbox"
             checked={settings.showGrid}
-            onChange={(e) => setSettings((s) => ({ ...s, showGrid: e.target.checked }))}
+            onChange={(e) =>
+              setSettings((s) => ({ ...s, showGrid: e.target.checked }))
+            }
           />
           <span>Grid</span>
         </label>
@@ -518,7 +638,7 @@ export default function App() {
         ],
       },
     ],
-    []
+    [],
   );
 
   async function refreshProjects() {
@@ -532,7 +652,9 @@ export default function App() {
       const list = await getProjects();
       setProjects(list);
     } catch (error) {
-      setProjectError(error instanceof Error ? error.message : "Failed to load projects.");
+      setProjectError(
+        error instanceof Error ? error.message : "Failed to load projects.",
+      );
     } finally {
       setProjectLoading(false);
     }
@@ -560,22 +682,22 @@ export default function App() {
     // SECURITY: Validate cursor position messages (Issue #5 fix)
     channel.on("broadcast", { event: "cursor" }, ({ payload }) => {
       const validated = validateCursorPosition(
-        payload, 
-        localUserId, 
-        canvasSpec.width, 
-        canvasSpec.height
+        payload,
+        localUserId,
+        canvasSpec.width,
+        canvasSpec.height,
       );
-      
+
       if (!validated) {
         return; // Invalid cursor message, silently ignore
       }
-      
+
       setRemoteCursors((prev) => ({
         ...prev,
-        [validated.userId]: { 
-          x: validated.x, 
-          y: validated.y, 
-          color: validated.color || "#4bb8bf" 
+        [validated.userId]: {
+          x: validated.x,
+          y: validated.y,
+          color: validated.color || "#4bb8bf",
         },
       }));
     });
@@ -583,30 +705,38 @@ export default function App() {
     // SECURITY: Validate and rate-limit pixel update messages (Issue #5 fix)
     channel.on("broadcast", { event: "pixel-update" }, ({ payload }) => {
       // Step 1: Check rate limit first (fastest check)
-      if (payload && typeof payload === 'object' && 'userId' in payload) {
+      if (payload && typeof payload === "object" && "userId" in payload) {
         const userId = (payload as any).userId;
-        if (typeof userId === 'string' && isRateLimited(userId)) {
-          logSecurityEvent('rate_limit', userId, 'Pixel update rate limit exceeded');
+        if (typeof userId === "string" && isRateLimited(userId)) {
+          logSecurityEvent(
+            "rate_limit",
+            userId,
+            "Pixel update rate limit exceeded",
+          );
           return; // Rate limited, drop message
         }
       }
-      
+
       // Step 2: Validate message structure and content
       const validated = validatePixelUpdate(
         payload,
         localUserId,
         canvasSpec.width,
-        canvasSpec.height
+        canvasSpec.height,
       );
-      
+
       if (!validated) {
         // Message failed validation
-        if (payload && typeof payload === 'object' && 'userId' in payload) {
-          logSecurityEvent('invalid_message', (payload as any).userId, 'Invalid pixel update message');
+        if (payload && typeof payload === "object" && "userId" in payload) {
+          logSecurityEvent(
+            "invalid_message",
+            (payload as any).userId,
+            "Invalid pixel update message",
+          );
         }
         return;
       }
-      
+
       // Step 3: Apply validated update
       const { frameId, layerId, patch } = validated;
       setFrameLayers((prev) => {
@@ -623,7 +753,10 @@ export default function App() {
     });
 
     channel.on("presence", { event: "sync" }, () => {
-      const state = channel.presenceState() as Record<string, Array<{ color?: string }>>;
+      const state = channel.presenceState() as Record<
+        string,
+        Array<{ color?: string }>
+      >;
       const collaborators = Object.keys(state).map((id) => ({
         id,
         color: state[id]?.[0]?.color ?? "#4bb8bf",
@@ -663,7 +796,7 @@ export default function App() {
 
   const activeTag = useMemo(
     () => animationTags.find((tag) => tag.id === activeAnimationTagId) || null,
-    [activeAnimationTagId, animationTags]
+    [activeAnimationTagId, animationTags],
   );
 
   // Animation system hook - handles frame operations and playback
@@ -692,10 +825,12 @@ export default function App() {
       defaultPivot,
       activeTag,
       loopTagOnly,
-      setConfirmDialog: setConfirmDialog as (dialog: ConfirmDialogConfig | null) => void,
+      setConfirmDialog: setConfirmDialog as (
+        dialog: ConfirmDialogConfig | null,
+      ) => void,
       setConfirmBusy,
       setProjectError,
-    }
+    },
   );
 
   // Note: The playback useEffect is now handled inside useAnimationSystem
@@ -707,17 +842,29 @@ export default function App() {
     // Actions
     { setFrameLayers, setFrameActiveLayerIds, setFrames },
     // Config
-    { canvasSpec }
+    { canvasSpec },
   );
 
   // Palette manager hook - handles palette operations
   const paletteManager = usePaletteManager(
     // State
-    { palettes, activePaletteId, compositeBuffer, frameLayers, isActiveLayerLocked },
+    {
+      palettes,
+      activePaletteId,
+      compositeBuffer,
+      frameLayers,
+      isActiveLayerLocked,
+    },
     // Actions
     { setPalettes, setActivePaletteId, setFrameLayers },
     // Config
-    { canvasSpec, settings, historyRef, rebuildFramesFromLayers, syncHistoryFlags }
+    {
+      canvasSpec,
+      settings,
+      historyRef,
+      rebuildFramesFromLayers,
+      syncHistoryFlags,
+    },
   );
 
   useEffect(() => {
@@ -732,11 +879,15 @@ export default function App() {
         framePrev.map((frame) =>
           frame.id === currentFrame.id
             ? {
-              ...frame,
-              pixels: compositeLayers([baseLayer], canvasSpec.width, canvasSpec.height),
-            }
-            : frame
-        )
+                ...frame,
+                pixels: compositeLayers(
+                  [baseLayer],
+                  canvasSpec.width,
+                  canvasSpec.height,
+                ),
+              }
+            : frame,
+        ),
       );
       return { ...prev, [currentFrame.id]: [baseLayer] };
     });
@@ -744,17 +895,20 @@ export default function App() {
 
   useEffect(() => {
     if (!loopTagOnly || !activeTag) return;
-    if (currentFrameIndex < activeTag.start_frame || currentFrameIndex > activeTag.end_frame) {
+    if (
+      currentFrameIndex < activeTag.start_frame ||
+      currentFrameIndex > activeTag.end_frame
+    ) {
       setCurrentFrameIndex(activeTag.start_frame);
     }
   }, [activeTag, currentFrameIndex, loopTagOnly]);
 
-/**
- * WHAT: Goes back in time by one step.
- * WHY: Because everyone makes mistakes! 
- * HOW: It pops the "Last State" off the `HistoryStack` and swaps it with the "Current State".
- * USE: CMD+Z or the "Undo" button in the Topbar.
- */
+  /**
+   * WHAT: Goes back in time by one step.
+   * WHY: Because everyone makes mistakes!
+   * HOW: It pops the "Last State" off the `HistoryStack` and swaps it with the "Current State".
+   * USE: CMD+Z or the "Undo" button in the Topbar.
+   */
   function handleUndo() {
     const next = historyRef.current.undo(buffer, frameLayers);
     if (!next) return;
@@ -769,10 +923,10 @@ export default function App() {
     syncHistoryFlags();
   }
 
-/**
- * WHAT: Goes forward in time by one step (if you undo-ed).
- * WHY: If you changed your mind about an undo!
- */
+  /**
+   * WHAT: Goes forward in time by one step (if you undo-ed).
+   * WHY: If you changed your mind about an undo!
+   */
   function handleRedo() {
     const next = historyRef.current.redo(buffer, frameLayers);
     if (!next) return;
@@ -792,7 +946,12 @@ export default function App() {
       commitTransform();
     }
     if (!selection) return;
-    const clip = copySelection(buffer, selection, canvasSpec.width, canvasSpec.height);
+    const clip = copySelection(
+      buffer,
+      selection,
+      canvasSpec.width,
+      canvasSpec.height,
+    );
     if (clip) clipboardRef.current = clip;
   }
 
@@ -803,7 +962,12 @@ export default function App() {
     if (!selection) return;
     if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
-    const { clipboardData, modifiedBuffer } = cutSelection(buffer, selection, canvasSpec.width, canvasSpec.height);
+    const { clipboardData, modifiedBuffer } = cutSelection(
+      buffer,
+      selection,
+      canvasSpec.width,
+      canvasSpec.height,
+    );
 
     if (clipboardData) clipboardRef.current = clipboardData;
 
@@ -820,7 +984,12 @@ export default function App() {
     if (isActiveLayerLocked) return;
 
     const before = cloneBuffer(buffer);
-    const after = pasteClipboard(buffer, clipboardRef.current, canvasSpec.width, canvasSpec.height);
+    const after = pasteClipboard(
+      buffer,
+      clipboardRef.current,
+      canvasSpec.width,
+      canvasSpec.height,
+    );
 
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
@@ -873,10 +1042,14 @@ export default function App() {
         const idx = y * canvasSpec.width + x;
         if (selection[idx]) {
           const hasUnselectedNeighbor =
-            (x === 0 || !selection[idx - 1]) ||
-            (x === canvasSpec.width - 1 || !selection[idx + 1]) ||
-            (y === 0 || !selection[idx - canvasSpec.width]) ||
-            (y === canvasSpec.height - 1 || !selection[idx + canvasSpec.width]);
+            x === 0 ||
+            !selection[idx - 1] ||
+            x === canvasSpec.width - 1 ||
+            !selection[idx + 1] ||
+            y === 0 ||
+            !selection[idx - canvasSpec.width] ||
+            y === canvasSpec.height - 1 ||
+            !selection[idx + canvasSpec.width];
           if (!hasUnselectedNeighbor) {
             shrunk[idx] = 1;
           }
@@ -886,12 +1059,13 @@ export default function App() {
     handleChangeSelection(shrunk);
   }
 
-  function handleFeatherSelection(_radius: number) {
-  }
+  function handleFeatherSelection(_radius: number) {}
 
   function handleDetectObjectSelection() {
     if (!cursorPosition) {
-      setProjectError("Move the cursor over a sprite pixel to detect an object.");
+      setProjectError(
+        "Move the cursor over a sprite pixel to detect an object.",
+      );
       return;
     }
     const mask = selectConnectedOpaque(
@@ -899,7 +1073,7 @@ export default function App() {
       canvasSpec.width,
       canvasSpec.height,
       cursorPosition.x,
-      cursorPosition.y
+      cursorPosition.y,
     );
     setSelection(mask);
   }
@@ -921,7 +1095,7 @@ export default function App() {
       activeLayer.pixels,
       selection,
       payload.denoiseStrength,
-      payload.promptInfluence
+      payload.promptInfluence,
     );
     console.info("Inpaint payload prepared", request);
     return "Inpaint payload prepared (see console).";
@@ -941,16 +1115,25 @@ export default function App() {
       activeLayer.pixels,
       selection ?? new Uint8Array(canvasSpec.width * canvasSpec.height).fill(1),
       payload.denoiseStrength,
-      payload.promptInfluence
+      payload.promptInfluence,
     );
     console.info("Image-to-image payload prepared", request);
     return "Image-to-image payload prepared (see console).";
   }
 
-  function updateCurrentFrameComposite(frameId: string, nextLayers: LayerData[]) {
-    const composite = compositeLayers(nextLayers, canvasSpec.width, canvasSpec.height);
+  function updateCurrentFrameComposite(
+    frameId: string,
+    nextLayers: LayerData[],
+  ) {
+    const composite = compositeLayers(
+      nextLayers,
+      canvasSpec.width,
+      canvasSpec.height,
+    );
     setFrames((prev) =>
-      prev.map((frame) => (frame.id === frameId ? { ...frame, pixels: composite } : frame))
+      prev.map((frame) =>
+        frame.id === frameId ? { ...frame, pixels: composite } : frame,
+      ),
     );
   }
 
@@ -960,20 +1143,26 @@ export default function App() {
     setFrameLayers((prev) => {
       const currentLayers = prev[frameId] || [];
       const nextLayers = currentLayers.map((layer) =>
-        layer.id === activeLayerId ? { ...layer, pixels: newPixels } : layer
+        layer.id === activeLayerId ? { ...layer, pixels: newPixels } : layer,
       );
       updateCurrentFrameComposite(frameId, nextLayers);
       return { ...prev, [frameId]: nextLayers };
     });
   }
 
-  function rebuildFramesFromLayers(nextFrameLayers: Record<string, LayerData[]>) {
+  function rebuildFramesFromLayers(
+    nextFrameLayers: Record<string, LayerData[]>,
+  ) {
     setFrames((prev) =>
       prev.map((frame) => {
         const layersForFrame = nextFrameLayers[frame.id] || [];
-        const composite = compositeLayers(layersForFrame, canvasSpec.width, canvasSpec.height);
+        const composite = compositeLayers(
+          layersForFrame,
+          canvasSpec.width,
+          canvasSpec.height,
+        );
         return { ...frame, pixels: composite };
-      })
+      }),
     );
   }
 
@@ -1012,15 +1201,19 @@ export default function App() {
       snapshot.frames.map((frame) => ({
         id: frame.id,
         durationMs: frame.durationMs,
-        pixels: compositeLayers(frame.layers, snapshot.canvas.width, snapshot.canvas.height),
+        pixels: compositeLayers(
+          frame.layers,
+          snapshot.canvas.width,
+          snapshot.canvas.height,
+        ),
         pivot: frame.pivot,
-      }))
+      })),
     );
     setFrameLayers(() =>
       snapshot.frames.reduce<Record<string, LayerData[]>>((acc, frame) => {
         acc[frame.id] = frame.layers;
         return acc;
-      }, {})
+      }, {}),
     );
     const activeIds = { ...snapshot.activeLayerIds };
     snapshot.frames.forEach((frame) => {
@@ -1030,7 +1223,10 @@ export default function App() {
     });
     setFrameActiveLayerIds(activeIds);
     setCurrentFrameIndex(
-      Math.min(snapshot.currentFrameIndex, Math.max(snapshot.frames.length - 1, 0))
+      Math.min(
+        snapshot.currentFrameIndex,
+        Math.max(snapshot.frames.length - 1, 0),
+      ),
     );
     setPalettes(snapshot.palettes);
     setActivePaletteId(snapshot.activePaletteId);
@@ -1046,7 +1242,8 @@ export default function App() {
           rightPanelOrder: snapshotLayout?.rightPanelOrder?.length
             ? snapshotLayout.rightPanelOrder
             : prev.layout.rightPanelOrder,
-          toolRailPosition: snapshotLayout?.toolRailPosition ?? prev.layout.toolRailPosition,
+          toolRailPosition:
+            snapshotLayout?.toolRailPosition ?? prev.layout.toolRailPosition,
         },
       }));
     }
@@ -1080,7 +1277,10 @@ export default function App() {
                 durationMs: 100,
                 pivot: { x: 32, y: 63 },
                 layers: [
-                  createLayer("Layer 1", createBuffer(64, 64, { r: 0, g: 0, b: 0, a: 0 })),
+                  createLayer(
+                    "Layer 1",
+                    createBuffer(64, 64, { r: 0, g: 0, b: 0, a: 0 }),
+                  ),
                 ],
               },
             ],
@@ -1092,7 +1292,8 @@ export default function App() {
             settings,
           };
           const frameId = fallbackSnapshot.frames[0].id;
-          fallbackSnapshot.activeLayerIds[frameId] = fallbackSnapshot.frames[0].layers[0].id;
+          fallbackSnapshot.activeLayerIds[frameId] =
+            fallbackSnapshot.frames[0].layers[0].id;
           applySnapshot(fallbackSnapshot);
         }
       } else {
@@ -1105,7 +1306,10 @@ export default function App() {
               durationMs: 100,
               pivot: { x: 32, y: 63 },
               layers: [
-                createLayer("Layer 1", createBuffer(64, 64, { r: 0, g: 0, b: 0, a: 0 })),
+                createLayer(
+                  "Layer 1",
+                  createBuffer(64, 64, { r: 0, g: 0, b: 0, a: 0 }),
+                ),
               ],
             },
           ],
@@ -1117,14 +1321,17 @@ export default function App() {
           settings,
         };
         const frameId = fallbackSnapshot.frames[0].id;
-        fallbackSnapshot.activeLayerIds[frameId] = fallbackSnapshot.frames[0].layers[0].id;
+        fallbackSnapshot.activeLayerIds[frameId] =
+          fallbackSnapshot.frames[0].layers[0].id;
         applySnapshot(fallbackSnapshot);
       }
       setActiveProject(project);
       setProjectView("editor");
       localStorage.setItem("spriteanvil:lastProjectId", project.id);
     } catch (error) {
-      setProjectError(error instanceof Error ? error.message : "Failed to load project.");
+      setProjectError(
+        error instanceof Error ? error.message : "Failed to load project.",
+      );
     } finally {
       setProjectLoading(false);
     }
@@ -1145,7 +1352,12 @@ export default function App() {
             layers: [
               createLayer(
                 "Layer 1",
-                createBuffer(request.width, request.height, { r: 0, g: 0, b: 0, a: 0 })
+                createBuffer(request.width, request.height, {
+                  r: 0,
+                  g: 0,
+                  b: 0,
+                  a: 0,
+                }),
               ),
             ],
           },
@@ -1199,7 +1411,9 @@ export default function App() {
       setProjectView("editor");
       localStorage.setItem("spriteanvil:lastProjectId", created.id);
     } catch (error) {
-      setProjectError(error instanceof Error ? error.message : "Failed to create project.");
+      setProjectError(
+        error instanceof Error ? error.message : "Failed to create project.",
+      );
     } finally {
       setProjectLoading(false);
     }
@@ -1224,9 +1438,15 @@ export default function App() {
     const currentProject = autoSaveStateRef.current.activeProject;
     if (!currentProject) return;
     const snapshot = autoSaveStateRef.current.buildSnapshot();
-    await autoSaveStateRef.current.cacheProjectSnapshot(currentProject.id, snapshot);
+    await autoSaveStateRef.current.cacheProjectSnapshot(
+      currentProject.id,
+      snapshot,
+    );
     const payload = autoSaveStateRef.current.serializeSnapshot(snapshot);
-    await autoSaveStateRef.current.saveProjectSnapshot(currentProject.id, payload);
+    await autoSaveStateRef.current.saveProjectSnapshot(
+      currentProject.id,
+      payload,
+    );
   }, []);
 
   const handleReloadProject = useCallback(async () => {
@@ -1248,7 +1468,9 @@ export default function App() {
         }
       }
     } catch (error) {
-      setProjectError(error instanceof Error ? error.message : "Failed to reload project.");
+      setProjectError(
+        error instanceof Error ? error.message : "Failed to reload project.",
+      );
     } finally {
       setProjectLoading(false);
     }
@@ -1300,7 +1522,9 @@ export default function App() {
             const ok = await deleteProject(project.id);
             if (!ok) throw new Error("Failed to delete project.");
           } else {
-            const nextProjects = loadLocalProjects().filter((p) => p.id !== project.id);
+            const nextProjects = loadLocalProjects().filter(
+              (p) => p.id !== project.id,
+            );
             saveLocalProjects(nextProjects);
           }
           setProjects((prev) => prev.filter((p) => p.id !== project.id));
@@ -1309,7 +1533,11 @@ export default function App() {
             setProjectView("dashboard");
           }
         } catch (error) {
-          setProjectError(error instanceof Error ? error.message : "Failed to delete project.");
+          setProjectError(
+            error instanceof Error
+              ? error.message
+              : "Failed to delete project.",
+          );
         } finally {
           setConfirmBusy(false);
           setConfirmDialog(null);
@@ -1320,30 +1548,48 @@ export default function App() {
 
   async function handleRenameProject(project: Project) {
     const nextName = window.prompt("Rename project", project.name);
-    if (!nextName || !nextName.trim() || nextName.trim() === project.name) return;
+    if (!nextName || !nextName.trim() || nextName.trim() === project.name)
+      return;
     try {
       if (hasSupabaseConfig) {
-        const updated = await updateProject(project.id, { name: nextName.trim() });
+        const updated = await updateProject(project.id, {
+          name: nextName.trim(),
+        });
         if (!updated) throw new Error("Failed to rename project.");
       } else {
         const nextProjects = loadLocalProjects().map((p) =>
-          p.id === project.id ? { ...p, name: nextName.trim(), updated_at: new Date().toISOString() } : p
+          p.id === project.id
+            ? {
+                ...p,
+                name: nextName.trim(),
+                updated_at: new Date().toISOString(),
+              }
+            : p,
         );
         saveLocalProjects(nextProjects);
       }
       setProjects((prev) =>
-        prev.map((p) => (p.id === project.id ? { ...p, name: nextName.trim() } : p))
+        prev.map((p) =>
+          p.id === project.id ? { ...p, name: nextName.trim() } : p,
+        ),
       );
       if (activeProject?.id === project.id) {
-        setActiveProject((prev) => (prev ? { ...prev, name: nextName.trim() } : prev));
+        setActiveProject((prev) =>
+          prev ? { ...prev, name: nextName.trim() } : prev,
+        );
       }
     } catch (error) {
-      setProjectError(error instanceof Error ? error.message : "Failed to rename project.");
+      setProjectError(
+        error instanceof Error ? error.message : "Failed to rename project.",
+      );
     }
   }
 
   async function handleDuplicateProject(project: Project) {
-    const nextName = window.prompt("Duplicate project as", `${project.name} Copy`);
+    const nextName = window.prompt(
+      "Duplicate project as",
+      `${project.name} Copy`,
+    );
     if (!nextName || !nextName.trim()) return;
     setProjectLoading(true);
     setProjectError(null);
@@ -1388,16 +1634,18 @@ export default function App() {
       if (!created) throw new Error("Failed to duplicate project.");
       setProjects((prev) => [created, ...prev]);
     } catch (error) {
-      setProjectError(error instanceof Error ? error.message : "Failed to duplicate project.");
+      setProjectError(
+        error instanceof Error ? error.message : "Failed to duplicate project.",
+      );
     } finally {
       setProjectLoading(false);
     }
   }
 
-/**
- * Animation handlers - delegated to useAnimationSystem hook
- * These wrappers maintain the function names for JSX compatibility
- */
+  /**
+   * Animation handlers - delegated to useAnimationSystem hook
+   * These wrappers maintain the function names for JSX compatibility
+   */
   const handleInsertFrame = animationSystem.handleInsertFrame;
   const handleDuplicateFrame = animationSystem.handleDuplicateFrame;
   const handleReorderFrames = animationSystem.handleReorderFrames;
@@ -1433,9 +1681,9 @@ export default function App() {
     });
   }
 
-/**
- * Layer handlers - delegated to useLayerManager hook
- */
+  /**
+   * Layer handlers - delegated to useLayerManager hook
+   */
   const handleCreateLayer = layerManager.handleCreateLayer;
   const handleDeleteLayer = layerManager.handleDeleteLayer;
   const handleDuplicateLayer = layerManager.handleDuplicateLayer;
@@ -1448,30 +1696,39 @@ export default function App() {
   const handleMergeDown = layerManager.handleMergeDown;
   const handleFlattenLayers = layerManager.handleFlattenLayers;
 
-/**
- * Palette handlers - delegated to usePaletteManager hook
- */
+  /**
+   * Palette handlers - delegated to usePaletteManager hook
+   */
   const handleCreatePalette = paletteManager.handleCreatePalette;
   const handleImportPalette = paletteManager.handleImportPalette;
   const handleExportPalette = paletteManager.handleExportPalette;
-  const handleExtractPaletteFromImage = paletteManager.handleExtractPaletteFromImage;
+  const handleExtractPaletteFromImage =
+    paletteManager.handleExtractPaletteFromImage;
   const handleGeneratePaletteRamp = paletteManager.handleGeneratePaletteRamp;
   const handleDeletePalette = paletteManager.handleDeletePalette;
   const handleAddColorToPalette = paletteManager.handleAddColorToPalette;
-  const handleRemoveColorFromPalette = paletteManager.handleRemoveColorFromPalette;
+  const handleRemoveColorFromPalette =
+    paletteManager.handleRemoveColorFromPalette;
   const handleSwapColors = paletteManager.handleSwapColors;
 
-  function handleCreateAnimationTag(tag: Omit<AnimationTag, "id" | "created_at">) {
+  function handleCreateAnimationTag(
+    tag: Omit<AnimationTag, "id" | "created_at">,
+  ) {
     const newTag: AnimationTag = {
       ...tag,
       id: crypto.randomUUID(),
       created_at: new Date().toISOString(),
     };
-    setAnimationTags((prev) => [...prev, newTag].sort((a, b) => a.start_frame - b.start_frame));
+    setAnimationTags((prev) =>
+      [...prev, newTag].sort((a, b) => a.start_frame - b.start_frame),
+    );
     setActiveAnimationTagId(newTag.id);
   }
 
-  function handleUpdateAnimationTag(tagId: string, updates: Partial<AnimationTag>) {
+  function handleUpdateAnimationTag(
+    tagId: string,
+    updates: Partial<AnimationTag>,
+  ) {
     setAnimationTags((prev) =>
       prev
         .map((tag) => {
@@ -1482,7 +1739,7 @@ export default function App() {
           }
           return next;
         })
-        .sort((a, b) => a.start_frame - b.start_frame)
+        .sort((a, b) => a.start_frame - b.start_frame),
     );
   }
 
@@ -1496,7 +1753,7 @@ export default function App() {
   function buildSelectionMaskFromBuffer(
     pixels: Uint8ClampedArray,
     width: number,
-    height: number
+    height: number,
   ): Uint8Array {
     const mask = new Uint8Array(width * height);
     for (let i = 0; i < width * height; i++) {
@@ -1508,12 +1765,14 @@ export default function App() {
     return mask;
   }
 
-  function buildSelectionMaskFromFloating(floating: FloatingSelection): Uint8Array | null {
+  function buildSelectionMaskFromFloating(
+    floating: FloatingSelection,
+  ): Uint8Array | null {
     const mask = new Uint8Array(canvasSpec.width * canvasSpec.height);
     const floatingMask = buildSelectionMaskFromBuffer(
       floating.pixels,
       floating.width,
-      floating.height
+      floating.height,
     );
 
     for (let y = 0; y < floating.height; y++) {
@@ -1550,7 +1809,7 @@ export default function App() {
       buffer,
       selection,
       canvasSpec.width,
-      canvasSpec.height
+      canvasSpec.height,
     );
     if (!floating) return null;
 
@@ -1582,7 +1841,7 @@ export default function App() {
       canvasSpec.width,
       canvasSpec.height,
       floatingBuffer.x,
-      floatingBuffer.y
+      floatingBuffer.y,
     );
     const newSelection = buildSelectionMaskFromFloating(floatingBuffer);
     historyRef.current.commit(transformBeforeRef.current);
@@ -1594,7 +1853,9 @@ export default function App() {
     syncHistoryFlags();
   }
 
-  function applyFloatingTransform(buildMatrix: (width: number, height: number) => TransformMatrix): boolean {
+  function applyFloatingTransform(
+    buildMatrix: (width: number, height: number) => TransformMatrix,
+  ): boolean {
     const floating = beginSelectionTransform();
     if (!floating) return false;
 
@@ -1606,14 +1867,17 @@ export default function App() {
 
   function handleFlipHorizontal() {
     if (isActiveLayerLocked) return;
-    if (applyFloatingTransform((width) => ({
-      a: -1,
-      b: 0,
-      c: 0,
-      d: 1,
-      e: width - 1,
-      f: 0,
-    }))) return;
+    if (
+      applyFloatingTransform((width) => ({
+        a: -1,
+        b: 0,
+        c: 0,
+        d: 1,
+        e: width - 1,
+        f: 0,
+      }))
+    )
+      return;
     const before = cloneBuffer(buffer);
     const after = flipHorizontal(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -1623,14 +1887,17 @@ export default function App() {
 
   function handleFlipVertical() {
     if (isActiveLayerLocked) return;
-    if (applyFloatingTransform((_width, height) => ({
-      a: 1,
-      b: 0,
-      c: 0,
-      d: -1,
-      e: 0,
-      f: height - 1,
-    }))) return;
+    if (
+      applyFloatingTransform((_width, height) => ({
+        a: 1,
+        b: 0,
+        c: 0,
+        d: -1,
+        e: 0,
+        f: height - 1,
+      }))
+    )
+      return;
     const before = cloneBuffer(buffer);
     const after = flipVertical(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -1640,14 +1907,17 @@ export default function App() {
 
   function handleRotate90CW() {
     if (isActiveLayerLocked) return;
-    if (applyFloatingTransform((_width, height) => ({
-      a: 0,
-      b: 1,
-      c: -1,
-      d: 0,
-      e: height - 1,
-      f: 0,
-    }))) return;
+    if (
+      applyFloatingTransform((_width, height) => ({
+        a: 0,
+        b: 1,
+        c: -1,
+        d: 0,
+        e: height - 1,
+        f: 0,
+      }))
+    )
+      return;
     const before = cloneBuffer(buffer);
     const result = rotate90CW(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -1657,14 +1927,17 @@ export default function App() {
 
   function handleRotate90CCW() {
     if (isActiveLayerLocked) return;
-    if (applyFloatingTransform((width) => ({
-      a: 0,
-      b: -1,
-      c: 1,
-      d: 0,
-      e: 0,
-      f: width - 1,
-    }))) return;
+    if (
+      applyFloatingTransform((width) => ({
+        a: 0,
+        b: -1,
+        c: 1,
+        d: 0,
+        e: 0,
+        f: width - 1,
+      }))
+    )
+      return;
     const before = cloneBuffer(buffer);
     const result = rotate90CCW(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -1674,14 +1947,17 @@ export default function App() {
 
   function handleRotate180() {
     if (isActiveLayerLocked) return;
-    if (applyFloatingTransform((width, height) => ({
-      a: -1,
-      b: 0,
-      c: 0,
-      d: -1,
-      e: width - 1,
-      f: height - 1,
-    }))) return;
+    if (
+      applyFloatingTransform((width, height) => ({
+        a: -1,
+        b: 0,
+        c: 0,
+        d: -1,
+        e: width - 1,
+        f: height - 1,
+      }))
+    )
+      return;
     const before = cloneBuffer(buffer);
     const after = rotate180(buffer, canvasSpec.width, canvasSpec.height);
     historyRef.current.commit(before);
@@ -1692,16 +1968,25 @@ export default function App() {
   function handleScale(scaleX: number, scaleY: number) {
     if (isActiveLayerLocked) return;
     if (scaleX <= 0 || scaleY <= 0) return;
-    if (applyFloatingTransform(() => ({
-      a: scaleX,
-      b: 0,
-      c: 0,
-      d: scaleY,
-      e: 0,
-      f: 0,
-    }))) return;
+    if (
+      applyFloatingTransform(() => ({
+        a: scaleX,
+        b: 0,
+        c: 0,
+        d: scaleY,
+        e: 0,
+        f: 0,
+      }))
+    )
+      return;
     const before = cloneBuffer(buffer);
-    const result = scaleNearest(buffer, canvasSpec.width, canvasSpec.height, scaleX, scaleY);
+    const result = scaleNearest(
+      buffer,
+      canvasSpec.width,
+      canvasSpec.height,
+      scaleX,
+      scaleY,
+    );
     historyRef.current.commit(before);
     updateActiveLayerPixels(result.buffer);
     syncHistoryFlags();
@@ -1729,7 +2014,12 @@ export default function App() {
   function handleAdjustHue(hueShift: number) {
     if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
-    const after = adjustHue(buffer, canvasSpec.width, canvasSpec.height, hueShift);
+    const after = adjustHue(
+      buffer,
+      canvasSpec.width,
+      canvasSpec.height,
+      hueShift,
+    );
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
@@ -1739,7 +2029,12 @@ export default function App() {
   function handleAdjustSaturation(saturationDelta: number) {
     if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
-    const after = adjustSaturation(buffer, canvasSpec.width, canvasSpec.height, saturationDelta);
+    const after = adjustSaturation(
+      buffer,
+      canvasSpec.width,
+      canvasSpec.height,
+      saturationDelta,
+    );
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
@@ -1749,24 +2044,36 @@ export default function App() {
   function handleAdjustBrightness(brightnessDelta: number) {
     if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
-    const after = adjustBrightness(buffer, canvasSpec.width, canvasSpec.height, brightnessDelta);
+    const after = adjustBrightness(
+      buffer,
+      canvasSpec.width,
+      canvasSpec.height,
+      brightnessDelta,
+    );
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
     setColorAdjustPreview((prev) => ({ ...prev, brightnessDelta: 0 }));
   }
 
-  function handlePreviewAdjustColor(preview: {
-    hueShift: number;
-    saturationDelta: number;
-    brightnessDelta: number;
-  }) {
-    setColorAdjustPreview(preview);
-  }
+  const handlePreviewAdjustColor = useCallback(
+    (preview: {
+      hueShift: number;
+      saturationDelta: number;
+      brightnessDelta: number;
+    }) => {
+      setColorAdjustPreview(preview);
+    },
+    [],
+  );
 
-  function handleClearAdjustPreview() {
-    setColorAdjustPreview({ hueShift: 0, saturationDelta: 0, brightnessDelta: 0 });
-  }
+  const handleClearAdjustPreview = useCallback(() => {
+    setColorAdjustPreview({
+      hueShift: 0,
+      saturationDelta: 0,
+      brightnessDelta: 0,
+    });
+  }, []);
 
   function handleInvert() {
     if (isActiveLayerLocked) return;
@@ -1775,7 +2082,11 @@ export default function App() {
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
-    setColorAdjustPreview({ hueShift: 0, saturationDelta: 0, brightnessDelta: 0 });
+    setColorAdjustPreview({
+      hueShift: 0,
+      saturationDelta: 0,
+      brightnessDelta: 0,
+    });
   }
 
   function handleDesaturate() {
@@ -1785,17 +2096,30 @@ export default function App() {
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
-    setColorAdjustPreview({ hueShift: 0, saturationDelta: 0, brightnessDelta: 0 });
+    setColorAdjustPreview({
+      hueShift: 0,
+      saturationDelta: 0,
+      brightnessDelta: 0,
+    });
   }
 
   function handlePosterize(levels: number) {
     if (isActiveLayerLocked) return;
     const before = cloneBuffer(buffer);
-    const after = posterize(buffer, canvasSpec.width, canvasSpec.height, levels);
+    const after = posterize(
+      buffer,
+      canvasSpec.width,
+      canvasSpec.height,
+      levels,
+    );
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
-    setColorAdjustPreview({ hueShift: 0, saturationDelta: 0, brightnessDelta: 0 });
+    setColorAdjustPreview({
+      hueShift: 0,
+      saturationDelta: 0,
+      brightnessDelta: 0,
+    });
   }
 
   function handleSmartOutline(mode: OutlineMode) {
@@ -1804,7 +2128,13 @@ export default function App() {
     if (!rgb) return;
     const outlineColor = { r: rgb.r, g: rgb.g, b: rgb.b, a: 255 };
     const before = cloneBuffer(buffer);
-    const after = applySmartOutline(buffer, canvasSpec.width, canvasSpec.height, outlineColor, mode);
+    const after = applySmartOutline(
+      buffer,
+      canvasSpec.width,
+      canvasSpec.height,
+      outlineColor,
+      mode,
+    );
     historyRef.current.commit(before);
     updateActiveLayerPixels(after);
     syncHistoryFlags();
@@ -1814,7 +2144,7 @@ export default function App() {
     startIndex: number,
     endIndex: number,
     count: number,
-    easing: EasingCurve
+    easing: EasingCurve,
   ) {
     if (frames.length < 2 || count <= 0) return;
     const start = Math.min(startIndex, endIndex);
@@ -1830,7 +2160,7 @@ export default function App() {
       canvasSpec.height,
       count,
       easing,
-      defaultPivot
+      defaultPivot,
     );
 
     const newFrames: Frame[] = tweenData.map((data) => ({
@@ -1855,7 +2185,7 @@ export default function App() {
           canvasSpec.width,
           canvasSpec.height,
           count,
-          easing
+          easing,
         );
       });
 
@@ -1866,7 +2196,11 @@ export default function App() {
           name: layer.name,
           pixels: layerBuffers[layerIndex]?.[tweenIndex] ?? createEmptyPixels(),
         }));
-        frame.pixels = compositeLayers(layersForFrame, canvasSpec.width, canvasSpec.height);
+        frame.pixels = compositeLayers(
+          layersForFrame,
+          canvasSpec.width,
+          canvasSpec.height,
+        );
         nextFrameLayers[frame.id] = layersForFrame;
         nextActiveLayerIds[frame.id] = layersForFrame[0]?.id || "";
       });
@@ -1888,99 +2222,303 @@ export default function App() {
     setCurrentFrameIndex(start + 1);
   }
 
-  const commands: Command[] = useMemo(() => [
-    { id: "undo", name: "Undo", shortcut: "Cmd+Z", category: "Edit", action: handleUndo, keywords: ["history"] },
-    { id: "redo", name: "Redo", shortcut: "Cmd+Y", category: "Edit", action: handleRedo, keywords: ["history"] },
-    { id: "copy", name: "Copy", shortcut: "Cmd+C", category: "Edit", action: handleCopy },
-    { id: "cut", name: "Cut", shortcut: "Cmd+X", category: "Edit", action: handleCut },
-    { id: "paste", name: "Paste", shortcut: "Cmd+V", category: "Edit", action: handlePaste },
-    { id: "selectAll", name: "Select All", shortcut: "Cmd+A", category: "Edit", action: handleSelectAll },
-    { id: "deselect", name: "Deselect", shortcut: "Cmd+D", category: "Edit", action: handleDeselect },
-    { id: "newFrame", name: "New Frame", category: "Animation", action: handleInsertFrame },
-    { id: "duplicateFrame", name: "Duplicate Frame", category: "Animation", action: handleDuplicateFrame },
-    { id: "deleteFrame", name: "Delete Frame", shortcut: "Delete", category: "Animation", action: handleDeleteFrame },
-    { id: "playPause", name: "Play/Pause", shortcut: "Space", category: "Animation", action: handleTogglePlayback },
-    { id: "export", name: "Export", shortcut: "Cmd+E", category: "File", action: () => setShowExportPanel(true) },
-    { id: "saveProject", name: "Save Project Snapshot", shortcut: "Cmd+S", category: "File", action: handleAutoSave, keywords: ["autosave", "cloud"] },
-    { id: "openDashboard", name: "Project Dashboard", category: "File", action: () => setProjectView("dashboard"), keywords: ["projects"] },
-    { id: "importPalette", name: "Import Palette", category: "Palette", action: () => paletteImportRef.current?.click() },
-    { id: "exportPaletteGpl", name: "Export Palette (GPL)", category: "Palette", action: () => handleExportPalette("gpl") },
-    { id: "exportPaletteAse", name: "Export Palette (ASE)", category: "Palette", action: () => handleExportPalette("ase") },
-    { id: "paletteRamp", name: "Generate Palette Ramp", category: "Palette", action: () => handleGeneratePaletteRamp(6) },
-    { id: "colorSwap", name: "Swap Primary/Secondary", category: "Palette", action: () => handleSwapColors(settings.primaryColor, settings.secondaryColor || "#000000") },
-    { id: "shortcuts", name: "Show Shortcuts", shortcut: "Cmd+/", category: "Help", action: () => setShowShortcutOverlay(true) },
-    { id: "flipH", name: "Flip Horizontal", shortcut: "Cmd+H", category: "Transform", action: handleFlipHorizontal },
-    { id: "flipV", name: "Flip Vertical", shortcut: "Cmd+Shift+H", category: "Transform", action: handleFlipVertical },
-    { id: "rotate90CW", name: "Rotate 90° CW", shortcut: "Cmd+Alt+R", category: "Transform", action: handleRotate90CW },
-    { id: "rotate90CCW", name: "Rotate 90° CCW", shortcut: "Cmd+Alt+Shift+R", category: "Transform", action: handleRotate90CCW },
-    { id: "rotate180", name: "Rotate 180°", category: "Transform", action: handleRotate180 },
-    { id: "invert", name: "Invert Colors", category: "Color", action: handleInvert },
-    { id: "desaturate", name: "Desaturate", category: "Color", action: handleDesaturate },
-    { id: "newLayer", name: "New Layer", category: "Layer", action: handleCreateLayer },
-    { id: "toolPen", name: "Pen Tool", shortcut: "B", category: "Tools", action: () => handleChangeTool("pen") },
-    { id: "toolSmudge", name: "Smudge Tool", shortcut: "S", category: "Tools", action: () => handleChangeTool("smudge") },
-    { id: "toolEraser", name: "Eraser Tool", shortcut: "E", category: "Tools", action: () => handleChangeTool("eraser") },
-    { id: "toolFill", name: "Fill Tool", shortcut: "F", category: "Tools", action: () => handleChangeTool("fill") },
-    { id: "toolEyedropper", name: "Eyedropper Tool", shortcut: "I", category: "Tools", action: () => handleChangeTool("eyedropper") },
-  ], [
-    handleUndo,
-    handleRedo,
-    handleCopy,
-    handleCut,
-    handlePaste,
-    handleSelectAll,
-    handleDeselect,
-    handleInsertFrame,
-    handleDuplicateFrame,
-    handleDeleteFrame,
-    handleTogglePlayback,
-    handleAutoSave,
-    handleExportPalette,
-    handleGeneratePaletteRamp,
-    handleSwapColors,
-    handleFlipHorizontal,
-    handleFlipVertical,
-    handleRotate90CW,
-    handleRotate90CCW,
-    handleRotate180,
-    handleInvert,
-    handleDesaturate,
-    handleCreateLayer,
-    handleChangeTool,
-    settings.primaryColor,
-    settings.secondaryColor,
-  ]);
+  const commands: Command[] = useMemo(
+    () => [
+      {
+        id: "undo",
+        name: "Undo",
+        shortcut: "Cmd+Z",
+        category: "Edit",
+        action: handleUndo,
+        keywords: ["history"],
+      },
+      {
+        id: "redo",
+        name: "Redo",
+        shortcut: "Cmd+Y",
+        category: "Edit",
+        action: handleRedo,
+        keywords: ["history"],
+      },
+      {
+        id: "copy",
+        name: "Copy",
+        shortcut: "Cmd+C",
+        category: "Edit",
+        action: handleCopy,
+      },
+      {
+        id: "cut",
+        name: "Cut",
+        shortcut: "Cmd+X",
+        category: "Edit",
+        action: handleCut,
+      },
+      {
+        id: "paste",
+        name: "Paste",
+        shortcut: "Cmd+V",
+        category: "Edit",
+        action: handlePaste,
+      },
+      {
+        id: "selectAll",
+        name: "Select All",
+        shortcut: "Cmd+A",
+        category: "Edit",
+        action: handleSelectAll,
+      },
+      {
+        id: "deselect",
+        name: "Deselect",
+        shortcut: "Cmd+D",
+        category: "Edit",
+        action: handleDeselect,
+      },
+      {
+        id: "newFrame",
+        name: "New Frame",
+        category: "Animation",
+        action: handleInsertFrame,
+      },
+      {
+        id: "duplicateFrame",
+        name: "Duplicate Frame",
+        category: "Animation",
+        action: handleDuplicateFrame,
+      },
+      {
+        id: "deleteFrame",
+        name: "Delete Frame",
+        shortcut: "Delete",
+        category: "Animation",
+        action: handleDeleteFrame,
+      },
+      {
+        id: "playPause",
+        name: "Play/Pause",
+        shortcut: "Space",
+        category: "Animation",
+        action: handleTogglePlayback,
+      },
+      {
+        id: "export",
+        name: "Export",
+        shortcut: "Cmd+E",
+        category: "File",
+        action: () => setShowExportPanel(true),
+      },
+      {
+        id: "saveProject",
+        name: "Save Project Snapshot",
+        shortcut: "Cmd+S",
+        category: "File",
+        action: handleAutoSave,
+        keywords: ["autosave", "cloud"],
+      },
+      {
+        id: "openDashboard",
+        name: "Project Dashboard",
+        category: "File",
+        action: () => setProjectView("dashboard"),
+        keywords: ["projects"],
+      },
+      {
+        id: "importPalette",
+        name: "Import Palette",
+        category: "Palette",
+        action: () => paletteImportRef.current?.click(),
+      },
+      {
+        id: "exportPaletteGpl",
+        name: "Export Palette (GPL)",
+        category: "Palette",
+        action: () => handleExportPalette("gpl"),
+      },
+      {
+        id: "exportPaletteAse",
+        name: "Export Palette (ASE)",
+        category: "Palette",
+        action: () => handleExportPalette("ase"),
+      },
+      {
+        id: "paletteRamp",
+        name: "Generate Palette Ramp",
+        category: "Palette",
+        action: () => handleGeneratePaletteRamp(6),
+      },
+      {
+        id: "colorSwap",
+        name: "Swap Primary/Secondary",
+        category: "Palette",
+        action: () =>
+          handleSwapColors(
+            settings.primaryColor,
+            settings.secondaryColor || "#000000",
+          ),
+      },
+      {
+        id: "shortcuts",
+        name: "Show Shortcuts",
+        shortcut: "Cmd+/",
+        category: "Help",
+        action: () => setShowShortcutOverlay(true),
+      },
+      {
+        id: "flipH",
+        name: "Flip Horizontal",
+        shortcut: "Cmd+H",
+        category: "Transform",
+        action: handleFlipHorizontal,
+      },
+      {
+        id: "flipV",
+        name: "Flip Vertical",
+        shortcut: "Cmd+Shift+H",
+        category: "Transform",
+        action: handleFlipVertical,
+      },
+      {
+        id: "rotate90CW",
+        name: "Rotate 90° CW",
+        shortcut: "Cmd+Alt+R",
+        category: "Transform",
+        action: handleRotate90CW,
+      },
+      {
+        id: "rotate90CCW",
+        name: "Rotate 90° CCW",
+        shortcut: "Cmd+Alt+Shift+R",
+        category: "Transform",
+        action: handleRotate90CCW,
+      },
+      {
+        id: "rotate180",
+        name: "Rotate 180°",
+        category: "Transform",
+        action: handleRotate180,
+      },
+      {
+        id: "invert",
+        name: "Invert Colors",
+        category: "Color",
+        action: handleInvert,
+      },
+      {
+        id: "desaturate",
+        name: "Desaturate",
+        category: "Color",
+        action: handleDesaturate,
+      },
+      {
+        id: "newLayer",
+        name: "New Layer",
+        category: "Layer",
+        action: handleCreateLayer,
+      },
+      {
+        id: "toolPen",
+        name: "Pen Tool",
+        shortcut: "B",
+        category: "Tools",
+        action: () => handleChangeTool("pen"),
+      },
+      {
+        id: "toolSmudge",
+        name: "Smudge Tool",
+        shortcut: "S",
+        category: "Tools",
+        action: () => handleChangeTool("smudge"),
+      },
+      {
+        id: "toolEraser",
+        name: "Eraser Tool",
+        shortcut: "E",
+        category: "Tools",
+        action: () => handleChangeTool("eraser"),
+      },
+      {
+        id: "toolFill",
+        name: "Fill Tool",
+        shortcut: "F",
+        category: "Tools",
+        action: () => handleChangeTool("fill"),
+      },
+      {
+        id: "toolEyedropper",
+        name: "Eyedropper Tool",
+        shortcut: "I",
+        category: "Tools",
+        action: () => handleChangeTool("eyedropper"),
+      },
+    ],
+    [
+      handleUndo,
+      handleRedo,
+      handleCopy,
+      handleCut,
+      handlePaste,
+      handleSelectAll,
+      handleDeselect,
+      handleInsertFrame,
+      handleDuplicateFrame,
+      handleDeleteFrame,
+      handleTogglePlayback,
+      handleAutoSave,
+      handleExportPalette,
+      handleGeneratePaletteRamp,
+      handleSwapColors,
+      handleFlipHorizontal,
+      handleFlipVertical,
+      handleRotate90CW,
+      handleRotate90CCW,
+      handleRotate180,
+      handleInvert,
+      handleDesaturate,
+      handleCreateLayer,
+      handleChangeTool,
+      settings.primaryColor,
+      settings.secondaryColor,
+    ],
+  );
 
-  useKeyboardShortcuts({
-    onUndo: handleUndo,
-    onRedo: handleRedo,
-    onCopy: handleCopy,
-    onCut: handleCut,
-    onPaste: handlePaste,
-    onDelete: handleDeselect,
-    onSelectAll: handleSelectAll,
-    onDeselect: handleDeselect,
-    onChangeTool: handleChangeTool,
-    onSave: handleAutoSave,
-    onExport: () => setShowExportPanel(true),
-    onZoomIn: () => setSettings((s) => ({ ...s, zoom: Math.min(32, s.zoom + 1) })),
-    onZoomOut: () => setSettings((s) => ({ ...s, zoom: Math.max(1, s.zoom - 1) })),
-    onZoomReset: () => setSettings((s) => ({ ...s, zoom: 8 })),
-    onToggleGrid: () => setSettings((s) => ({ ...s, showGrid: !s.showGrid })),
-    onToggleOnionSkin: () => setSettings((s) => ({ ...s, showOnionSkin: !s.showOnionSkin })),
-    onFlipHorizontal: handleFlipHorizontal,
-    onFlipVertical: handleFlipVertical,
-    onRotate90CW: handleRotate90CW,
-    onRotate90CCW: handleRotate90CCW,
-    onOpenCommandPalette: () => setShowCommandPalette(true),
-    onToggleShortcutOverlay: () => setShowShortcutOverlay((prev) => !prev),
-    onNewFrame: handleInsertFrame,
-    onDuplicateFrame: handleDuplicateFrame,
-    onDeleteFrame: handleDeleteFrame,
-    onNextFrame: () => setCurrentFrameIndex((i) => Math.min(frames.length - 1, i + 1)),
-    onPrevFrame: () => setCurrentFrameIndex((i) => Math.max(0, i - 1)),
-    onPlayPause: handleTogglePlayback,
-  }, projectView === "editor" && !showCommandPalette && !showShortcutOverlay);
+  useKeyboardShortcuts(
+    {
+      onUndo: handleUndo,
+      onRedo: handleRedo,
+      onCopy: handleCopy,
+      onCut: handleCut,
+      onPaste: handlePaste,
+      onDelete: handleDeselect,
+      onSelectAll: handleSelectAll,
+      onDeselect: handleDeselect,
+      onChangeTool: handleChangeTool,
+      onSave: handleAutoSave,
+      onExport: () => setShowExportPanel(true),
+      onZoomIn: () =>
+        setSettings((s) => ({ ...s, zoom: Math.min(32, s.zoom + 1) })),
+      onZoomOut: () =>
+        setSettings((s) => ({ ...s, zoom: Math.max(1, s.zoom - 1) })),
+      onZoomReset: () => setSettings((s) => ({ ...s, zoom: 8 })),
+      onToggleGrid: () => setSettings((s) => ({ ...s, showGrid: !s.showGrid })),
+      onToggleOnionSkin: () =>
+        setSettings((s) => ({ ...s, showOnionSkin: !s.showOnionSkin })),
+      onFlipHorizontal: handleFlipHorizontal,
+      onFlipVertical: handleFlipVertical,
+      onRotate90CW: handleRotate90CW,
+      onRotate90CCW: handleRotate90CCW,
+      onOpenCommandPalette: () => setShowCommandPalette(true),
+      onToggleShortcutOverlay: () => setShowShortcutOverlay((prev) => !prev),
+      onNewFrame: handleInsertFrame,
+      onDuplicateFrame: handleDuplicateFrame,
+      onDeleteFrame: handleDeleteFrame,
+      onNextFrame: () =>
+        setCurrentFrameIndex((i) => Math.min(frames.length - 1, i + 1)),
+      onPrevFrame: () => setCurrentFrameIndex((i) => Math.max(0, i - 1)),
+      onPlayPause: handleTogglePlayback,
+    },
+    projectView === "editor" && !showCommandPalette && !showShortcutOverlay,
+  );
 
   function handleChangeSelection(next: Uint8Array | null) {
     if (isTransforming) {
@@ -2062,7 +2600,10 @@ export default function App() {
           activeLayerId={activeLayerId}
           onLayerOperations={{
             onSelectLayer: (id) =>
-              setFrameActiveLayerIds((prev) => ({ ...prev, [currentFrame.id]: id })),
+              setFrameActiveLayerIds((prev) => ({
+                ...prev,
+                [currentFrame.id]: id,
+              })),
             onCreateLayer: handleCreateLayer,
             onDeleteLayer: handleDeleteLayer,
             onDuplicateLayer: handleDuplicateLayer,
@@ -2131,54 +2672,113 @@ export default function App() {
                 </div>
                 <div className="topbar__sep" />
                 <div className="topbar__project">
-                  <span className="topbar__project-label" style={{ opacity: 0.5, fontSize: '10px', textTransform: 'uppercase' }}>Project</span>
-                  <span className="topbar__project-name">{activeProject?.name ?? "Untitled"}</span>
+                  <span
+                    className="topbar__project-label"
+                    style={{
+                      opacity: 0.5,
+                      fontSize: "10px",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Project
+                  </span>
+                  <span className="topbar__project-name">
+                    {activeProject?.name ?? "Untitled"}
+                  </span>
                 </div>
               </div>
 
               <div className="topbar__center">
-                  <button className="uiBtn uiBtn--ghost" onClick={handleUndo} disabled={!canUndo} title="Undo (Cmd+Z)">↩</button>
-                  <button className="uiBtn uiBtn--ghost" onClick={handleRedo} disabled={!canRedo} title="Redo (Cmd+Y)">↪</button>
-                  
-                  <div className="topbar__sep" />
-                  
-                  <button className="uiBtn" onClick={() => setShowCommandPalette(true)} title="Command Palette (Cmd+K)">
-                    Commands
-                  </button>
-                  
-                  <button className="uiBtn" onClick={() => setProjectView("dashboard")} title="Project Dashboard">
-                    Projects
-                  </button>
+                <button
+                  className="uiBtn uiBtn--ghost"
+                  onClick={handleUndo}
+                  disabled={!canUndo}
+                  title="Undo (Cmd+Z)"
+                >
+                  ↩
+                </button>
+                <button
+                  className="uiBtn uiBtn--ghost"
+                  onClick={handleRedo}
+                  disabled={!canRedo}
+                  title="Redo (Cmd+Y)"
+                >
+                  ↪
+                </button>
 
-                  <div className="topbar__sep" />
+                <div className="topbar__sep" />
 
-                  {/* Color Picker Integration */}
-                  <label className="ui-color-picker-btn" title="Primary Color">
-                    <input 
-                      type="color" 
-                      value={settings.primaryColor}
-                      onChange={(e) => handleSelectColor(e.target.value)}
-                    />
-                    <div className="color-swatch" style={{ backgroundColor: settings.primaryColor }} />
-                  </label>
+                <button
+                  className="uiBtn"
+                  onClick={() => setShowCommandPalette(true)}
+                  title="Command Palette (Cmd+K)"
+                >
+                  Commands
+                </button>
+
+                <button
+                  className="uiBtn"
+                  onClick={() => setProjectView("dashboard")}
+                  title="Project Dashboard"
+                >
+                  Projects
+                </button>
+
+                <div className="topbar__sep" />
+
+                {/* Color Picker Integration */}
+                <label className="ui-color-picker-btn" title="Primary Color">
+                  <input
+                    type="color"
+                    value={settings.primaryColor}
+                    onChange={(e) => handleSelectColor(e.target.value)}
+                  />
+                  <div
+                    className="color-swatch"
+                    style={{ backgroundColor: settings.primaryColor }}
+                  />
+                </label>
               </div>
 
               <div className="topbar__right">
-                <button className={"uiBtn" + (showExportPanel ? " uiBtn--active" : "")} onClick={() => setShowExportPanel(prev => !prev)} title="Export Sprite (Cmd+E)">
+                <button
+                  className={
+                    "uiBtn" + (showExportPanel ? " uiBtn--active" : "")
+                  }
+                  onClick={() => setShowExportPanel((prev) => !prev)}
+                  title="Export Sprite (Cmd+E)"
+                >
                   Export
                 </button>
-                <button className={"uiBtn" + (showSettingsPanel ? " uiBtn--active" : "")} onClick={() => setShowSettingsPanel(prev => !prev)} title="Workspace Settings">
+                <button
+                  className={
+                    "uiBtn" + (showSettingsPanel ? " uiBtn--active" : "")
+                  }
+                  onClick={() => setShowSettingsPanel((prev) => !prev)}
+                  title="Workspace Settings"
+                >
                   Settings
                 </button>
-                
+
                 {/* User Avatars / QuickControls simplified */}
-                 {activeCollaborators.length > 0 && (
-                  <div style={{ display: "flex", gap: "4px", marginLeft: "8px" }}>
-                    {activeCollaborators.slice(0, 3).map(u => (
-                      <div key={u.id} style={{ width: 20, height: 20, background: u.color, borderRadius: '50%' }} title={u.id} />
+                {activeCollaborators.length > 0 && (
+                  <div
+                    style={{ display: "flex", gap: "4px", marginLeft: "8px" }}
+                  >
+                    {activeCollaborators.slice(0, 3).map((u) => (
+                      <div
+                        key={u.id}
+                        style={{
+                          width: 20,
+                          height: 20,
+                          background: u.color,
+                          borderRadius: "50%",
+                        }}
+                        title={u.id}
+                      />
                     ))}
                   </div>
-                 )}
+                )}
               </div>
 
               <button
@@ -2193,13 +2793,50 @@ export default function App() {
                 <div className="topbar__menu">
                   <div className="topbar__menu-header">
                     <span>Menu</span>
-                    <button className="uiBtn uiBtn--ghost" onClick={() => setShowTopbarMenu(false)}>✕</button>
+                    <button
+                      className="uiBtn uiBtn--ghost"
+                      onClick={() => setShowTopbarMenu(false)}
+                    >
+                      ✕
+                    </button>
                   </div>
                   <div className="topbar__menu-body">
-                      <button className="uiBtn" onClick={() => { setShowCommandPalette(true); setShowTopbarMenu(false); }}>Commands</button>
-                      <button className="uiBtn" onClick={() => { setProjectView("dashboard"); setShowTopbarMenu(false); }}>Projects</button>
-                      <button className="uiBtn" onClick={() => { setShowExportPanel(prev => !prev); setShowTopbarMenu(false); }}>Export</button>
-                      <button className="uiBtn" onClick={() => { setShowSettingsPanel(prev => !prev); setShowTopbarMenu(false); }}>Settings</button>
+                    <button
+                      className="uiBtn"
+                      onClick={() => {
+                        setShowCommandPalette(true);
+                        setShowTopbarMenu(false);
+                      }}
+                    >
+                      Commands
+                    </button>
+                    <button
+                      className="uiBtn"
+                      onClick={() => {
+                        setProjectView("dashboard");
+                        setShowTopbarMenu(false);
+                      }}
+                    >
+                      Projects
+                    </button>
+                    <button
+                      className="uiBtn"
+                      onClick={() => {
+                        setShowExportPanel((prev) => !prev);
+                        setShowTopbarMenu(false);
+                      }}
+                    >
+                      Export
+                    </button>
+                    <button
+                      className="uiBtn"
+                      onClick={() => {
+                        setShowSettingsPanel((prev) => !prev);
+                        setShowTopbarMenu(false);
+                      }}
+                    >
+                      Settings
+                    </button>
                   </div>
                 </div>
               )}
