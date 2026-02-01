@@ -468,3 +468,58 @@ export function selectPixel(mask: SelectionMask, width: number, x: number, y: nu
 export function deselectPixel(mask: SelectionMask, width: number, x: number, y: number): void {
   mask[y * width + x] = 0
 }
+
+/**
+ * Creates a selection mask from a pixel buffer based on alpha channel.
+ * Any pixel with alpha > 0 is selected.
+ */
+export function buildSelectionMaskFromBuffer(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number
+): SelectionMask {
+  const mask = new Uint8Array(width * height);
+  for (let i = 0; i < mask.length; i++) {
+    const alpha = pixels[i * 4 + 3];
+    if (alpha > 0) {
+      mask[i] = 1;
+    }
+  }
+  return mask;
+}
+
+/**
+ * Creates a selection mask from a floating selection.
+ * The mask covers the canvas area occupied by the opaque pixels of the floating selection.
+ */
+export function buildSelectionMaskFromFloating(
+  floating: import("../types").FloatingSelection,
+  canvasWidth: number,
+  canvasHeight: number
+): SelectionMask {
+  const mask = new Uint8Array(canvasWidth * canvasHeight);
+  const floatingMask = buildSelectionMaskFromBuffer(
+    floating.pixels,
+    floating.width,
+    floating.height
+  );
+
+  for (let y = 0; y < floating.height; y++) {
+    for (let x = 0; x < floating.width; x++) {
+      const maskIdx = y * floating.width + x;
+      if (!floatingMask[maskIdx]) continue;
+      const canvasX = floating.x + x;
+      const canvasY = floating.y + y;
+      if (
+        canvasX < 0 ||
+        canvasY < 0 ||
+        canvasX >= canvasWidth ||
+        canvasY >= canvasHeight
+      ) {
+        continue;
+      }
+      mask[canvasY * canvasWidth + canvasX] = 1;
+    }
+  }
+  return mask;
+}

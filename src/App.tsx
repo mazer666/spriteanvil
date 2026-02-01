@@ -73,6 +73,7 @@ import {
 } from "./hooks/useAnimationSystem";
 import { useLayerManager } from "./hooks/useLayerManager";
 import { usePaletteManager } from "./hooks/usePaletteManager";
+import { useTransformOperations } from "./hooks/useTransformOperations";
 import { AnimationTag } from "./lib/supabase/animation_tags";
 import {
   flipHorizontal,
@@ -187,9 +188,7 @@ export default function App() {
     new Set([0]),
   );
   const [selection, setSelection] = useState<Uint8Array | null>(null);
-  const [floatingBuffer, setFloatingBuffer] =
-    useState<FloatingSelection | null>(null);
-  const [isTransforming, setIsTransforming] = useState(false);
+  /* State removed: floatingBuffer, isTransforming */
   const clipboardRef = useRef<ClipboardData | null>(null);
   const paletteImportRef = useRef<HTMLInputElement | null>(null);
 
@@ -219,7 +218,7 @@ export default function App() {
   const historyRef = useRef<HistoryStack>(new HistoryStack());
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
-  const transformBeforeRef = useRef<Uint8ClampedArray | null>(null);
+  /* State removed: transformBeforeRef */
 
   const currentFrame = frames[currentFrameIndex];
   const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(
@@ -942,8 +941,8 @@ export default function App() {
   }
 
   function handleCopy() {
-    if (isTransforming) {
-      commitTransform();
+    if (transformOperations.floatingBuffer) {
+      transformOperations.onCommitTransform();
     }
     if (!selection) return;
     const clip = copySelection(
@@ -956,8 +955,8 @@ export default function App() {
   }
 
   function handleCut() {
-    if (isTransforming) {
-      commitTransform();
+    if (transformOperations.floatingBuffer) {
+      transformOperations.onCommitTransform();
     }
     if (!selection) return;
     if (isActiveLayerLocked) return;
@@ -977,8 +976,8 @@ export default function App() {
   }
 
   function handlePaste() {
-    if (isTransforming) {
-      commitTransform();
+    if (transformOperations.floatingBuffer) {
+      transformOperations.onCommitTransform();
     }
     if (!clipboardRef.current) return;
     if (isActiveLayerLocked) return;
@@ -1250,8 +1249,7 @@ export default function App() {
     historyRef.current = new HistoryStack();
     syncHistoryFlags();
     setSelection(null);
-    setFloatingBuffer(null);
-    setIsTransforming(false);
+    transformOperations.setFloatingBuffer(null);
   }
 
   async function handleSelectProject(project: Project) {
@@ -1711,6 +1709,21 @@ export default function App() {
     paletteManager.handleRemoveColorFromPalette;
   const handleSwapColors = paletteManager.handleSwapColors;
 
+  /**
+   * Transform handlers - delegated to useTransformOperations hook
+   */
+  const transformOperations = useTransformOperations({
+    canvasSpec,
+    activeLayerPixels: buffer,
+    isActiveLayerLocked,
+    selection,
+    setSelection: setSelection,
+    updateActiveLayerPixels,
+    history: historyRef.current,
+    syncHistoryFlags,
+    primaryColor: settings.primaryColor,
+  });
+
   function handleCreateAnimationTag(
     tag: Omit<AnimationTag, "id" | "created_at">,
   ) {
@@ -1765,251 +1778,9 @@ export default function App() {
     return mask;
   }
 
-  function buildSelectionMaskFromFloating(
-    floating: FloatingSelection,
-  ): Uint8Array | null {
-    const mask = new Uint8Array(canvasSpec.width * canvasSpec.height);
-    const floatingMask = buildSelectionMaskFromBuffer(
-      floating.pixels,
-      floating.width,
-      floating.height,
-    );
 
-    for (let y = 0; y < floating.height; y++) {
-      for (let x = 0; x < floating.width; x++) {
-        const maskIdx = y * floating.width + x;
-        if (!floatingMask[maskIdx]) continue;
-        const canvasX = floating.x + x;
-        const canvasY = floating.y + y;
-        if (
-          canvasX < 0 ||
-          canvasY < 0 ||
-          canvasX >= canvasSpec.width ||
-          canvasY >= canvasSpec.height
-        ) {
-          continue;
-        }
-        mask[canvasY * canvasSpec.width + canvasX] = 1;
-      }
-    }
 
-    const hasSelection = mask.some((value) => value !== 0);
-    return hasSelection ? mask : null;
-  }
 
-  function beginSelectionTransform(): FloatingSelection | null {
-    if (isActiveLayerLocked) return null;
-    if (floatingBuffer) {
-      if (!isTransforming) setIsTransforming(true);
-      return floatingBuffer;
-    }
-    if (!selection) return null;
-
-    const { floating, cleared } = liftSelection(
-      buffer,
-      selection,
-      canvasSpec.width,
-      canvasSpec.height,
-    );
-    if (!floating) return null;
-
-    transformBeforeRef.current = cloneBuffer(buffer);
-    updateActiveLayerPixels(cleared);
-    setFloatingBuffer(floating);
-    setIsTransforming(true);
-    setSelection(buildSelectionMaskFromFloating(floating));
-    return floating;
-  }
-
-  function updateFloating(next: FloatingSelection) {
-    setFloatingBuffer(next);
-    setIsTransforming(true);
-    setSelection(buildSelectionMaskFromFloating(next));
-  }
-
-  function commitTransform() {
-    if (!floatingBuffer) return;
-    if (!transformBeforeRef.current) return;
-
-    const pasted = pasteClipboard(
-      buffer,
-      {
-        pixels: floatingBuffer.pixels,
-        width: floatingBuffer.width,
-        height: floatingBuffer.height,
-      },
-      canvasSpec.width,
-      canvasSpec.height,
-      floatingBuffer.x,
-      floatingBuffer.y,
-    );
-    const newSelection = buildSelectionMaskFromFloating(floatingBuffer);
-    historyRef.current.commit(transformBeforeRef.current);
-    updateActiveLayerPixels(pasted);
-    setFloatingBuffer(null);
-    setIsTransforming(false);
-    setSelection(newSelection);
-    transformBeforeRef.current = null;
-    syncHistoryFlags();
-  }
-
-  function applyFloatingTransform(
-    buildMatrix: (width: number, height: number) => TransformMatrix,
-  ): boolean {
-    const floating = beginSelectionTransform();
-    if (!floating) return false;
-
-    const matrix = buildMatrix(floating.width, floating.height);
-    const next = applyTransform(floating, matrix, "nearest");
-    updateFloating(next);
-    return true;
-  }
-
-  function handleFlipHorizontal() {
-    if (isActiveLayerLocked) return;
-    if (
-      applyFloatingTransform((width) => ({
-        a: -1,
-        b: 0,
-        c: 0,
-        d: 1,
-        e: width - 1,
-        f: 0,
-      }))
-    )
-      return;
-    const before = cloneBuffer(buffer);
-    const after = flipHorizontal(buffer, canvasSpec.width, canvasSpec.height);
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(after);
-    syncHistoryFlags();
-  }
-
-  function handleFlipVertical() {
-    if (isActiveLayerLocked) return;
-    if (
-      applyFloatingTransform((_width, height) => ({
-        a: 1,
-        b: 0,
-        c: 0,
-        d: -1,
-        e: 0,
-        f: height - 1,
-      }))
-    )
-      return;
-    const before = cloneBuffer(buffer);
-    const after = flipVertical(buffer, canvasSpec.width, canvasSpec.height);
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(after);
-    syncHistoryFlags();
-  }
-
-  function handleRotate90CW() {
-    if (isActiveLayerLocked) return;
-    if (
-      applyFloatingTransform((_width, height) => ({
-        a: 0,
-        b: 1,
-        c: -1,
-        d: 0,
-        e: height - 1,
-        f: 0,
-      }))
-    )
-      return;
-    const before = cloneBuffer(buffer);
-    const result = rotate90CW(buffer, canvasSpec.width, canvasSpec.height);
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(result.buffer);
-    syncHistoryFlags();
-  }
-
-  function handleRotate90CCW() {
-    if (isActiveLayerLocked) return;
-    if (
-      applyFloatingTransform((width) => ({
-        a: 0,
-        b: -1,
-        c: 1,
-        d: 0,
-        e: 0,
-        f: width - 1,
-      }))
-    )
-      return;
-    const before = cloneBuffer(buffer);
-    const result = rotate90CCW(buffer, canvasSpec.width, canvasSpec.height);
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(result.buffer);
-    syncHistoryFlags();
-  }
-
-  function handleRotate180() {
-    if (isActiveLayerLocked) return;
-    if (
-      applyFloatingTransform((width, height) => ({
-        a: -1,
-        b: 0,
-        c: 0,
-        d: -1,
-        e: width - 1,
-        f: height - 1,
-      }))
-    )
-      return;
-    const before = cloneBuffer(buffer);
-    const after = rotate180(buffer, canvasSpec.width, canvasSpec.height);
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(after);
-    syncHistoryFlags();
-  }
-
-  function handleScale(scaleX: number, scaleY: number) {
-    if (isActiveLayerLocked) return;
-    if (scaleX <= 0 || scaleY <= 0) return;
-    if (
-      applyFloatingTransform(() => ({
-        a: scaleX,
-        b: 0,
-        c: 0,
-        d: scaleY,
-        e: 0,
-        f: 0,
-      }))
-    )
-      return;
-    const before = cloneBuffer(buffer);
-    const result = scaleNearest(
-      buffer,
-      canvasSpec.width,
-      canvasSpec.height,
-      scaleX,
-      scaleY,
-    );
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(result.buffer);
-    syncHistoryFlags();
-  }
-
-  function handleRotateDegrees(degrees: number) {
-    if (isActiveLayerLocked) return;
-    const snapped = Math.round(degrees / 90) * 90;
-    const normalized = ((snapped % 360) + 360) % 360;
-    if (normalized === 0) return;
-    if (normalized === 90) {
-      handleRotate90CW();
-      return;
-    }
-    if (normalized === 180) {
-      handleRotate180();
-      return;
-    }
-    if (normalized === 270) {
-      handleRotate90CCW();
-      return;
-    }
-  }
 
   function handleAdjustHue(hueShift: number) {
     if (isActiveLayerLocked) return;
@@ -2122,23 +1893,7 @@ export default function App() {
     });
   }
 
-  function handleSmartOutline(mode: OutlineMode) {
-    if (isActiveLayerLocked) return;
-    const rgb = hexToRgb(settings.primaryColor);
-    if (!rgb) return;
-    const outlineColor = { r: rgb.r, g: rgb.g, b: rgb.b, a: 255 };
-    const before = cloneBuffer(buffer);
-    const after = applySmartOutline(
-      buffer,
-      canvasSpec.width,
-      canvasSpec.height,
-      outlineColor,
-      mode,
-    );
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(after);
-    syncHistoryFlags();
-  }
+
 
   function handleGenerateTweens(
     startIndex: number,
@@ -2369,34 +2124,34 @@ export default function App() {
         name: "Flip Horizontal",
         shortcut: "Cmd+H",
         category: "Transform",
-        action: handleFlipHorizontal,
+        action: transformOperations.onFlipHorizontal,
       },
       {
         id: "flipV",
         name: "Flip Vertical",
         shortcut: "Cmd+Shift+H",
         category: "Transform",
-        action: handleFlipVertical,
+        action: transformOperations.onFlipVertical,
       },
       {
         id: "rotate90CW",
         name: "Rotate 90° CW",
         shortcut: "Cmd+Alt+R",
         category: "Transform",
-        action: handleRotate90CW,
+        action: transformOperations.onRotate90CW,
       },
       {
         id: "rotate90CCW",
         name: "Rotate 90° CCW",
         shortcut: "Cmd+Alt+Shift+R",
         category: "Transform",
-        action: handleRotate90CCW,
+        action: transformOperations.onRotate90CCW,
       },
       {
         id: "rotate180",
         name: "Rotate 180°",
         category: "Transform",
-        action: handleRotate180,
+        action: transformOperations.onRotate180,
       },
       {
         id: "invert",
@@ -2468,11 +2223,11 @@ export default function App() {
       handleExportPalette,
       handleGeneratePaletteRamp,
       handleSwapColors,
-      handleFlipHorizontal,
-      handleFlipVertical,
-      handleRotate90CW,
-      handleRotate90CCW,
-      handleRotate180,
+      transformOperations.onFlipHorizontal,
+      transformOperations.onFlipVertical,
+      transformOperations.onRotate90CW,
+      transformOperations.onRotate90CCW,
+      transformOperations.onRotate180,
       handleInvert,
       handleDesaturate,
       handleCreateLayer,
@@ -2503,10 +2258,10 @@ export default function App() {
       onToggleGrid: () => setSettings((s) => ({ ...s, showGrid: !s.showGrid })),
       onToggleOnionSkin: () =>
         setSettings((s) => ({ ...s, showOnionSkin: !s.showOnionSkin })),
-      onFlipHorizontal: handleFlipHorizontal,
-      onFlipVertical: handleFlipVertical,
-      onRotate90CW: handleRotate90CW,
-      onRotate90CCW: handleRotate90CCW,
+      onFlipHorizontal: transformOperations.onFlipHorizontal,
+      onFlipVertical: transformOperations.onFlipVertical,
+      onRotate90CW: transformOperations.onRotate90CW,
+      onRotate90CCW: transformOperations.onRotate90CCW,
       onOpenCommandPalette: () => setShowCommandPalette(true),
       onToggleShortcutOverlay: () => setShowShortcutOverlay((prev) => !prev),
       onNewFrame: handleInsertFrame,
@@ -2521,30 +2276,30 @@ export default function App() {
   );
 
   function handleChangeSelection(next: Uint8Array | null) {
-    if (isTransforming) {
-      commitTransform();
+    if (transformOperations.floatingBuffer) {
+      transformOperations.onCommitTransform();
     }
     setSelection(next);
   }
 
   function handleChangeTool(nextTool: ToolId) {
-    if (isTransforming) {
-      commitTransform();
+    if (transformOperations.floatingBuffer) {
+      transformOperations.onCommitTransform();
     }
     setTool(nextTool);
   }
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Enter" && isTransforming && !isInputFocused()) {
+      if (e.key === "Enter" && transformOperations.floatingBuffer && !isInputFocused()) {
         e.preventDefault();
-        commitTransform();
+        transformOperations.onCommitTransform();
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isTransforming]);
+  }, [transformOperations]);
 
   return (
     <>
@@ -2632,16 +2387,7 @@ export default function App() {
             onExportPalette: handleExportPalette,
             onGenerateRamp: handleGeneratePaletteRamp,
           }}
-          onTransformOperations={{
-            onFlipHorizontal: handleFlipHorizontal,
-            onFlipVertical: handleFlipVertical,
-            onRotate90CW: handleRotate90CW,
-            onRotate90CCW: handleRotate90CCW,
-            onRotate180: handleRotate180,
-            onScale: handleScale,
-            onRotate: handleRotateDegrees,
-            onSmartOutline: handleSmartOutline,
-          }}
+          onTransformOperations={transformOperations}
           onColorAdjustOperations={{
             onAdjustHue: handleAdjustHue,
             onAdjustSaturation: handleAdjustSaturation,
