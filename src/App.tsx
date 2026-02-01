@@ -46,6 +46,7 @@ import {
 } from "./hooks/useProjectPersistence";
 import { useAnimationSystem, ConfirmDialogConfig } from "./hooks/useAnimationSystem";
 import { useLayerManager } from "./hooks/useLayerManager";
+import { usePaletteManager } from "./hooks/usePaletteManager";
 import { AnimationTag } from "./lib/supabase/animation_tags";
 import {
   flipHorizontal,
@@ -67,7 +68,7 @@ import {
   posterize,
 } from "./editor/tools/coloradjust";
 import { invertSelection, selectConnectedOpaque } from "./editor/selection";
-import { extractPaletteFromPixels } from "./editor/palette";
+
 import {
   createProject,
   getProjects,
@@ -80,11 +81,12 @@ import {
 } from "./lib/supabase/projects";
 import { hasSupabaseConfig } from "./lib/supabase/client";
 import { supabase } from "./lib/supabase/client";
-import { buildPaletteRamp, exportPaletteFile, importPaletteFile } from "./lib/supabase/palettes";
+
 import { cacheProjectSnapshot, getCachedProjectSnapshot } from "./lib/storage/frameCache";
 import ProjectDashboard, { NewProjectRequest } from "./ui/ProjectDashboard";
 import ShortcutOverlay, { ShortcutGroup } from "./ui/ShortcutOverlay";
 import StatusBar from "./ui/StatusBar";
+
 import { hexToRgb } from "./utils/colors";
 import { isInputFocused } from "./utils/dom";
 import { buildInpaintPayload } from "./lib/ai/inpaint";
@@ -706,6 +708,16 @@ export default function App() {
     { setFrameLayers, setFrameActiveLayerIds, setFrames },
     // Config
     { canvasSpec }
+  );
+
+  // Palette manager hook - handles palette operations
+  const paletteManager = usePaletteManager(
+    // State
+    { palettes, activePaletteId, compositeBuffer, frameLayers, isActiveLayerLocked },
+    // Actions
+    { setPalettes, setActivePaletteId, setFrameLayers },
+    // Config
+    { canvasSpec, settings, historyRef, rebuildFramesFromLayers, syncHistoryFlags }
   );
 
   useEffect(() => {
@@ -1436,132 +1448,18 @@ export default function App() {
   const handleMergeDown = layerManager.handleMergeDown;
   const handleFlattenLayers = layerManager.handleFlattenLayers;
 
-  function handleCreatePalette(name: string, colors: string[]) {
-    const newPalette: PaletteData = {
-      id: `palette-${Date.now()}`,
-      name,
-      colors,
-      is_default: false,
-    };
-    setPalettes((prev) => [newPalette, ...prev]);
-    setActivePaletteId(newPalette.id);
-  }
-
-  async function handleImportPalette(file: File) {
-    try {
-      const { name, colors } = await importPaletteFile(file);
-      if (colors.length === 0) return;
-      handleCreatePalette(name, colors);
-    } catch (error) {
-      console.error("Palette import failed:", error);
-    }
-  }
-
-  function handleExportPalette(format: "gpl" | "ase") {
-    const palette = palettes.find((p) => p.id === activePaletteId);
-    if (!palette) return;
-    const blob = exportPaletteFile(palette.name, palette.colors, format);
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${palette.name}.${format}`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
 /**
- * WHAT: Scans your image and builds a Palette from the colors it finds.
- * WHY: So you can save the colors you used for later!
+ * Palette handlers - delegated to usePaletteManager hook
  */
-  function handleExtractPaletteFromImage() {
-    const colors = extractPaletteFromPixels(
-      compositeBuffer,
-      canvasSpec.width,
-      canvasSpec.height
-    );
-    if (colors.length === 0) return;
-    const newPalette: PaletteData = {
-      id: `palette-${Date.now()}`,
-      name: `Extracted ${new Date().toLocaleTimeString()}`,
-      colors,
-      is_default: false,
-    };
-    setPalettes((prev) => [newPalette, ...prev]);
-    setActivePaletteId(newPalette.id);
-  }
-
-  function handleGeneratePaletteRamp(steps: number) {
-    const ramp = buildPaletteRamp(settings.primaryColor, settings.secondaryColor || "#000000", steps);
-    if (ramp.length === 0) return;
-    if (!activePaletteId) return;
-    setPalettes((prev) =>
-      prev.map((palette) =>
-        palette.id === activePaletteId
-          ? { ...palette, colors: [...palette.colors, ...ramp] }
-          : palette
-      )
-    );
-  }
-
-  function handleDeletePalette(id: string) {
-    setPalettes((prev) => prev.filter((p) => p.id !== id));
-    if (activePaletteId === id) {
-      setActivePaletteId(palettes.find((p) => p.id !== id)?.id || "default");
-    }
-  }
-
-  function handleAddColorToPalette(paletteId: string, color: string) {
-    setPalettes((prev) =>
-      prev.map((p) =>
-        p.id === paletteId ? { ...p, colors: [...p.colors, color] } : p
-      )
-    );
-  }
-
-  function handleRemoveColorFromPalette(paletteId: string, colorIndex: number) {
-    setPalettes((prev) =>
-      prev.map((p) =>
-        p.id === paletteId
-          ? { ...p, colors: p.colors.filter((_, i) => i !== colorIndex) }
-          : p
-      )
-    );
-  }
-
-/**
- * WHAT: Replaces EVERY pixel of "Color A" with "Color B" across the WHOLE project.
- * WHY: If you decide a character's "Red Hat" should actually be "Blue", this saves you from repainting every frame!
- */
-  function handleSwapColors(fromColor: string, toColor: string) {
-    if (isActiveLayerLocked) return;
-    const from = hexToRgb(fromColor);
-    const to = hexToRgb(toColor);
-    if (!from || !to) return;
-
-    historyRef.current.commitLayers(frameLayers);
-    const next: Record<string, LayerData[]> = {};
-    Object.entries(frameLayers).forEach(([frameId, layers]) => {
-      next[frameId] = layers.map((layer) => {
-        if (!layer.pixels) return layer;
-        const updated = new Uint8ClampedArray(layer.pixels);
-        for (let i = 0; i < updated.length; i += 4) {
-          if (
-            updated[i] === from.r &&
-            updated[i + 1] === from.g &&
-            updated[i + 2] === from.b
-          ) {
-            updated[i] = to.r;
-            updated[i + 1] = to.g;
-            updated[i + 2] = to.b;
-          }
-        }
-        return { ...layer, pixels: updated };
-      });
-    });
-    setFrameLayers(next);
-    rebuildFramesFromLayers(next);
-    syncHistoryFlags();
-  }
+  const handleCreatePalette = paletteManager.handleCreatePalette;
+  const handleImportPalette = paletteManager.handleImportPalette;
+  const handleExportPalette = paletteManager.handleExportPalette;
+  const handleExtractPaletteFromImage = paletteManager.handleExtractPaletteFromImage;
+  const handleGeneratePaletteRamp = paletteManager.handleGeneratePaletteRamp;
+  const handleDeletePalette = paletteManager.handleDeletePalette;
+  const handleAddColorToPalette = paletteManager.handleAddColorToPalette;
+  const handleRemoveColorFromPalette = paletteManager.handleRemoveColorFromPalette;
+  const handleSwapColors = paletteManager.handleSwapColors;
 
   function handleCreateAnimationTag(tag: Omit<AnimationTag, "id" | "created_at">) {
     const newTag: AnimationTag = {
