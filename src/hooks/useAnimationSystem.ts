@@ -165,6 +165,12 @@ export function useAnimationSystem(
   // ============================================================================
   // PLAYBACK EFFECT
   // ============================================================================
+  
+  // Track current frame index in a ref for the timer to use
+  const currentFrameIndexRef = useRef(currentFrameIndex);
+  useEffect(() => {
+    currentFrameIndexRef.current = currentFrameIndex;
+  }, [currentFrameIndex]);
 
   useEffect(() => {
     // Clear any existing timer first
@@ -173,7 +179,8 @@ export function useAnimationSystem(
       playbackTimerRef.current = null;
     }
     
-    if (!isPlaying || !currentFrame) return;
+    // Early exit if not playing
+    if (!isPlaying) return;
 
     const advanceFrame = () => {
       // CRITICAL: Check if we're still playing before doing anything
@@ -181,35 +188,32 @@ export function useAnimationSystem(
         return; // Stop the chain if playback was stopped
       }
       
-      setCurrentFrameIndex((prev) => {
-        // Double-check inside the state updater as well
-        if (!isPlayingRef.current) {
-          return prev; // Don't advance if stopped
-        }
-        
-        const currentFrames = framesRef.current;
-        const tag = activeTagRef.current;
-        const shouldLoopTag = loopTagOnlyRef.current;
-        
-        const tagStart = tag?.start_frame ?? 0;
-        const tagEnd = tag?.end_frame ?? currentFrames.length - 1;
-        const loopRange = shouldLoopTag && tag ? { start: tagStart, end: tagEnd } : null;
-        const next = loopRange
-          ? (prev + 1 > loopRange.end ? loopRange.start : prev + 1)
-          : (prev + 1) % currentFrames.length;
-        
-        // Schedule next frame ONLY if still playing
-        if (isPlayingRef.current) {
-          const nextDuration = currentFrames[next]?.durationMs ?? 100;
-          playbackTimerRef.current = window.setTimeout(advanceFrame, nextDuration);
-        }
-        
-        return next;
-      });
+      const currentFrames = framesRef.current;
+      const tag = activeTagRef.current;
+      const shouldLoopTag = loopTagOnlyRef.current;
+      const currentIdx = currentFrameIndexRef.current;
+      
+      const tagStart = tag?.start_frame ?? 0;
+      const tagEnd = tag?.end_frame ?? currentFrames.length - 1;
+      const loopRange = shouldLoopTag && tag ? { start: tagStart, end: tagEnd } : null;
+      const next = loopRange
+        ? (currentIdx + 1 > loopRange.end ? loopRange.start : currentIdx + 1)
+        : (currentIdx + 1) % currentFrames.length;
+      
+      // Update frame index
+      setCurrentFrameIndex(next);
+      currentFrameIndexRef.current = next; // Update ref immediately for next iteration
+      
+      // Schedule next frame ONLY if still playing (OUTSIDE state updater!)
+      if (isPlayingRef.current) {
+        const nextDuration = currentFrames[next]?.durationMs ?? 100;
+        playbackTimerRef.current = window.setTimeout(advanceFrame, nextDuration);
+      }
     };
 
-    // Start the first timer
-    playbackTimerRef.current = window.setTimeout(advanceFrame, currentFrame.durationMs);
+    // Start the first timer using current frame's duration from ref
+    const initialDuration = framesRef.current[currentFrameIndex]?.durationMs ?? 100;
+    playbackTimerRef.current = window.setTimeout(advanceFrame, initialDuration);
 
     return () => {
       if (playbackTimerRef.current !== null) {
@@ -217,7 +221,8 @@ export function useAnimationSystem(
         playbackTimerRef.current = null;
       }
     };
-  }, [isPlaying, currentFrame?.id, setCurrentFrameIndex]); // Only depend on isPlaying and frame ID change
+  }, [isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
+  // IMPORTANT: Only depend on isPlaying! The timer chain is self-contained.
 
   // ============================================================================
   // FRAME OPERATIONS

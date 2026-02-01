@@ -45,6 +45,7 @@ import {
   saveLocalProjects,
 } from "./hooks/useProjectPersistence";
 import { useAnimationSystem, ConfirmDialogConfig } from "./hooks/useAnimationSystem";
+import { useLayerManager } from "./hooks/useLayerManager";
 import { AnimationTag } from "./lib/supabase/animation_tags";
 import {
   flipHorizontal,
@@ -696,6 +697,16 @@ export default function App() {
   );
 
   // Note: The playback useEffect is now handled inside useAnimationSystem
+
+  // Layer manager hook - handles layer CRUD and properties
+  const layerManager = useLayerManager(
+    // State
+    { currentFrame, layers, activeLayerId },
+    // Actions
+    { setFrameLayers, setFrameActiveLayerIds, setFrames },
+    // Config
+    { canvasSpec }
+  );
 
   useEffect(() => {
     setFrameLayers((prev) => {
@@ -1410,123 +1421,20 @@ export default function App() {
     });
   }
 
-  function handleCreateLayer() {
-    if (!currentFrame) return;
-    const newLayer = createLayer(`Layer ${layers.length + 1}`);
-    const frameId = currentFrame.id;
-    const nextLayers = [newLayer, ...layers];
-    setFrameLayers((prev) => ({ ...prev, [frameId]: nextLayers }));
-    setFrameActiveLayerIds((prev) => ({ ...prev, [frameId]: newLayer.id }));
-    updateCurrentFrameComposite(frameId, nextLayers);
-  }
-
-  function handleDeleteLayer(id: string) {
-    if (layers.length === 1) return;
-    const frameId = currentFrame.id;
-    const nextLayers = layers.filter((layer) => layer.id !== id);
-    setFrameLayers((prev) => ({ ...prev, [frameId]: nextLayers }));
-    if (activeLayerId === id) {
-      const nextActive = nextLayers[0]?.id || null;
-      setFrameActiveLayerIds((prev) => ({ ...prev, [frameId]: nextActive || "" }));
-    }
-    updateCurrentFrameComposite(frameId, nextLayers);
-  }
-
-  function handleDuplicateLayer(id: string) {
-    const layer = layers.find((l) => l.id === id);
-    if (!layer) return;
-    const newLayer: LayerData = {
-      ...layer,
-      id: crypto.randomUUID(),
-      name: `${layer.name} copy`,
-      pixels: layer.pixels ? cloneBuffer(layer.pixels) : createEmptyPixels(),
-    };
-    const index = layers.findIndex((l) => l.id === id);
-    const nextLayers = [...layers];
-    nextLayers.splice(index, 0, newLayer);
-    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: nextLayers }));
-    updateCurrentFrameComposite(currentFrame.id, nextLayers);
-  }
-
-  function handleToggleLayerVisibility(id: string) {
-    const nextLayers = layers.map((layer) =>
-      layer.id === id ? { ...layer, is_visible: !layer.is_visible } : layer
-    );
-    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: nextLayers }));
-    updateCurrentFrameComposite(currentFrame.id, nextLayers);
-  }
-
-  function handleToggleLayerLock(id: string) {
-    const nextLayers = layers.map((layer) =>
-      layer.id === id ? { ...layer, is_locked: !layer.is_locked } : layer
-    );
-    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: nextLayers }));
-  }
-
-  function handleUpdateLayerOpacity(id: string, opacity: number) {
-    const nextLayers = layers.map((layer) =>
-      layer.id === id ? { ...layer, opacity } : layer
-    );
-    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: nextLayers }));
-    updateCurrentFrameComposite(currentFrame.id, nextLayers);
-  }
-
-  function handleUpdateLayerBlendMode(id: string, blend_mode: BlendMode) {
-    const nextLayers = layers.map((layer) =>
-      layer.id === id ? { ...layer, blend_mode } : layer
-    );
-    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: nextLayers }));
-    updateCurrentFrameComposite(currentFrame.id, nextLayers);
-  }
-
-  function handleRenameLayer(id: string, name: string) {
-    const nextLayers = layers.map((layer) =>
-      layer.id === id ? { ...layer, name } : layer
-    );
-    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: nextLayers }));
-  }
-
-  function handleReorderLayers(fromIndex: number, toIndex: number) {
-    const updated = [...layers];
-    const [moved] = updated.splice(fromIndex, 1);
-    updated.splice(toIndex, 0, moved);
-    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: updated }));
-    updateCurrentFrameComposite(currentFrame.id, updated);
-  }
-
 /**
- * WHAT: Merges the selected layer with the one directly below it.
- * WHY: To keep your layer list clean and manageable once a part of the art is finished.
+ * Layer handlers - delegated to useLayerManager hook
  */
-  function handleMergeDown(id: string) {
-    const index = layers.findIndex((l) => l.id === id);
-    const updated = mergeDown(layers, index, canvasSpec.width, canvasSpec.height);
-    if (updated === layers) return;
-    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: updated }));
-    updateCurrentFrameComposite(currentFrame.id, updated);
-  }
-
-/**
- * WHAT: Squashes ALL layers into one single sheet of pixels.
- * WHY: Useful when you're finished drawing and want to simplify the file.
- * CAUTION: Once flattened, you can't easily edit individual layers again!
- */
-  function handleFlattenLayers() {
-    if (!layers.length) return;
-    const flattenedPixels = flattenImage(layers, canvasSpec.width, canvasSpec.height);
-    const baseLayer: LayerData = {
-      id: crypto.randomUUID(),
-      name: "Flattened Layer",
-      opacity: 1,
-      blend_mode: "normal",
-      is_visible: true,
-      is_locked: false,
-      pixels: flattenedPixels,
-    };
-    setFrameLayers((prev) => ({ ...prev, [currentFrame.id]: [baseLayer] }));
-    setFrameActiveLayerIds((prev) => ({ ...prev, [currentFrame.id]: baseLayer.id }));
-    updateCurrentFrameComposite(currentFrame.id, [baseLayer]);
-  }
+  const handleCreateLayer = layerManager.handleCreateLayer;
+  const handleDeleteLayer = layerManager.handleDeleteLayer;
+  const handleDuplicateLayer = layerManager.handleDuplicateLayer;
+  const handleToggleLayerVisibility = layerManager.handleToggleLayerVisibility;
+  const handleToggleLayerLock = layerManager.handleToggleLayerLock;
+  const handleUpdateLayerOpacity = layerManager.handleUpdateLayerOpacity;
+  const handleUpdateLayerBlendMode = layerManager.handleUpdateLayerBlendMode;
+  const handleRenameLayer = layerManager.handleRenameLayer;
+  const handleReorderLayers = layerManager.handleReorderLayers;
+  const handleMergeDown = layerManager.handleMergeDown;
+  const handleFlattenLayers = layerManager.handleFlattenLayers;
 
   function handleCreatePalette(name: string, colors: string[]) {
     const newPalette: PaletteData = {
