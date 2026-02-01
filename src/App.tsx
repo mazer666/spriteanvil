@@ -74,6 +74,8 @@ import {
 import { useLayerManager } from "./hooks/useLayerManager";
 import { usePaletteManager } from "./hooks/usePaletteManager";
 import { useTransformOperations } from "./hooks/useTransformOperations";
+import { useColorAdjustments } from "./hooks/useColorAdjustments";
+import { useSelectionOperations } from "./hooks/useSelectionOperations";
 import { AnimationTag } from "./lib/supabase/animation_tags";
 import {
   flipHorizontal,
@@ -86,14 +88,7 @@ import {
   liftSelection,
   TransformMatrix,
 } from "./editor/tools/transform";
-import {
-  adjustHue,
-  adjustSaturation,
-  adjustBrightness,
-  invertColors,
-  desaturate,
-  posterize,
-} from "./editor/tools/coloradjust";
+
 import { invertSelection, selectConnectedOpaque } from "./editor/selection";
 
 import {
@@ -320,72 +315,20 @@ export default function App() {
   }, [canvasSpec.height, canvasSpec.width, currentFrame.pixels, layers]);
   const isActiveLayerLocked = activeLayer?.is_locked ?? false;
 
-  const [colorAdjustPreview, setColorAdjustPreview] = useState({
-    hueShift: 0,
-    saturationDelta: 0,
-    brightnessDelta: 0,
-  });
 
-  const previewLayerPixels = useMemo(() => {
-    if (
-      colorAdjustPreview.hueShift === 0 &&
-      colorAdjustPreview.saturationDelta === 0 &&
-      colorAdjustPreview.brightnessDelta === 0
-    ) {
-      return null;
-    }
-    let preview = buffer;
-    if (colorAdjustPreview.hueShift !== 0) {
-      preview = adjustHue(
-        preview,
-        canvasSpec.width,
-        canvasSpec.height,
-        colorAdjustPreview.hueShift,
-      );
-    }
-    if (colorAdjustPreview.saturationDelta !== 0) {
-      preview = adjustSaturation(
-        preview,
-        canvasSpec.width,
-        canvasSpec.height,
-        colorAdjustPreview.saturationDelta,
-      );
-    }
-    if (colorAdjustPreview.brightnessDelta !== 0) {
-      preview = adjustBrightness(
-        preview,
-        canvasSpec.width,
-        canvasSpec.height,
-        colorAdjustPreview.brightnessDelta,
-      );
-    }
-    return preview;
-  }, [
-    buffer,
-    canvasSpec.height,
-    canvasSpec.width,
-    colorAdjustPreview.brightnessDelta,
-    colorAdjustPreview.hueShift,
-    colorAdjustPreview.saturationDelta,
-  ]);
 
-  const compositePreviewBuffer = useMemo(() => {
-    if (!previewLayerPixels) return compositeBuffer;
-    if (!layers.length) return previewLayerPixels;
-    const previewLayers = layers.map((layer) =>
-      layer.id === activeLayerId
-        ? { ...layer, pixels: previewLayerPixels }
-        : layer,
-    );
-    return compositeLayers(previewLayers, canvasSpec.width, canvasSpec.height);
-  }, [
-    activeLayerId,
-    canvasSpec.height,
-    canvasSpec.width,
-    compositeBuffer,
+  // useColorAdjustments hook handles Preview logic
+  const colorAdjustments = useColorAdjustments({
+    canvasSpec,
+    activeLayerPixels: buffer,
     layers,
-    previewLayerPixels,
-  ]);
+    activeLayerId,
+    compositeBuffer,
+    updateActiveLayerPixels,
+    history: historyRef.current,
+    syncHistoryFlags,
+    isActiveLayerLocked,
+  });
 
   const [palettes, setPalettes] = useState<PaletteData[]>([
     {
@@ -995,89 +938,9 @@ export default function App() {
     syncHistoryFlags();
   }
 
-  function handleDeselect() {
-    handleChangeSelection(null);
-  }
 
-  function handleSelectAll() {
-    const sel = new Uint8Array(canvasSpec.width * canvasSpec.height);
-    sel.fill(1);
-    handleChangeSelection(sel);
-  }
 
-  function handleInvertSelection() {
-    if (!selection) {
-      handleSelectAll();
-      return;
-    }
-    const inverted = new Uint8Array(selection);
-    invertSelection(inverted);
-    handleChangeSelection(inverted);
-  }
-
-  function handleGrowSelection() {
-    if (!selection) return;
-    const grown = new Uint8Array(canvasSpec.width * canvasSpec.height);
-    for (let y = 0; y < canvasSpec.height; y++) {
-      for (let x = 0; x < canvasSpec.width; x++) {
-        const idx = y * canvasSpec.width + x;
-        if (selection[idx]) {
-          grown[idx] = 1;
-          if (x > 0) grown[idx - 1] = 1;
-          if (x < canvasSpec.width - 1) grown[idx + 1] = 1;
-          if (y > 0) grown[idx - canvasSpec.width] = 1;
-          if (y < canvasSpec.height - 1) grown[idx + canvasSpec.width] = 1;
-        }
-      }
-    }
-    handleChangeSelection(grown);
-  }
-
-  function handleShrinkSelection() {
-    if (!selection) return;
-    const shrunk = new Uint8Array(canvasSpec.width * canvasSpec.height);
-    for (let y = 0; y < canvasSpec.height; y++) {
-      for (let x = 0; x < canvasSpec.width; x++) {
-        const idx = y * canvasSpec.width + x;
-        if (selection[idx]) {
-          const hasUnselectedNeighbor =
-            x === 0 ||
-            !selection[idx - 1] ||
-            x === canvasSpec.width - 1 ||
-            !selection[idx + 1] ||
-            y === 0 ||
-            !selection[idx - canvasSpec.width] ||
-            y === canvasSpec.height - 1 ||
-            !selection[idx + canvasSpec.width];
-          if (!hasUnselectedNeighbor) {
-            shrunk[idx] = 1;
-          }
-        }
-      }
-    }
-    handleChangeSelection(shrunk);
-  }
-
-  function handleFeatherSelection(_radius: number) {}
-
-  function handleDetectObjectSelection() {
-    if (!cursorPosition) {
-      setProjectError(
-        "Move the cursor over a sprite pixel to detect an object.",
-      );
-      return;
-    }
-    const mask = selectConnectedOpaque(
-      compositeBuffer,
-      canvasSpec.width,
-      canvasSpec.height,
-      cursorPosition.x,
-      cursorPosition.y,
-    );
-    setSelection(mask);
-  }
-
-  async function handleInpaintRequest(payload: {
+  function handleInpaintRequest(payload: {
     prompt: string;
     denoiseStrength: number;
     promptInfluence: number;
@@ -1726,6 +1589,17 @@ export default function App() {
     primaryColor: settings.primaryColor,
   });
 
+  const selectionOperations = useSelectionOperations({
+    selection,
+    setSelection,
+    canvasSpec,
+    compositeBuffer,
+    cursorPosition,
+    setProjectError,
+    floatingBuffer: transformOperations.floatingBuffer,
+    onCommitTransform: transformOperations.onCommitTransform,
+  });
+
   function handleCreateAnimationTag(
     tag: Omit<AnimationTag, "id" | "created_at">,
   ) {
@@ -1784,116 +1658,7 @@ export default function App() {
 
 
 
-  function handleAdjustHue(hueShift: number) {
-    if (isActiveLayerLocked) return;
-    const before = cloneBuffer(buffer);
-    const after = adjustHue(
-      buffer,
-      canvasSpec.width,
-      canvasSpec.height,
-      hueShift,
-    );
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(after);
-    syncHistoryFlags();
-    setColorAdjustPreview((prev) => ({ ...prev, hueShift: 0 }));
-  }
 
-  function handleAdjustSaturation(saturationDelta: number) {
-    if (isActiveLayerLocked) return;
-    const before = cloneBuffer(buffer);
-    const after = adjustSaturation(
-      buffer,
-      canvasSpec.width,
-      canvasSpec.height,
-      saturationDelta,
-    );
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(after);
-    syncHistoryFlags();
-    setColorAdjustPreview((prev) => ({ ...prev, saturationDelta: 0 }));
-  }
-
-  function handleAdjustBrightness(brightnessDelta: number) {
-    if (isActiveLayerLocked) return;
-    const before = cloneBuffer(buffer);
-    const after = adjustBrightness(
-      buffer,
-      canvasSpec.width,
-      canvasSpec.height,
-      brightnessDelta,
-    );
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(after);
-    syncHistoryFlags();
-    setColorAdjustPreview((prev) => ({ ...prev, brightnessDelta: 0 }));
-  }
-
-  const handlePreviewAdjustColor = useCallback(
-    (preview: {
-      hueShift: number;
-      saturationDelta: number;
-      brightnessDelta: number;
-    }) => {
-      setColorAdjustPreview(preview);
-    },
-    [],
-  );
-
-  const handleClearAdjustPreview = useCallback(() => {
-    setColorAdjustPreview({
-      hueShift: 0,
-      saturationDelta: 0,
-      brightnessDelta: 0,
-    });
-  }, []);
-
-  function handleInvert() {
-    if (isActiveLayerLocked) return;
-    const before = cloneBuffer(buffer);
-    const after = invertColors(buffer, canvasSpec.width, canvasSpec.height);
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(after);
-    syncHistoryFlags();
-    setColorAdjustPreview({
-      hueShift: 0,
-      saturationDelta: 0,
-      brightnessDelta: 0,
-    });
-  }
-
-  function handleDesaturate() {
-    if (isActiveLayerLocked) return;
-    const before = cloneBuffer(buffer);
-    const after = desaturate(buffer, canvasSpec.width, canvasSpec.height);
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(after);
-    syncHistoryFlags();
-    setColorAdjustPreview({
-      hueShift: 0,
-      saturationDelta: 0,
-      brightnessDelta: 0,
-    });
-  }
-
-  function handlePosterize(levels: number) {
-    if (isActiveLayerLocked) return;
-    const before = cloneBuffer(buffer);
-    const after = posterize(
-      buffer,
-      canvasSpec.width,
-      canvasSpec.height,
-      levels,
-    );
-    historyRef.current.commit(before);
-    updateActiveLayerPixels(after);
-    syncHistoryFlags();
-    setColorAdjustPreview({
-      hueShift: 0,
-      saturationDelta: 0,
-      brightnessDelta: 0,
-    });
-  }
 
 
 
@@ -2023,14 +1788,14 @@ export default function App() {
         name: "Select All",
         shortcut: "Cmd+A",
         category: "Edit",
-        action: handleSelectAll,
+        action: selectionOperations.onSelectAll,
       },
       {
         id: "deselect",
         name: "Deselect",
         shortcut: "Cmd+D",
         category: "Edit",
-        action: handleDeselect,
+        action: selectionOperations.onDeselect,
       },
       {
         id: "newFrame",
@@ -2159,13 +1924,13 @@ export default function App() {
         id: "invert",
         name: "Invert Colors",
         category: "Color",
-        action: handleInvert,
+        action: colorAdjustments.handleInvert,
       },
       {
         id: "desaturate",
         name: "Desaturate",
         category: "Color",
-        action: handleDesaturate,
+        action: colorAdjustments.handleDesaturate,
       },
       {
         id: "newLayer",
@@ -2214,9 +1979,11 @@ export default function App() {
       handleRedo,
       handleCopy,
       handleCut,
+      handleCopy,
+      handleCut,
       handlePaste,
-      handleSelectAll,
-      handleDeselect,
+      selectionOperations.onSelectAll,
+      selectionOperations.onDeselect,
       handleInsertFrame,
       handleDuplicateFrame,
       handleDeleteFrame,
@@ -2230,8 +1997,8 @@ export default function App() {
       transformOperations.onRotate90CW,
       transformOperations.onRotate90CCW,
       transformOperations.onRotate180,
-      handleInvert,
-      handleDesaturate,
+      colorAdjustments.handleInvert,
+      colorAdjustments.handleDesaturate,
       handleCreateLayer,
       handleChangeTool,
       settings.primaryColor,
@@ -2246,9 +2013,9 @@ export default function App() {
       onCopy: handleCopy,
       onCut: handleCut,
       onPaste: handlePaste,
-      onDelete: handleDeselect,
-      onSelectAll: handleSelectAll,
-      onDeselect: handleDeselect,
+      onDelete: selectionOperations.onDeselect,
+      onSelectAll: selectionOperations.onSelectAll,
+      onDeselect: selectionOperations.onDeselect,
       onChangeTool: handleChangeTool,
       onSave: handleAutoSave,
       onExport: () => setShowExportPanel(true),
@@ -2276,13 +2043,6 @@ export default function App() {
     },
     projectView === "editor" && !showCommandPalette && !showShortcutOverlay,
   );
-
-  function handleChangeSelection(next: Uint8Array | null) {
-    if (transformOperations.floatingBuffer) {
-      transformOperations.onCommitTransform();
-    }
-    setSelection(next);
-  }
 
   function handleChangeTool(nextTool: ToolId) {
     if (transformOperations.floatingBuffer) {
@@ -2325,8 +2085,8 @@ export default function App() {
           onChangeTool={handleChangeTool}
           canvasSpec={canvasSpec}
           buffer={buffer}
-          compositeBuffer={compositePreviewBuffer}
-          previewLayerPixels={previewLayerPixels}
+          compositeBuffer={colorAdjustments.compositePreviewBuffer}
+          previewLayerPixels={colorAdjustments.previewLayerPixels}
           onStrokeEnd={onStrokeEnd}
           selection={selection}
           onChangeSelection={setSelection}
@@ -2392,24 +2152,16 @@ export default function App() {
           }}
           onTransformOperations={transformOperations}
           onColorAdjustOperations={{
-            onAdjustHue: handleAdjustHue,
-            onAdjustSaturation: handleAdjustSaturation,
-            onAdjustBrightness: handleAdjustBrightness,
-            onPreviewAdjust: handlePreviewAdjustColor,
-            onClearPreview: handleClearAdjustPreview,
-            onInvert: handleInvert,
-            onDesaturate: handleDesaturate,
-            onPosterize: handlePosterize,
+            onAdjustHue: colorAdjustments.handleAdjustHue,
+            onAdjustSaturation: colorAdjustments.handleAdjustSaturation,
+            onAdjustBrightness: colorAdjustments.handleAdjustBrightness,
+            onPreviewAdjust: colorAdjustments.handlePreviewAdjust,
+            onClearPreview: colorAdjustments.handleClearPreview,
+            onInvert: colorAdjustments.handleInvert,
+            onDesaturate: colorAdjustments.handleDesaturate,
+            onPosterize: colorAdjustments.handlePosterize,
           }}
-          onSelectionOperations={{
-            onSelectAll: handleSelectAll,
-            onDeselect: handleDeselect,
-            onInvertSelection: handleInvertSelection,
-            onGrow: handleGrowSelection,
-            onShrink: handleShrinkSelection,
-            onFeather: handleFeatherSelection,
-            onDetectObject: handleDetectObjectSelection,
-          }}
+          onSelectionOperations={selectionOperations}
           onCursorMove={handleCursorMove}
           onNavigateToDashboard={() => setProjectView("dashboard")}
           topBar={
